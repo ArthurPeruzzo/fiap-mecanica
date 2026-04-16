@@ -9,6 +9,7 @@ import com.fiap.mecanica.shared.seguranca.infra.gateway.entity.RoleEntity;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.entity.UserEntity;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.repository.RoleRepository;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.repository.UserRepository;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -49,7 +50,7 @@ class AuthenticateIntegrationTest extends AbstractContainer {
         userRepository.saveAndFlush(user);
 
         LoginRequestJson requestJson = new LoginRequestJson("any@any.com", "any");
-        authenticateController.login(requestJson);
+        Assertions.assertDoesNotThrow(() -> authenticateController.login(requestJson));
 
     }
 }
