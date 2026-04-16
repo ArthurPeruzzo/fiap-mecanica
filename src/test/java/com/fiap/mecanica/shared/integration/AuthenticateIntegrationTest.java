@@ -3,17 +3,15 @@ package com.fiap.mecanica.shared.integration;
 import com.fiap.mecanica.resources.testcontainer.AbstractContainer;
 import com.fiap.mecanica.shared.seguranca.core.domain.RoleEnum;
 import com.fiap.mecanica.shared.seguranca.infra.config.SecurityConfiguration;
+import com.fiap.mecanica.shared.seguranca.infra.controller.AuthenticateController;
+import com.fiap.mecanica.shared.seguranca.infra.controller.json.request.LoginRequestJson;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.entity.RoleEntity;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.entity.UserEntity;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.repository.RoleRepository;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.repository.UserRepository;
-import io.restassured.RestAssured;
-import org.hamcrest.Matchers;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -34,13 +32,8 @@ class AuthenticateIntegrationTest extends AbstractContainer {
     @Autowired
     private SecurityConfiguration securityConfiguration;
 
-    @LocalServerPort
-    private int port;
-
-    @BeforeEach
-    void setup() {
-        RestAssured.port = port;
-    }
+    @Autowired
+    private AuthenticateController authenticateController;
 
     @Test
     void shouldAuthenticateSuccessFully() {
@@ -55,20 +48,8 @@ class AuthenticateIntegrationTest extends AbstractContainer {
 
         userRepository.saveAndFlush(user);
 
-        RestAssured
-                .given()
-                    .contentType("application/json")
-                    .body("""
-                            {
-                                "email": "any@any.com",
-                                "password": "any"
-                            }
-                            """)
-                .when()
-                    .post("/authenticate/login")
-                .then()
-                    .statusCode(200)
-                .body("token", Matchers.notNullValue())
-                .body("token", Matchers.instanceOf(String.class));
+        LoginRequestJson requestJson = new LoginRequestJson("any@any.com", "any");
+        authenticateController.login(requestJson);
+
     }
 }

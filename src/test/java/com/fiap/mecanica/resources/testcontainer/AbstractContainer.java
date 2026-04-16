@@ -1,6 +1,7 @@
 package com.fiap.mecanica.resources.testcontainer;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -26,6 +27,11 @@ public abstract class AbstractContainer {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    public void cleanupBeforeTest() {
+        truncateTables();
+    }
 
     @AfterEach
     public void truncateTables() {
