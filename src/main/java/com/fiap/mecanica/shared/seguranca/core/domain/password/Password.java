@@ -16,7 +16,7 @@ public final class Password extends PasswordBase {
             """;
 
     public Password(String value) {
-        boolean isValid = Pattern.compile(REGEX_VALIDATE, Pattern.CASE_INSENSITIVE)
+        boolean isValid = Pattern.compile(REGEX_VALIDATE)
                 .matcher(value)
                 .matches();
 

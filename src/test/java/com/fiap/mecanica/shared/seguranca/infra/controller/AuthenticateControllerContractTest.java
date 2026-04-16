@@ -1,8 +1,7 @@
-package com.fiap.mecanica.shared.contract;
+package com.fiap.mecanica.shared.seguranca.infra.controller;
 
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.seguranca.core.usecase.AuthenticateUserUseCase;
-import com.fiap.mecanica.shared.seguranca.infra.controller.AuthenticateController;
 import com.fiap.mecanica.shared.seguranca.infra.controller.dto.LoginInputDto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

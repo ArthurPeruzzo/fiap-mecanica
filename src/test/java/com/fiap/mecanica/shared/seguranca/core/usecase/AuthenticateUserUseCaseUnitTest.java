@@ -1,4 +1,4 @@
-package com.fiap.mecanica.shared.unit;
+package com.fiap.mecanica.shared.seguranca.core.usecase;
 
 import com.fiap.mecanica.shared.seguranca.core.domain.Email;
 import com.fiap.mecanica.shared.seguranca.core.domain.Role;

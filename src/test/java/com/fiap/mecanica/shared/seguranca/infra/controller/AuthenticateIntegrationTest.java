@@ -1,9 +1,8 @@
-package com.fiap.mecanica.shared.integration;
+package com.fiap.mecanica.shared.seguranca.infra.controller;
 
 import com.fiap.mecanica.resources.testcontainer.AbstractContainer;
 import com.fiap.mecanica.shared.seguranca.core.domain.RoleEnum;
 import com.fiap.mecanica.shared.seguranca.infra.config.SecurityConfiguration;
-import com.fiap.mecanica.shared.seguranca.infra.controller.AuthenticateController;
 import com.fiap.mecanica.shared.seguranca.infra.controller.json.request.LoginRequestJson;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.entity.RoleEntity;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.entity.UserEntity;
