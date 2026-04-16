@@ -9,7 +9,7 @@ import com.fiap.mecanica.shared.seguranca.core.exception.BadCredentialsAuthentic
 import com.fiap.mecanica.shared.seguranca.core.exception.UnexpectedErrorAuthenticateException;
 import com.fiap.mecanica.shared.seguranca.core.usecase.AuthenticateUserUseCase;
 import com.fiap.mecanica.shared.seguranca.infra.controller.dto.LoginInputDto;
-import com.fiap.mecanica.shared.seguranca.infra.token.TokenGateway;
+import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import com.fiap.mecanica.shared.seguranca.infra.token.dto.TokenParams;
 import com.fiap.mecanica.shared.seguranca.infra.userdetails.UserDetailsImpl;
 import org.junit.jupiter.api.Assertions;

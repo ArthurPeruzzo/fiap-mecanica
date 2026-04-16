@@ -1,6 +1,6 @@
 package com.fiap.mecanica.shared.seguranca.infra.config;
 
-import com.fiap.mecanica.shared.seguranca.infra.token.TokenGateway;
+import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import com.fiap.mecanica.shared.seguranca.infra.userdetails.UserDetailsImpl;
 import com.fiap.mecanica.shared.seguranca.core.domain.User;
 import com.fiap.mecanica.shared.seguranca.core.gateway.UserGateway;

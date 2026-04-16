@@ -4,7 +4,7 @@ import com.fiap.mecanica.shared.seguranca.core.domain.User;
 import com.fiap.mecanica.shared.seguranca.core.exception.BadCredentialsAuthenticateException;
 import com.fiap.mecanica.shared.seguranca.core.exception.UnexpectedErrorAuthenticateException;
 import com.fiap.mecanica.shared.seguranca.infra.controller.dto.LoginInputDto;
-import com.fiap.mecanica.shared.seguranca.infra.token.TokenGateway;
+import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import com.fiap.mecanica.shared.seguranca.infra.token.dto.TokenParams;
 import com.fiap.mecanica.shared.seguranca.infra.userdetails.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;

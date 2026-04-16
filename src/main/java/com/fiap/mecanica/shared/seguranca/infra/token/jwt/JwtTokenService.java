@@ -5,7 +5,7 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.fiap.mecanica.shared.seguranca.infra.token.TokenGateway;
+import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import com.fiap.mecanica.shared.seguranca.infra.token.dto.TokenParams;
 import com.fiap.mecanica.shared.seguranca.core.domain.RoleEnum;
 import jakarta.servlet.http.HttpServletRequest;
