@@ -17,7 +17,10 @@ public class Cliente {
 	public Cliente(NomeCompleto nomeCompleto, String cnpj, String cpf) {
 		this.nomeCompleto = nomeCompleto;
 
-		if ((cnpj == null && cpf == null) || (cnpj != null && cpf != null)) {
+		boolean temCnpj = cnpj != null;
+		boolean temCpf  = cpf  != null;
+
+		if (temCpf == temCnpj) {
 			throw new IllegalArgumentException("O cnpj ou cpf precisam estar preenchidos");
 		}
 

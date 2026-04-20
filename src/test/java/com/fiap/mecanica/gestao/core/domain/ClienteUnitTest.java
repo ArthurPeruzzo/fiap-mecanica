@@ -54,7 +54,7 @@ class ClienteUnitTest {
     }
 
     @Test
-    void shouldThrowWithCorrectMessageWhenDocumentosInvalidos() {
+    void shouldThrowWithCorrectMessageWhenNeitherDocumentoProvided() {
         var ex = assertThrows(IllegalArgumentException.class,
                 () -> new Cliente(NOME, null, null));
 
