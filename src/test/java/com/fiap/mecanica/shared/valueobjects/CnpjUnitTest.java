@@ -44,4 +44,35 @@ class CnpjUnitTest {
     void shouldImplementDocumentoInterface() {
         assertInstanceOf(Documento.class, new Cnpj("00000000000000"));
     }
+
+    @Test
+    void shouldFormatNumericCnpjWithDotsSlashAndDash() {
+        var cnpj = new Cnpj("00000000000191");
+
+        assertEquals("00.000.000/0001-91", cnpj.getValorFormatado());
+    }
+
+    @Test
+    void shouldFormatAlphanumericCnpj() {
+        var cnpj = new Cnpj("1A3BC45D0001EF");
+
+        assertEquals("1A.3BC.45D/0001-EF", cnpj.getValorFormatado());
+    }
+
+    @Test
+    void shouldFormatAfterStrippingInputFormatting() {
+        var cnpj = new Cnpj("1A.3BC.45D/0001-EF");
+
+        assertEquals("1A.3BC.45D/0001-EF", cnpj.getValorFormatado());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "00000000000191, 00.000.000/0001-91",
+            "11222333000181, 11.222.333/0001-81",
+            "ABCDEFGH0001IJ, AB.CDE.FGH/0001-IJ"
+    })
+    void shouldFormatVariousCnpjs(String raw, String expected) {
+        assertEquals(expected, new Cnpj(raw).getValorFormatado());
+    }
 }

@@ -28,8 +28,8 @@ public record ClienteResponseJson(
                 cliente.getId(),
                 cliente.getNomeCompleto().nome(),
                 cliente.getNomeCompleto().sobrenome(),
-                cliente.getCpf().map(Cpf::getValor).orElse(null),
-                cliente.getCnpj().map(Cnpj::getValor).orElse(null)
+                cliente.getCpf().map(Cpf::getValorFormatado).orElse(null),
+                cliente.getCnpj().map(Cnpj::getValorFormatado).orElse(null)
         );
     }
 }

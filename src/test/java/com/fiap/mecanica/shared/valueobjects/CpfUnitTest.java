@@ -37,4 +37,28 @@ class CpfUnitTest {
     void shouldImplementDocumentoInterface() {
         assertInstanceOf(Documento.class, new Cpf("12345678909"));
     }
+
+    @Test
+    void shouldFormatRawDigitsWithDotsAndDash() {
+        var cpf = new Cpf("12345678909");
+
+        assertEquals("123.456.789-09", cpf.getValorFormatado());
+    }
+
+    @Test
+    void shouldFormatAfterStrippingInputFormatting() {
+        var cpf = new Cpf("123.456.789-09");
+
+        assertEquals("123.456.789-09", cpf.getValorFormatado());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "95114752073, 951.147.520-73",
+            "00000000000, 000.000.000-00",
+            "18825469039, 188.254.690-39"
+    })
+    void shouldFormatVariousCpfs(String raw, String expected) {
+        assertEquals(expected, new Cpf(raw).getValorFormatado());
+    }
 }

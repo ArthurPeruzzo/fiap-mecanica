@@ -11,4 +11,8 @@ public class Cnpj implements Documento {
 	public String getValor() {
 		return valor;
 	}
+
+	public String getValorFormatado() {
+		return valor.replaceAll("(.{2})(.{3})(.{3})(.{4})(.{2})", "$1.$2.$3/$4-$5");
+	}
 }
