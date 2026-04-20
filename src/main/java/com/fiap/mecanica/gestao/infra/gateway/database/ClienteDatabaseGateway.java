@@ -124,4 +124,14 @@ public class ClienteDatabaseGateway implements ClienteGateway {
 			throw new ErroAcessoBaseDeDadosException();
 		}
 	}
+
+	@Override
+	public void deletar(Long id) {
+		try {
+			clienteRepository.deleteById(id);
+		} catch (Exception e) {
+			log.error("Erro ao deletar cliente por id: {}", id, e);
+			throw new ErroAcessoBaseDeDadosException();
+		}
+	}
 }

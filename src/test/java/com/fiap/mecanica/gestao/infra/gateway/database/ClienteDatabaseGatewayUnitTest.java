@@ -234,6 +234,25 @@ class ClienteDatabaseGatewayUnitTest {
     }
 
     // -------------------------------------------------------------------------
+    // deletar
+    // -------------------------------------------------------------------------
+
+    @Test
+    void deletar_shouldCallDeleteById() {
+        gateway.deletar(1L);
+
+        Mockito.verify(clienteRepository).deleteById(1L);
+    }
+
+    @Test
+    void deletar_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.doThrow(new RuntimeException("db error"))
+                .when(clienteRepository).deleteById(Mockito.anyLong());
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.deletar(1L));
+    }
+
+    // -------------------------------------------------------------------------
     // existePorCpf
     // -------------------------------------------------------------------------
 

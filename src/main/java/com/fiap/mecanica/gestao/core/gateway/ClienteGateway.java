@@ -14,4 +14,5 @@ public interface ClienteGateway {
 	boolean existePorCpfExcluindoId(String cpf, Long id);
 	boolean existePorCnpjExcluindoId(String cnpj, Long id);
 	Pagina<Cliente> listar(int page, int size);
+	void deletar(Long id);
 }

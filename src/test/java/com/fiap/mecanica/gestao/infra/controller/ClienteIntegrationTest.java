@@ -348,6 +348,47 @@ class ClienteIntegrationTest extends AbstractContainer {
 				.body("message", Matchers.equalTo("Já existe um cliente cadastrado com o documento informado"));
 	}
 
+	// -------------------------------------------------------------------------
+	// DELETE /cliente/{id}
+	// -------------------------------------------------------------------------
+
+	@Test
+	void shouldDeleteClienteSuccessfully() {
+		String token = obterToken();
+
+		RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+				.body("""
+						{"nome":"Pedro","sobrenome":"Silva","cpf":"188.254.690-39"}
+						""")
+				.when().post("/cliente").then().statusCode(201);
+
+		Long id = clienteRepository.findAll().getFirst().getId();
+
+		RestAssured
+				.given()
+				.header("Authorization", "Bearer " + token)
+				.when()
+				.delete("/cliente/" + id)
+				.then()
+				.statusCode(204);
+
+		Assertions.assertTrue(clienteRepository.findById(id).isEmpty());
+	}
+
+	@Test
+	void shouldReturn404WhenClienteNotFoundOnDelete() {
+		String token = obterToken();
+
+		RestAssured
+				.given()
+				.header("Authorization", "Bearer " + token)
+				.when()
+				.delete("/cliente/9999")
+				.then()
+				.statusCode(404)
+				.body("message", Matchers.equalTo("Cliente não encontrado"));
+	}
+
 	@Test
 	void shouldReturn401WhenNoTokenProvided() {
 		RestAssured

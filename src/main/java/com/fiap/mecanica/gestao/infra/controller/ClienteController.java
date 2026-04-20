@@ -5,6 +5,7 @@ import com.fiap.mecanica.gestao.core.dto.CriarClienteDto;
 import com.fiap.mecanica.gestao.core.dto.ListarClientesDto;
 import com.fiap.mecanica.gestao.core.usecase.AtualizarClienteUseCase;
 import com.fiap.mecanica.gestao.core.usecase.CriarClienteUseCase;
+import com.fiap.mecanica.gestao.core.usecase.DeletarClienteUseCase;
 import com.fiap.mecanica.gestao.core.usecase.ListarClientesUseCase;
 import com.fiap.mecanica.gestao.infra.controller.json.ClienteRequestJson;
 import com.fiap.mecanica.gestao.infra.controller.json.ClienteResponseJson;
@@ -17,6 +18,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,6 +36,7 @@ public class ClienteController {
 
 	private final CriarClienteUseCase criarClienteUseCase;
 	private final AtualizarClienteUseCase atualizarClienteUseCase;
+	private final DeletarClienteUseCase deletarClienteUseCase;
 	private final ListarClientesUseCase listarClientesUseCase;
 
 	@Operation(
@@ -87,6 +90,22 @@ public class ClienteController {
 	public ResponseEntity<Void> atualizar(@PathVariable Long id, @RequestBody @Valid ClienteRequestJson clienteRequestJson) {
 		var dto = new AtualizarClienteDto(id, clienteRequestJson.nome(), clienteRequestJson.sobrenome(), clienteRequestJson.cnpj(), clienteRequestJson.cpf());
 		atualizarClienteUseCase.atualizar(dto);
+		return ResponseEntity.noContent().build();
+	}
+
+	@Operation(
+			summary = "Deletar um cliente",
+			description = "Remove um cliente pelo ID"
+	)
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204", description = "Cliente removido com sucesso"),
+			@ApiResponse(responseCode = "404", description = "Cliente não encontrado"),
+			@ApiResponse(responseCode = "401", description = "Não autenticado"),
+			@ApiResponse(responseCode = "403", description = "Acesso negado")
+	})
+	@DeleteMapping("/{id}")
+	public ResponseEntity<Void> deletar(@PathVariable Long id) {
+		deletarClienteUseCase.deletar(id);
 		return ResponseEntity.noContent().build();
 	}
 }

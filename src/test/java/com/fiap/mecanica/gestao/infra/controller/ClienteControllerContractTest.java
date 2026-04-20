@@ -4,6 +4,7 @@ import com.fiap.mecanica.gestao.core.domain.Cliente;
 import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.usecase.AtualizarClienteUseCase;
 import com.fiap.mecanica.gestao.core.usecase.CriarClienteUseCase;
+import com.fiap.mecanica.gestao.core.usecase.DeletarClienteUseCase;
 import com.fiap.mecanica.gestao.core.usecase.ListarClientesUseCase;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.page.Pagina;
@@ -39,6 +40,9 @@ class ClienteControllerContractTest {
 
 	@MockitoBean
 	private AtualizarClienteUseCase atualizarClienteUseCase;
+
+	@MockitoBean
+	private DeletarClienteUseCase deletarClienteUseCase;
 
 	@MockitoBean
 	private ListarClientesUseCase listarClientesUseCase;
@@ -275,5 +279,27 @@ class ClienteControllerContractTest {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(json))
 				.andExpect(status().isNotFound());
+	}
+
+	// -------------------------------------------------------------------------
+	// DELETE /cliente/{id}
+	// -------------------------------------------------------------------------
+
+	@Test
+	void shouldReturn204WhenDeletarClienteSuccessfully() throws Exception {
+		mockMvc.perform(MockMvcRequestBuilders.delete("/cliente/1"))
+				.andExpect(status().isNoContent());
+
+		Mockito.verify(deletarClienteUseCase).deletar(1L);
+	}
+
+	@Test
+	void shouldReturn404WhenClienteNotFoundOnDelete() throws Exception {
+		Mockito.doThrow(new ClienteNaoEncontradoException())
+				.when(deletarClienteUseCase).deletar(99L);
+
+		mockMvc.perform(MockMvcRequestBuilders.delete("/cliente/99"))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.message").value("Cliente não encontrado"));
 	}
 }
