@@ -169,6 +169,92 @@ class ClienteIntegrationTest extends AbstractContainer {
 	}
 
 	@Test
+	void shouldReturnEmptyPageWhenNoClientesCadastrados() {
+		String token = obterToken();
+
+		RestAssured
+				.given()
+				.contentType("application/json")
+				.header("Authorization", "Bearer " + token)
+				.queryParam("page", 0)
+				.queryParam("size", 10)
+				.when()
+				.get("/cliente")
+				.then()
+				.statusCode(200)
+				.body("content", Matchers.hasSize(0))
+				.body("totalElements", Matchers.equalTo(0))
+				.body("totalPages", Matchers.equalTo(0))
+				.body("page", Matchers.equalTo(0))
+				.body("size", Matchers.equalTo(10));
+	}
+
+	@Test
+	void shouldReturnClientesPagedAfterCreation() {
+		String token = obterToken();
+
+		String cpf1 = """
+				{"nome":"Pedro","sobrenome":"Silva","cpf":"909.815.060-89"}
+				""";
+		String cpf2 = """
+				{"nome":"Ana","sobrenome":"Costa","cpf":"859.886.590-71"}
+				""";
+
+		RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+				.body(cpf1).when().post("/cliente").then().statusCode(201);
+		RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+				.body(cpf2).when().post("/cliente").then().statusCode(201);
+
+		RestAssured
+				.given()
+				.contentType("application/json")
+				.header("Authorization", "Bearer " + token)
+				.queryParam("page", 0)
+				.queryParam("size", 10)
+				.when()
+				.get("/cliente")
+				.then()
+				.statusCode(200)
+				.body("content", Matchers.hasSize(2))
+				.body("totalElements", Matchers.equalTo(2))
+				.body("totalPages", Matchers.equalTo(1))
+				.body("content[0].nome", Matchers.notNullValue())
+				.body("content[0].cpf", Matchers.notNullValue());
+	}
+
+	@Test
+	void shouldRespectPageSizeInPagination() {
+		String token = obterToken();
+
+		String cpf1 = """
+				{"nome":"Pedro","sobrenome":"Silva","cpf":"909.815.060-89"}
+				""";
+		String cpf2 = """
+				{"nome":"Ana","sobrenome":"Costa","cpf":"859.886.590-71"}
+				""";
+
+		RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+				.body(cpf1).when().post("/cliente").then().statusCode(201);
+		RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+				.body(cpf2).when().post("/cliente").then().statusCode(201);
+
+		RestAssured
+				.given()
+				.contentType("application/json")
+				.header("Authorization", "Bearer " + token)
+				.queryParam("page", 0)
+				.queryParam("size", 1)
+				.when()
+				.get("/cliente")
+				.then()
+				.statusCode(200)
+				.body("content", Matchers.hasSize(1))
+				.body("totalElements", Matchers.equalTo(2))
+				.body("totalPages", Matchers.equalTo(2))
+				.body("size", Matchers.equalTo(1));
+	}
+
+	@Test
 	void shouldReturn401WhenNoTokenProvided() {
 		RestAssured
 				.given()

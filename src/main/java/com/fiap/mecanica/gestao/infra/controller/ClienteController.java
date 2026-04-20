@@ -1,8 +1,12 @@
 package com.fiap.mecanica.gestao.infra.controller;
 
 import com.fiap.mecanica.gestao.core.dto.CriarClienteDto;
+import com.fiap.mecanica.gestao.core.dto.ListarClientesDto;
 import com.fiap.mecanica.gestao.core.usecase.CriarClienteUseCase;
+import com.fiap.mecanica.gestao.core.usecase.ListarClientesUseCase;
 import com.fiap.mecanica.gestao.infra.controller.json.ClienteRequestJson;
+import com.fiap.mecanica.gestao.infra.controller.json.ClienteResponseJson;
+import com.fiap.mecanica.shared.page.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -11,9 +15,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -23,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ClienteController {
 
 	private final CriarClienteUseCase criarClienteUseCase;
+	private final ListarClientesUseCase listarClientesUseCase;
 
 	@Operation(
 			summary = "Criar um cliente",
@@ -40,5 +47,22 @@ public class ClienteController {
 		var dto = new CriarClienteDto(clienteRequestJson.nome(), clienteRequestJson.sobrenome(), clienteRequestJson.cpf(), clienteRequestJson.cnpj());
 		criarClienteUseCase.criar(dto);
 		return ResponseEntity.status(HttpStatus.CREATED).build();
+	}
+
+	@Operation(
+			summary = "Listar clientes",
+			description = "Retorna a lista paginada de clientes cadastrados"
+	)
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
+			@ApiResponse(responseCode = "401", description = "Não autenticado"),
+			@ApiResponse(responseCode = "403", description = "Acesso negado")
+	})
+	@GetMapping
+	public ResponseEntity<PageResponse<ClienteResponseJson>> listar(
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size) {
+		var pagina = listarClientesUseCase.listar(new ListarClientesDto(page, size));
+		return ResponseEntity.ok(PageResponse.from(pagina.map(ClienteResponseJson::from)));
 	}
 }

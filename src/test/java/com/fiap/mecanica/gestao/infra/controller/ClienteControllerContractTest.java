@@ -1,11 +1,17 @@
 package com.fiap.mecanica.gestao.infra.controller;
 
+import com.fiap.mecanica.gestao.core.domain.Cliente;
 import com.fiap.mecanica.gestao.core.usecase.CriarClienteUseCase;
+import com.fiap.mecanica.gestao.core.usecase.ListarClientesUseCase;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
+import com.fiap.mecanica.shared.page.Pagina;
+import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mockito;
+
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -28,6 +34,9 @@ class ClienteControllerContractTest {
 
 	@MockitoBean
 	private CriarClienteUseCase criarClienteUseCase;
+
+	@MockitoBean
+	private ListarClientesUseCase listarClientesUseCase;
 
 	// -------------------------------------------------------------------------
 	// Validações de campos obrigatórios e formato
@@ -130,5 +139,58 @@ class ClienteControllerContractTest {
 				.andExpect(status().isCreated());
 
 		Mockito.verify(criarClienteUseCase).criar(Mockito.any());
+	}
+
+	// -------------------------------------------------------------------------
+	// GET /cliente
+	// -------------------------------------------------------------------------
+
+	@Test
+	void shouldReturn200WithEmptyPageWhenNoClientes() throws Exception {
+		Mockito.when(listarClientesUseCase.listar(Mockito.any()))
+				.thenReturn(new Pagina<>(List.of(), 0, 10, 0L, 0));
+
+		mockMvc.perform(MockMvcRequestBuilders.get("/cliente")
+						.param("page", "0")
+						.param("size", "10"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content").isArray())
+				.andExpect(jsonPath("$.totalElements").value(0))
+				.andExpect(jsonPath("$.totalPages").value(0))
+				.andExpect(jsonPath("$.page").value(0))
+				.andExpect(jsonPath("$.size").value(10));
+
+		Mockito.verify(listarClientesUseCase).listar(Mockito.any());
+	}
+
+	@Test
+	void shouldReturn200WithClientesMappedToResponseJson() throws Exception {
+		var cliente = Cliente.reconstituir(1L, new NomeCompleto("Pedro", "Silva"), null, "12345678909");
+		Mockito.when(listarClientesUseCase.listar(Mockito.any()))
+				.thenReturn(new Pagina<>(List.of(cliente), 0, 10, 1L, 1));
+
+		mockMvc.perform(MockMvcRequestBuilders.get("/cliente")
+						.param("page", "0")
+						.param("size", "10"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content[0].id").value(1))
+				.andExpect(jsonPath("$.content[0].nome").value("Pedro"))
+				.andExpect(jsonPath("$.content[0].sobrenome").value("Silva"))
+				.andExpect(jsonPath("$.content[0].cpf").value("12345678909"))
+				.andExpect(jsonPath("$.content[0].cnpj").doesNotExist())
+				.andExpect(jsonPath("$.totalElements").value(1));
+
+		Mockito.verify(listarClientesUseCase).listar(Mockito.any());
+	}
+
+	@Test
+	void shouldReturn200WithDefaultPaginationWhenParamsOmitted() throws Exception {
+		Mockito.when(listarClientesUseCase.listar(Mockito.any()))
+				.thenReturn(new Pagina<>(List.of(), 0, 10, 0L, 0));
+
+		mockMvc.perform(MockMvcRequestBuilders.get("/cliente"))
+				.andExpect(status().isOk());
+
+		Mockito.verify(listarClientesUseCase).listar(Mockito.any());
 	}
 }

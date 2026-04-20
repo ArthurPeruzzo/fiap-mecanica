@@ -28,6 +28,12 @@ public class Cliente {
 		}
 	}
 
+	public static Cliente reconstituir(Long id, NomeCompleto nomeCompleto, String cnpj, String cpf) {
+		var cliente = new Cliente(nomeCompleto, cnpj, cpf);
+		cliente.id = id;
+		return cliente;
+	}
+
 	public Optional<Cnpj> getCnpj() {
 		if (documento instanceof Cnpj cnpj) {
 			return Optional.of(cnpj);

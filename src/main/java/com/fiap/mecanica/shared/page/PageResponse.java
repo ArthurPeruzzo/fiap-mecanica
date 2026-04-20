@@ -20,5 +20,15 @@ public record PageResponse<T>(
                 page.getTotalPages()
         );
     }
+
+    public static <T> PageResponse<T> from(Pagina<T> pagina) {
+        return new PageResponse<>(
+                pagina.content(),
+                pagina.page(),
+                pagina.size(),
+                pagina.totalElements(),
+                pagina.totalPages()
+        );
+    }
 }
 

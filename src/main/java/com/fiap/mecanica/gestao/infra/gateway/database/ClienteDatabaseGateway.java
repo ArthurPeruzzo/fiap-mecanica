@@ -5,8 +5,11 @@ import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
 import com.fiap.mecanica.gestao.infra.gateway.entity.ClienteEntity;
 import com.fiap.mecanica.gestao.infra.gateway.repository.ClienteRepository;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
+import com.fiap.mecanica.shared.page.Pagina;
 import com.fiap.mecanica.shared.valueobjects.Cnpj;
 import com.fiap.mecanica.shared.valueobjects.Cpf;
+import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
+import org.springframework.data.domain.PageRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -28,6 +31,24 @@ public class ClienteDatabaseGateway implements ClienteGateway {
 				.build();
 
 		clienteRepository.save(entity);
+	}
+
+	@Override
+	public Pagina<Cliente> listar(int page, int size) {
+		try {
+			var resultado = clienteRepository.findAll(PageRequest.of(page, size));
+			var clientes = resultado.getContent().stream()
+					.map(e -> Cliente.reconstituir(
+							e.getId(),
+							new NomeCompleto(e.getNome(), e.getSobrenome()),
+							e.getCnpj(),
+							e.getCpf()))
+					.toList();
+			return new Pagina<>(clientes, resultado.getNumber(), resultado.getSize(), resultado.getTotalElements(), resultado.getTotalPages());
+		} catch (Exception e) {
+			log.error("Erro ao listar clientes", e);
+			throw new ErroAcessoBaseDeDadosException();
+		}
 	}
 
 	@Override

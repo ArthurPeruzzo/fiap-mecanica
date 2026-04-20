@@ -68,4 +68,22 @@ class ClienteUnitTest {
         assertEquals("Pedro", cliente.getNomeCompleto().nome());
         assertEquals("Silva", cliente.getNomeCompleto().sobrenome());
     }
+
+    @Test
+    void reconstituir_shouldSetIdAndPreserveDocumento() {
+        var cliente = Cliente.reconstituir(42L, NOME, null, "12345678909");
+
+        assertEquals(42L, cliente.getId());
+        assertTrue(cliente.getCpf().isPresent());
+        assertEquals("12345678909", cliente.getCpf().get().getValor());
+    }
+
+    @Test
+    void reconstituir_shouldWorkWithCnpj() {
+        var cliente = Cliente.reconstituir(5L, NOME, "00000000000191", null);
+
+        assertEquals(5L, cliente.getId());
+        assertTrue(cliente.getCnpj().isPresent());
+        assertEquals("00000000000191", cliente.getCnpj().get().getValor());
+    }
 }
