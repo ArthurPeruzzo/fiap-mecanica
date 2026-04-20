@@ -208,4 +208,106 @@ class VeiculoIntegrationTest extends AbstractContainer {
                 .then()
                 .statusCode(401);
     }
+
+    // -------------------------------------------------------------------------
+    // GET /veiculo
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldReturnEmptyPageWhenNoVeiculosCadastrados() {
+        String token = obterToken();
+
+        RestAssured
+                .given()
+                .header("Authorization", "Bearer " + token)
+                .queryParam("page", 0)
+                .queryParam("size", 10)
+                .when()
+                .get("/veiculo")
+                .then()
+                .statusCode(200)
+                .body("content", Matchers.hasSize(0))
+                .body("totalElements", Matchers.equalTo(0))
+                .body("totalPages", Matchers.equalTo(0))
+                .body("page", Matchers.equalTo(0))
+                .body("size", Matchers.equalTo(10));
+    }
+
+    @Test
+    void shouldReturnVeiculosPagedAfterCreation() {
+        String token = obterToken();
+        Long clienteId = criarCliente(token);
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body(String.format("{\"clienteId\":%d,\"placa\":\"ABC1234\",\"modelo\":\"Gol\",\"ano\":2020}", clienteId))
+                .when().post("/veiculo").then().statusCode(201);
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body(String.format("{\"clienteId\":%d,\"placa\":\"ABC1D23\",\"modelo\":\"Onix\",\"ano\":2023}", clienteId))
+                .when().post("/veiculo").then().statusCode(201);
+
+        RestAssured
+                .given()
+                .header("Authorization", "Bearer " + token)
+                .queryParam("page", 0)
+                .queryParam("size", 10)
+                .when()
+                .get("/veiculo")
+                .then()
+                .statusCode(200)
+                .body("content", Matchers.hasSize(2))
+                .body("totalElements", Matchers.equalTo(2))
+                .body("totalPages", Matchers.equalTo(1))
+                .body("content[0].placa", Matchers.notNullValue())
+                .body("content[0].modelo", Matchers.notNullValue());
+    }
+
+    @Test
+    void shouldRespectPageSizeInPagination() {
+        String token = obterToken();
+        Long clienteId = criarCliente(token);
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body(String.format("{\"clienteId\":%d,\"placa\":\"ABC1234\",\"modelo\":\"Gol\",\"ano\":2020}", clienteId))
+                .when().post("/veiculo").then().statusCode(201);
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body(String.format("{\"clienteId\":%d,\"placa\":\"ABC1D23\",\"modelo\":\"Onix\",\"ano\":2023}", clienteId))
+                .when().post("/veiculo").then().statusCode(201);
+
+        RestAssured
+                .given()
+                .header("Authorization", "Bearer " + token)
+                .queryParam("page", 0)
+                .queryParam("size", 1)
+                .when()
+                .get("/veiculo")
+                .then()
+                .statusCode(200)
+                .body("content", Matchers.hasSize(1))
+                .body("totalElements", Matchers.equalTo(2))
+                .body("totalPages", Matchers.equalTo(2))
+                .body("size", Matchers.equalTo(1));
+    }
+
+    @Test
+    void shouldReturnPlacaFormatadaInResponse() {
+        String token = obterToken();
+        Long clienteId = criarCliente(token);
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body(String.format("{\"clienteId\":%d,\"placa\":\"ABC1234\",\"modelo\":\"Gol\",\"ano\":2020}", clienteId))
+                .when().post("/veiculo").then().statusCode(201);
+
+        RestAssured
+                .given()
+                .header("Authorization", "Bearer " + token)
+                .queryParam("page", 0)
+                .queryParam("size", 10)
+                .when()
+                .get("/veiculo")
+                .then()
+                .statusCode(200)
+                .body("content[0].placa", Matchers.equalTo("ABC-1234"));
+    }
 }

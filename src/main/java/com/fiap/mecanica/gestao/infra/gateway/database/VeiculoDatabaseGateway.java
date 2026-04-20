@@ -5,8 +5,10 @@ import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
 import com.fiap.mecanica.gestao.infra.gateway.entity.VeiculoEntity;
 import com.fiap.mecanica.gestao.infra.gateway.repository.VeiculoRepository;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
+import com.fiap.mecanica.shared.page.Pagina;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -38,6 +40,20 @@ public class VeiculoDatabaseGateway implements VeiculoGateway {
             return veiculoRepository.existsByPlaca(placa);
         } catch (Exception e) {
             log.error("Erro ao verificar existência de veiculo por placa", e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+
+    @Override
+    public Pagina<Veiculo> listar(int page, int size) {
+        try {
+            var resultado = veiculoRepository.findAll(PageRequest.of(page, size));
+            var veiculos = resultado.getContent().stream()
+                    .map(e -> Veiculo.reconstituir(e.getId(), e.getClienteId(), e.getPlaca(), e.getModelo(), e.getAno()))
+                    .toList();
+            return new Pagina<>(veiculos, resultado.getNumber(), resultado.getSize(), resultado.getTotalElements(), resultado.getTotalPages());
+        } catch (Exception e) {
+            log.error("Erro ao listar veiculos", e);
             throw new ErroAcessoBaseDeDadosException();
         }
     }

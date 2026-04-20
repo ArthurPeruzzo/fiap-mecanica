@@ -1,13 +1,18 @@
 package com.fiap.mecanica.gestao.infra.controller;
 
+import com.fiap.mecanica.gestao.core.domain.Veiculo;
 import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.VeiculoJaExisteException;
 import com.fiap.mecanica.gestao.core.usecase.CriarVeiculoUseCase;
+import com.fiap.mecanica.gestao.core.usecase.ListarVeiculosUseCase;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
+import com.fiap.mecanica.shared.page.Pagina;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mockito;
+
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -30,6 +35,9 @@ class VeiculoControllerContractTest {
 
     @MockitoBean
     private CriarVeiculoUseCase criarVeiculoUseCase;
+
+    @MockitoBean
+    private ListarVeiculosUseCase listarVeiculosUseCase;
 
     // -------------------------------------------------------------------------
     // Validações de campos obrigatórios
@@ -137,5 +145,58 @@ class VeiculoControllerContractTest {
                         .content("{\"clienteId\":1,\"placa\":\"ABC1234\",\"modelo\":\"Gol\",\"ano\":2020}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Já existe um veículo cadastrado com a placa informada"));
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /veiculo
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldReturn200WithEmptyPageWhenNoVeiculos() throws Exception {
+        Mockito.when(listarVeiculosUseCase.listar(Mockito.any()))
+                .thenReturn(new Pagina<>(List.of(), 0, 10, 0L, 0));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/veiculo")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.totalPages").value(0))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(10));
+
+        Mockito.verify(listarVeiculosUseCase).listar(Mockito.any());
+    }
+
+    @Test
+    void shouldReturn200WithVeiculosMappedToResponseJson() throws Exception {
+        var veiculo = Veiculo.reconstituir(1L, 2L, "ABC1234", "Gol", 2020);
+        Mockito.when(listarVeiculosUseCase.listar(Mockito.any()))
+                .thenReturn(new Pagina<>(List.of(veiculo), 0, 10, 1L, 1));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/veiculo")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(1))
+                .andExpect(jsonPath("$.content[0].clienteId").value(2))
+                .andExpect(jsonPath("$.content[0].placa").value("ABC-1234"))
+                .andExpect(jsonPath("$.content[0].modelo").value("Gol"))
+                .andExpect(jsonPath("$.content[0].ano").value(2020))
+                .andExpect(jsonPath("$.totalElements").value(1));
+
+        Mockito.verify(listarVeiculosUseCase).listar(Mockito.any());
+    }
+
+    @Test
+    void shouldReturn200WithDefaultPaginationWhenParamsOmitted() throws Exception {
+        Mockito.when(listarVeiculosUseCase.listar(Mockito.any()))
+                .thenReturn(new Pagina<>(List.of(), 0, 10, 0L, 0));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/veiculo"))
+                .andExpect(status().isOk());
+
+        Mockito.verify(listarVeiculosUseCase).listar(Mockito.any());
     }
 }

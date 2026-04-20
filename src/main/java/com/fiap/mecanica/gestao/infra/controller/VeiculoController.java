@@ -1,8 +1,12 @@
 package com.fiap.mecanica.gestao.infra.controller;
 
 import com.fiap.mecanica.gestao.core.dto.CriarVeiculoDto;
+import com.fiap.mecanica.gestao.core.dto.ListarVeiculosDto;
 import com.fiap.mecanica.gestao.core.usecase.CriarVeiculoUseCase;
+import com.fiap.mecanica.gestao.core.usecase.ListarVeiculosUseCase;
 import com.fiap.mecanica.gestao.infra.controller.json.VeiculoRequestJson;
+import com.fiap.mecanica.gestao.infra.controller.json.VeiculoResponseJson;
+import com.fiap.mecanica.shared.page.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -11,18 +15,21 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping(value = "/veiculo")
-@Tag(name = "veículo")
+@Tag(name = "Veículo")
 public class VeiculoController {
 
     private final CriarVeiculoUseCase criarVeiculoUseCase;
+    private final ListarVeiculosUseCase listarVeiculosUseCase;
 
     @Operation(
             summary = "Criar um veiculo",
@@ -46,5 +53,22 @@ public class VeiculoController {
         );
         criarVeiculoUseCase.criar(dto);
         return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @Operation(
+            summary = "Listar veiculos",
+            description = "Retorna a lista paginada de veiculos cadastrados"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado")
+    })
+    @GetMapping
+    public ResponseEntity<PageResponse<VeiculoResponseJson>> listar(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        var pagina = listarVeiculosUseCase.listar(new ListarVeiculosDto(page, size));
+        return ResponseEntity.ok(PageResponse.from(pagina.map(VeiculoResponseJson::from)));
     }
 }
