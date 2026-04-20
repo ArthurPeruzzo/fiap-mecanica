@@ -1,8 +1,8 @@
-package com.fiap.mecanica.gestao.infra.gateway.database.persona;
+package com.fiap.mecanica.gestao.infra.gateway.database;
 
-import com.fiap.mecanica.gestao.core.domain.persona.Atendente;
-import com.fiap.mecanica.gestao.core.gateway.persona.AtendenteGateway;
-import com.fiap.mecanica.gestao.infra.gateway.repository.persona.AtendenteRepository;
+import com.fiap.mecanica.gestao.core.domain.Atendente;
+import com.fiap.mecanica.gestao.core.gateway.AtendenteGateway;
+import com.fiap.mecanica.gestao.infra.gateway.repository.AtendenteRepository;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

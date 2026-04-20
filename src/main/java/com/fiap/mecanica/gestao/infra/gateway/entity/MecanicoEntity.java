@@ -1,4 +1,4 @@
-package com.fiap.mecanica.gestao.infra.gateway.entity.persona;
+package com.fiap.mecanica.gestao.infra.gateway.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -7,12 +7,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name="atendente")
+@Table(name="mecanico")
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
-public class AtendenteEntity {
+public class MecanicoEntity {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -22,6 +22,9 @@ public class AtendenteEntity {
 
 	@Column(name = "sobrenome", nullable = false)
 	private String sobrenome;
+
+	@Column(name = "especialidade", nullable = false)
+	private String especialidade;
 
 	@Column(name = "user_id", nullable = false)
 	private Long userId;

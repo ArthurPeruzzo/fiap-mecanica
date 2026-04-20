@@ -1,4 +1,4 @@
-package com.fiap.mecanica.gestao.core.domain.persona;
+package com.fiap.mecanica.gestao.core.domain;
 
 import lombok.Getter;
 import lombok.experimental.SuperBuilder;
