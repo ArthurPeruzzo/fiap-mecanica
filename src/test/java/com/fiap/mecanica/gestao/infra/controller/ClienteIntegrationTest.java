@@ -101,6 +101,74 @@ class ClienteIntegrationTest extends AbstractContainer {
 	}
 
 	@Test
+	void shouldReturn409WhenClienteWithSameCpfAlreadyExists() {
+		String token = obterToken();
+
+		String body = """
+				{
+				  "nome": "Pedro",
+				  "sobrenome": "Silva",
+				  "cpf": "975.730.520-06"
+				}
+				""";
+
+		RestAssured
+				.given()
+				.contentType("application/json")
+				.header("Authorization", "Bearer " + token)
+				.body(body)
+				.when()
+				.post("/cliente")
+				.then()
+				.statusCode(201);
+
+		RestAssured
+				.given()
+				.contentType("application/json")
+				.header("Authorization", "Bearer " + token)
+				.body(body)
+				.when()
+				.post("/cliente")
+				.then()
+				.statusCode(409)
+				.body("message", Matchers.equalTo("Já existe um cliente cadastrado com o documento informado"));
+	}
+
+	@Test
+	void shouldReturn409WhenClienteWithSameCnpjAlreadyExists() {
+		String token = obterToken();
+
+		String body = """
+				{
+				  "nome": "Empresa",
+				  "sobrenome": "LTDA",
+				  "cnpj": "D4.779.442/0001-21"
+				}
+				""";
+
+		RestAssured
+				.given()
+				.contentType("application/json")
+				.header("Authorization", "Bearer " + token)
+				.body(body)
+				.when()
+				.post("/cliente")
+				.then()
+				.statusCode(201);
+
+		RestAssured
+				.given()
+				.contentType("application/json")
+				.header("Authorization", "Bearer " + token)
+				.body(body)
+				.when()
+				.post("/cliente")
+				.then()
+				.statusCode(409)
+				.body("message", Matchers.equalTo("Já existe um cliente cadastrado com o documento informado"));
+	}
+
+	@Test
 	void shouldReturn401WhenNoTokenProvided() {
 		RestAssured
 				.given()

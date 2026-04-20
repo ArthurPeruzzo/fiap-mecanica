@@ -2,6 +2,7 @@ package com.fiap.mecanica.gestao.core.usecase;
 
 import com.fiap.mecanica.gestao.core.domain.Cliente;
 import com.fiap.mecanica.gestao.core.dto.CriarClienteDto;
+import com.fiap.mecanica.gestao.core.exception.ClienteJaExisteException;
 import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -25,8 +26,11 @@ class CriarClienteUseCaseUnitTest {
 	void shouldDelegateToGatewayWhenCpfProvided() {
 		var dto = new CriarClienteDto("Pedro", "Silva", "951.147.520-73", null);
 
+		Mockito.when(clienteGateway.existePorCpf(Mockito.anyString())).thenReturn(false);
+
 		criarClienteUseCase.criar(dto);
 
+		Mockito.verify(clienteGateway).existePorCpf("95114752073");
 		Mockito.verify(clienteGateway).criar(Mockito.any(Cliente.class));
 		Mockito.verifyNoMoreInteractions(clienteGateway);
 	}
@@ -35,8 +39,11 @@ class CriarClienteUseCaseUnitTest {
 	void shouldDelegateToGatewayWhenCnpjProvided() {
 		var dto = new CriarClienteDto("Pedro", "Silva", null, "00.000.000/0001-91");
 
+		Mockito.when(clienteGateway.existePorCnpj(Mockito.anyString())).thenReturn(false);
+
 		criarClienteUseCase.criar(dto);
 
+		Mockito.verify(clienteGateway).existePorCnpj("00000000000191");
 		Mockito.verify(clienteGateway).criar(Mockito.any(Cliente.class));
 		Mockito.verifyNoMoreInteractions(clienteGateway);
 	}
@@ -45,6 +52,8 @@ class CriarClienteUseCaseUnitTest {
 	void shouldPassCorrectNomeToGatewayWhenCpfProvided() {
 		var dto = new CriarClienteDto("Pedro", "Silva", "951.147.520-73", null);
 		var captor = ArgumentCaptor.forClass(Cliente.class);
+
+		Mockito.when(clienteGateway.existePorCpf(Mockito.anyString())).thenReturn(false);
 
 		criarClienteUseCase.criar(dto);
 
@@ -59,6 +68,8 @@ class CriarClienteUseCaseUnitTest {
 		var dto = new CriarClienteDto("Pedro", "Silva", null, "00.000.000/0001-91");
 		var captor = ArgumentCaptor.forClass(Cliente.class);
 
+		Mockito.when(clienteGateway.existePorCnpj(Mockito.anyString())).thenReturn(false);
+
 		criarClienteUseCase.criar(dto);
 
 		Mockito.verify(clienteGateway).criar(captor.capture());
@@ -68,9 +79,34 @@ class CriarClienteUseCaseUnitTest {
 	}
 
 	@Test
+	void shouldThrowClienteJaExisteExceptionWhenCpfAlreadyExists() {
+		var dto = new CriarClienteDto("Pedro", "Silva", "951.147.520-73", null);
+
+		Mockito.when(clienteGateway.existePorCpf("95114752073")).thenReturn(true);
+
+		Assertions.assertThrows(ClienteJaExisteException.class, () -> criarClienteUseCase.criar(dto));
+
+		Mockito.verify(clienteGateway).existePorCpf("95114752073");
+		Mockito.verify(clienteGateway, Mockito.never()).criar(Mockito.any());
+	}
+
+	@Test
+	void shouldThrowClienteJaExisteExceptionWhenCnpjAlreadyExists() {
+		var dto = new CriarClienteDto("Pedro", "Silva", null, "00.000.000/0001-91");
+
+		Mockito.when(clienteGateway.existePorCnpj("00000000000191")).thenReturn(true);
+
+		Assertions.assertThrows(ClienteJaExisteException.class, () -> criarClienteUseCase.criar(dto));
+
+		Mockito.verify(clienteGateway).existePorCnpj("00000000000191");
+		Mockito.verify(clienteGateway, Mockito.never()).criar(Mockito.any());
+	}
+
+	@Test
 	void shouldPropagateExceptionFromGateway() {
 		var dto = new CriarClienteDto("Pedro", "Silva", "951.147.520-73", null);
 
+		Mockito.when(clienteGateway.existePorCpf(Mockito.anyString())).thenReturn(false);
 		Mockito.doThrow(new RuntimeException("erro no banco"))
 				.when(clienteGateway).criar(Mockito.any(Cliente.class));
 

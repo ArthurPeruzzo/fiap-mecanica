@@ -30,6 +30,7 @@ public class ClienteController {
 	)
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "201", description = "Cliente criado com sucesso"),
+			@ApiResponse(responseCode = "409", description = "Ja existe um Cliente criado com o documento informado"),
 			@ApiResponse(responseCode = "400", description = "Parametros de entrada invalidos"),
 			@ApiResponse(responseCode = "401", description = "Não autenticado"),
 			@ApiResponse(responseCode = "403", description = "Acesso negado")

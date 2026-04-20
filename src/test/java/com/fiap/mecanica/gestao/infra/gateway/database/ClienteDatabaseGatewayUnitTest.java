@@ -3,6 +3,7 @@ package com.fiap.mecanica.gestao.infra.gateway.database;
 import com.fiap.mecanica.gestao.core.domain.Cliente;
 import com.fiap.mecanica.gestao.infra.gateway.entity.ClienteEntity;
 import com.fiap.mecanica.gestao.infra.gateway.repository.ClienteRepository;
+import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,6 +23,10 @@ class ClienteDatabaseGatewayUnitTest {
 
     @Mock
     private ClienteRepository clienteRepository;
+
+    // -------------------------------------------------------------------------
+    // criar
+    // -------------------------------------------------------------------------
 
     @Test
     void criar_shouldSaveEntityWithCpfAndNullCnpj() {
@@ -61,5 +66,57 @@ class ClienteDatabaseGatewayUnitTest {
                 .thenThrow(new RuntimeException("erro no banco"));
 
         assertThrows(RuntimeException.class, () -> gateway.criar(cliente));
+    }
+
+    // -------------------------------------------------------------------------
+    // existePorCpf
+    // -------------------------------------------------------------------------
+
+    @Test
+    void existePorCpf_shouldReturnTrueWhenCpfExists() {
+        Mockito.when(clienteRepository.existsByCpf("12345678909")).thenReturn(true);
+
+        assertTrue(gateway.existePorCpf("12345678909"));
+    }
+
+    @Test
+    void existePorCpf_shouldReturnFalseWhenCpfNotExists() {
+        Mockito.when(clienteRepository.existsByCpf("12345678909")).thenReturn(false);
+
+        assertFalse(gateway.existePorCpf("12345678909"));
+    }
+
+    @Test
+    void existePorCpf_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.when(clienteRepository.existsByCpf(Mockito.anyString()))
+                .thenThrow(new RuntimeException("db error"));
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.existePorCpf("12345678909"));
+    }
+
+    // -------------------------------------------------------------------------
+    // existePorCnpj
+    // -------------------------------------------------------------------------
+
+    @Test
+    void existePorCnpj_shouldReturnTrueWhenCnpjExists() {
+        Mockito.when(clienteRepository.existsByCnpj("00000000000191")).thenReturn(true);
+
+        assertTrue(gateway.existePorCnpj("00000000000191"));
+    }
+
+    @Test
+    void existePorCnpj_shouldReturnFalseWhenCnpjNotExists() {
+        Mockito.when(clienteRepository.existsByCnpj("00000000000191")).thenReturn(false);
+
+        assertFalse(gateway.existePorCnpj("00000000000191"));
+    }
+
+    @Test
+    void existePorCnpj_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.when(clienteRepository.existsByCnpj(Mockito.anyString()))
+                .thenThrow(new RuntimeException("db error"));
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.existePorCnpj("00000000000191"));
     }
 }
