@@ -1,6 +1,7 @@
 package com.fiap.mecanica.gestao.infra.gateway.database;
 
 import com.fiap.mecanica.gestao.core.domain.Atendente;
+import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
 import com.fiap.mecanica.gestao.core.gateway.AtendenteGateway;
 import com.fiap.mecanica.gestao.infra.gateway.repository.AtendenteRepository;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
@@ -23,8 +24,7 @@ public class AtendenteDatabaseGateway implements AtendenteGateway {
 			return atendenteRepository.findById(id)
 					.map(entity -> Atendente.builder()
 							.id(entity.getId())
-							.nome(entity.getNome())
-							.sobrenome(entity.getSobrenome())
+							.nomeCompleto(new NomeCompleto(entity.getNome(), entity.getSobrenome()))
 							.build());
 		} catch (Exception e) {
 			log.error("Erro ao buscar atendente por id: {}", id, e);

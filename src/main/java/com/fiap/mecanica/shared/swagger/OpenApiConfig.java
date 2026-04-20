@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 @OpenAPIDefinition(
         tags = {
                 @Tag(name = "Autenticação", description = "Autenticação"),
+                @Tag(name = "Cliente", description = "Operações relacionadas ao cliente"),
         },
         security = {
                 @SecurityRequirement(name = "bearerAuth")

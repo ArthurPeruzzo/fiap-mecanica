@@ -1,5 +1,6 @@
 package com.fiap.mecanica.gestao.infra.gateway.database;
 
+import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import com.fiap.mecanica.gestao.core.domain.Mecanico;
 import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
@@ -23,8 +24,7 @@ public class MecanicoDatabaseGateway implements MecanicoGateway {
 			return mecanicoRepository.findById(id)
 					.map(entity -> Mecanico.builder()
 							.id(entity.getId())
-							.nome(entity.getNome())
-							.sobrenome(entity.getSobrenome())
+							.nomeCompleto(new NomeCompleto(entity.getNome(), entity.getSobrenome()))
 							.especialidade(entity.getEspecialidade())
 							.build());
 		} catch (Exception e) {
