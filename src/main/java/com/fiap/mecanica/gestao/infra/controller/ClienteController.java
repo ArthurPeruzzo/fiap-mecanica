@@ -1,7 +1,9 @@
 package com.fiap.mecanica.gestao.infra.controller;
 
+import com.fiap.mecanica.gestao.core.dto.AtualizarClienteDto;
 import com.fiap.mecanica.gestao.core.dto.CriarClienteDto;
 import com.fiap.mecanica.gestao.core.dto.ListarClientesDto;
+import com.fiap.mecanica.gestao.core.usecase.AtualizarClienteUseCase;
 import com.fiap.mecanica.gestao.core.usecase.CriarClienteUseCase;
 import com.fiap.mecanica.gestao.core.usecase.ListarClientesUseCase;
 import com.fiap.mecanica.gestao.infra.controller.json.ClienteRequestJson;
@@ -16,7 +18,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -29,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ClienteController {
 
 	private final CriarClienteUseCase criarClienteUseCase;
+	private final AtualizarClienteUseCase atualizarClienteUseCase;
 	private final ListarClientesUseCase listarClientesUseCase;
 
 	@Operation(
@@ -64,5 +69,24 @@ public class ClienteController {
 			@RequestParam(defaultValue = "10") int size) {
 		var pagina = listarClientesUseCase.listar(new ListarClientesDto(page, size));
 		return ResponseEntity.ok(PageResponse.from(pagina.map(ClienteResponseJson::from)));
+	}
+
+	@Operation(
+			summary = "Atualizar um cliente",
+			description = "Atualiza os dados de um cliente existente"
+	)
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "204", description = "Cliente atualizado com sucesso"),
+			@ApiResponse(responseCode = "400", description = "Parametros de entrada invalidos"),
+			@ApiResponse(responseCode = "404", description = "Cliente não encontrado"),
+			@ApiResponse(responseCode = "409", description = "Ja existe um cliente com o documento informado"),
+			@ApiResponse(responseCode = "401", description = "Não autenticado"),
+			@ApiResponse(responseCode = "403", description = "Acesso negado")
+	})
+	@PutMapping("/{id}")
+	public ResponseEntity<Void> atualizar(@PathVariable Long id, @RequestBody @Valid ClienteRequestJson clienteRequestJson) {
+		var dto = new AtualizarClienteDto(id, clienteRequestJson.nome(), clienteRequestJson.sobrenome(), clienteRequestJson.cnpj(), clienteRequestJson.cpf());
+		atualizarClienteUseCase.atualizar(dto);
+		return ResponseEntity.noContent().build();
 	}
 }

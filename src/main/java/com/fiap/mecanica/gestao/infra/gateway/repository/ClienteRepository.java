@@ -8,4 +8,6 @@ import org.springframework.stereotype.Repository;
 public interface ClienteRepository extends JpaRepository<ClienteEntity, Long> {
 	boolean existsByCpf(String cpf);
 	boolean existsByCnpj(String cnpj);
+	boolean existsByCpfAndIdNot(String cpf, Long id);
+	boolean existsByCnpjAndIdNot(String cnpj, Long id);
 }

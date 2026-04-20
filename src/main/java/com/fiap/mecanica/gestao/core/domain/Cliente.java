@@ -31,6 +31,18 @@ public class Cliente {
 		}
 	}
 
+	public void atualizar(NomeCompleto nomeCompleto, String cnpj, String cpf) {
+		boolean temCnpj = cnpj != null;
+		boolean temCpf  = cpf  != null;
+
+		if (temCpf == temCnpj) {
+			throw new IllegalArgumentException("O cnpj ou cpf precisam estar preenchidos");
+		}
+
+		this.nomeCompleto = nomeCompleto;
+		this.documento = cnpj != null ? new Cnpj(cnpj) : new Cpf(cpf);
+	}
+
 	public static Cliente reconstituir(Long id, NomeCompleto nomeCompleto, String cnpj, String cpf) {
 		var cliente = new Cliente(nomeCompleto, cnpj, cpf);
 		cliente.id = id;

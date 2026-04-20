@@ -1,6 +1,8 @@
 package com.fiap.mecanica.gestao.infra.controller;
 
 import com.fiap.mecanica.gestao.core.domain.Cliente;
+import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
+import com.fiap.mecanica.gestao.core.usecase.AtualizarClienteUseCase;
 import com.fiap.mecanica.gestao.core.usecase.CriarClienteUseCase;
 import com.fiap.mecanica.gestao.core.usecase.ListarClientesUseCase;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
@@ -34,6 +36,9 @@ class ClienteControllerContractTest {
 
 	@MockitoBean
 	private CriarClienteUseCase criarClienteUseCase;
+
+	@MockitoBean
+	private AtualizarClienteUseCase atualizarClienteUseCase;
 
 	@MockitoBean
 	private ListarClientesUseCase listarClientesUseCase;
@@ -176,7 +181,7 @@ class ClienteControllerContractTest {
 				.andExpect(jsonPath("$.content[0].id").value(1))
 				.andExpect(jsonPath("$.content[0].nome").value("Pedro"))
 				.andExpect(jsonPath("$.content[0].sobrenome").value("Silva"))
-				.andExpect(jsonPath("$.content[0].cpf").value("12345678909"))
+				.andExpect(jsonPath("$.content[0].cpf").value("123.456.789-09"))
 				.andExpect(jsonPath("$.content[0].cnpj").doesNotExist())
 				.andExpect(jsonPath("$.totalElements").value(1));
 
@@ -192,5 +197,83 @@ class ClienteControllerContractTest {
 				.andExpect(status().isOk());
 
 		Mockito.verify(listarClientesUseCase).listar(Mockito.any());
+	}
+
+	// -------------------------------------------------------------------------
+	// PUT /cliente/{id}
+	// -------------------------------------------------------------------------
+
+	@ParameterizedTest
+	@CsvSource({
+			"'{\"nome\":\"\",\"sobrenome\":\"Silva\",\"cpf\":\"951.147.520-73\"}', nome, 'O nome deve ser preenchido'",
+			"'{\"nome\":\"Pedro\",\"sobrenome\":\"\",\"cpf\":\"951.147.520-73\"}', sobrenome, 'O sobrenome deve ser preenchido'",
+			"'{\"nome\":\"Pedro\",\"sobrenome\":\"Silva\",\"cpf\":\"000.000.000-00\"}', cpf, 'O conteúdo ou a formatação do CPF não é válida'",
+			"'{\"nome\":\"Pedro\",\"sobrenome\":\"Silva\",\"cnpj\":\"00.000.000/0000-00\"}', cnpj, 'O conteúdo ou a formatação do CNPJ não é válida. Segue formatos de exemplo: AA.AAA.AAA/AAAA-DV ou 00.000.000/0000-00 com ou sem formatação'"
+	})
+	void shouldReturn400WithFieldValidationMessageOnUpdate(String requestJson, String field, String expectedMessage) throws Exception {
+		mockMvc.perform(MockMvcRequestBuilders.put("/cliente/1")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(requestJson))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$." + field).value(expectedMessage));
+
+		Mockito.verifyNoInteractions(atualizarClienteUseCase);
+	}
+
+	@Test
+	void shouldReturn400WhenBothCpfAndCnpjProvidedOnUpdate() throws Exception {
+		String json = """
+				{
+				  "nome": "Pedro",
+				  "sobrenome": "Silva",
+				  "cpf": "951.147.520-73",
+				  "cnpj": "1A.3BC.45D/0001-EF"
+				}
+				""";
+
+		mockMvc.perform(MockMvcRequestBuilders.put("/cliente/1")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(json))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.clienteRequestJson").value("Informe CPF ou CNPJ, não ambos e não nenhum"));
+
+		Mockito.verifyNoInteractions(atualizarClienteUseCase);
+	}
+
+	@Test
+	void shouldReturn204WhenValidCpfProvidedOnUpdate() throws Exception {
+		String json = """
+				{
+				  "nome": "Pedro",
+				  "sobrenome": "Silva",
+				  "cpf": "951.147.520-73"
+				}
+				""";
+
+		mockMvc.perform(MockMvcRequestBuilders.put("/cliente/1")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(json))
+				.andExpect(status().isNoContent());
+
+		Mockito.verify(atualizarClienteUseCase).atualizar(Mockito.any());
+	}
+
+	@Test
+	void shouldReturn404WhenClienteNotFoundOnUpdate() throws Exception {
+		String json = """
+				{
+				  "nome": "Pedro",
+				  "sobrenome": "Silva",
+				  "cpf": "951.147.520-73"
+				}
+				""";
+
+		Mockito.doThrow(new ClienteNaoEncontradoException())
+				.when(atualizarClienteUseCase).atualizar(Mockito.any());
+
+		mockMvc.perform(MockMvcRequestBuilders.put("/cliente/99")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(json))
+				.andExpect(status().isNotFound());
 	}
 }

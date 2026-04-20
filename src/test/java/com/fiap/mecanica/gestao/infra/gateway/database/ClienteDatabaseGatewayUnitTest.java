@@ -73,6 +73,113 @@ class ClienteDatabaseGatewayUnitTest {
     }
 
     // -------------------------------------------------------------------------
+    // buscarPorId
+    // -------------------------------------------------------------------------
+
+    @Test
+    void buscarPorId_shouldReturnMappedClienteWhenFound() {
+        var entity = ClienteEntity.builder().id(1L).nome("Pedro").sobrenome("Silva").cpf("12345678909").build();
+        Mockito.when(clienteRepository.findById(1L)).thenReturn(java.util.Optional.of(entity));
+
+        var result = gateway.buscarPorId(1L);
+
+        assertTrue(result.isPresent());
+        assertEquals(1L, result.get().getId());
+        assertEquals("Pedro", result.get().getNomeCompleto().nome());
+        assertEquals("12345678909", result.get().getCpf().get().getValor());
+    }
+
+    @Test
+    void buscarPorId_shouldReturnEmptyWhenNotFound() {
+        Mockito.when(clienteRepository.findById(99L)).thenReturn(java.util.Optional.empty());
+
+        assertTrue(gateway.buscarPorId(99L).isEmpty());
+    }
+
+    @Test
+    void buscarPorId_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.when(clienteRepository.findById(Mockito.anyLong()))
+                .thenThrow(new RuntimeException("db error"));
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.buscarPorId(1L));
+    }
+
+    // -------------------------------------------------------------------------
+    // atualizar
+    // -------------------------------------------------------------------------
+
+    @Test
+    void atualizar_shouldSaveEntityWithId() {
+        var cliente = Cliente.reconstituir(1L, new NomeCompleto("Carlos", "Costa"), null, "12345678909");
+        var captor = ArgumentCaptor.forClass(ClienteEntity.class);
+
+        gateway.atualizar(cliente);
+
+        Mockito.verify(clienteRepository).save(captor.capture());
+        var entity = captor.getValue();
+        assertEquals(1L, entity.getId());
+        assertEquals("Carlos", entity.getNome());
+        assertEquals("12345678909", entity.getCpf());
+        assertNull(entity.getCnpj());
+    }
+
+    @Test
+    void atualizar_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        var cliente = Cliente.reconstituir(1L, new NomeCompleto("Pedro", "Silva"), null, "12345678909");
+        Mockito.when(clienteRepository.save(Mockito.any())).thenThrow(new RuntimeException("db error"));
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.atualizar(cliente));
+    }
+
+    // -------------------------------------------------------------------------
+    // existePorCpfExcluindoId / existePorCnpjExcluindoId
+    // -------------------------------------------------------------------------
+
+    @Test
+    void existePorCpfExcluindoId_shouldReturnTrueWhenAnotherClienteHasCpf() {
+        Mockito.when(clienteRepository.existsByCpfAndIdNot("12345678909", 1L)).thenReturn(true);
+
+        assertTrue(gateway.existePorCpfExcluindoId("12345678909", 1L));
+    }
+
+    @Test
+    void existePorCpfExcluindoId_shouldReturnFalseWhenOnlyCurrentClienteHasCpf() {
+        Mockito.when(clienteRepository.existsByCpfAndIdNot("12345678909", 1L)).thenReturn(false);
+
+        assertFalse(gateway.existePorCpfExcluindoId("12345678909", 1L));
+    }
+
+    @Test
+    void existePorCpfExcluindoId_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.when(clienteRepository.existsByCpfAndIdNot(Mockito.anyString(), Mockito.anyLong()))
+                .thenThrow(new RuntimeException("db error"));
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.existePorCpfExcluindoId("12345678909", 1L));
+    }
+
+    @Test
+    void existePorCnpjExcluindoId_shouldReturnTrueWhenAnotherClienteHasCnpj() {
+        Mockito.when(clienteRepository.existsByCnpjAndIdNot("00000000000191", 1L)).thenReturn(true);
+
+        assertTrue(gateway.existePorCnpjExcluindoId("00000000000191", 1L));
+    }
+
+    @Test
+    void existePorCnpjExcluindoId_shouldReturnFalseWhenOnlyCurrentClienteHasCnpj() {
+        Mockito.when(clienteRepository.existsByCnpjAndIdNot("00000000000191", 1L)).thenReturn(false);
+
+        assertFalse(gateway.existePorCnpjExcluindoId("00000000000191", 1L));
+    }
+
+    @Test
+    void existePorCnpjExcluindoId_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.when(clienteRepository.existsByCnpjAndIdNot(Mockito.anyString(), Mockito.anyLong()))
+                .thenThrow(new RuntimeException("db error"));
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.existePorCnpjExcluindoId("00000000000191", 1L));
+    }
+
+    // -------------------------------------------------------------------------
     // listar
     // -------------------------------------------------------------------------
 

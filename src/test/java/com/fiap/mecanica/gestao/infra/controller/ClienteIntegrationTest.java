@@ -254,6 +254,100 @@ class ClienteIntegrationTest extends AbstractContainer {
 				.body("size", Matchers.equalTo(1));
 	}
 
+	// -------------------------------------------------------------------------
+	// PUT /cliente/{id}
+	// -------------------------------------------------------------------------
+
+	@Test
+	void shouldUpdateClienteSuccessfully() {
+		String token = obterToken();
+
+		String createBody = """
+				{"nome":"Pedro","sobrenome":"Silva","cpf":"188.254.690-39"}
+				""";
+
+		RestAssured
+				.given()
+				.contentType("application/json")
+				.header("Authorization", "Bearer " + token)
+				.body(createBody)
+				.when()
+				.post("/cliente")
+				.then()
+				.statusCode(201);
+
+		Long id = clienteRepository.findAll().getFirst().getId();
+
+		RestAssured
+				.given()
+				.contentType("application/json")
+				.header("Authorization", "Bearer " + token)
+				.body("""
+						{"nome":"Carlos","sobrenome":"Costa","cpf":"951.147.520-73"}
+						""")
+				.when()
+				.put("/cliente/" + id)
+				.then()
+				.statusCode(204);
+
+		var updated = clienteRepository.findById(id).orElseThrow();
+		Assertions.assertEquals("Carlos", updated.getNome());
+		Assertions.assertEquals("Costa", updated.getSobrenome());
+		Assertions.assertEquals("95114752073", updated.getCpf());
+	}
+
+	@Test
+	void shouldReturn404WhenClienteNotFoundOnUpdate() {
+		String token = obterToken();
+
+		RestAssured
+				.given()
+				.contentType("application/json")
+				.header("Authorization", "Bearer " + token)
+				.body("""
+						{"nome":"Pedro","sobrenome":"Silva","cpf":"951.147.520-73"}
+						""")
+				.when()
+				.put("/cliente/9999")
+				.then()
+				.statusCode(404)
+				.body("message", Matchers.equalTo("Cliente não encontrado"));
+	}
+
+	@Test
+	void shouldReturn409WhenUpdatingToExistingCpf() {
+		String token = obterToken();
+
+		RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+				.body("""
+						{"nome":"Pedro","sobrenome":"Silva","cpf":"188.254.690-39"}
+						""")
+				.when().post("/cliente").then().statusCode(201);
+
+		RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+				.body("""
+						{"nome":"Ana","sobrenome":"Costa","cpf":"951.147.520-73"}
+						""")
+				.when().post("/cliente").then().statusCode(201);
+
+		Long secondId = clienteRepository.findAll().stream()
+				.filter(c -> "95114752073".equals(c.getCpf()))
+				.findFirst().orElseThrow().getId();
+
+		RestAssured
+				.given()
+				.contentType("application/json")
+				.header("Authorization", "Bearer " + token)
+				.body("""
+						{"nome":"Ana","sobrenome":"Costa","cpf":"188.254.690-39"}
+						""")
+				.when()
+				.put("/cliente/" + secondId)
+				.then()
+				.statusCode(409)
+				.body("message", Matchers.equalTo("Já existe um cliente cadastrado com o documento informado"));
+	}
+
 	@Test
 	void shouldReturn401WhenNoTokenProvided() {
 		RestAssured

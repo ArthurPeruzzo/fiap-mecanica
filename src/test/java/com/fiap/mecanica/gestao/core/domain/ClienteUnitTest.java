@@ -79,6 +79,35 @@ class ClienteUnitTest {
     }
 
     @Test
+    void atualizar_shouldChangeNomeAndDocumento() {
+        var cliente = new Cliente(NOME, null, "12345678909");
+
+        cliente.atualizar(new NomeCompleto("Carlos", "Costa"), "00000000000191", null);
+
+        assertEquals("Carlos", cliente.getNomeCompleto().nome());
+        assertEquals("Costa", cliente.getNomeCompleto().sobrenome());
+        assertTrue(cliente.getCnpj().isPresent());
+        assertEquals("00000000000191", cliente.getCnpj().get().getValor());
+        assertTrue(cliente.getCpf().isEmpty());
+    }
+
+    @Test
+    void atualizar_shouldThrowWhenNeitherDocumentoProvided() {
+        var cliente = new Cliente(NOME, null, "12345678909");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> cliente.atualizar(NOME, null, null));
+    }
+
+    @Test
+    void atualizar_shouldThrowWhenBothDocumentosProvided() {
+        var cliente = new Cliente(NOME, null, "12345678909");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> cliente.atualizar(NOME, "00000000000191", "12345678909"));
+    }
+
+    @Test
     void reconstituir_shouldWorkWithCnpj() {
         var cliente = Cliente.reconstituir(5L, NOME, "00000000000191", null);
 

@@ -10,6 +10,8 @@ import com.fiap.mecanica.shared.valueobjects.Cnpj;
 import com.fiap.mecanica.shared.valueobjects.Cpf;
 import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
 import org.springframework.data.domain.PageRequest;
+
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -31,6 +33,58 @@ public class ClienteDatabaseGateway implements ClienteGateway {
 				.build();
 
 		clienteRepository.save(entity);
+	}
+
+	@Override
+	public Optional<Cliente> buscarPorId(Long id) {
+		try {
+			return clienteRepository.findById(id)
+					.map(e -> Cliente.reconstituir(
+							e.getId(),
+							new NomeCompleto(e.getNome(), e.getSobrenome()),
+							e.getCnpj(),
+							e.getCpf()));
+		} catch (Exception e) {
+			log.error("Erro ao buscar cliente por id: {}", id, e);
+			throw new ErroAcessoBaseDeDadosException();
+		}
+	}
+
+	@Override
+	public void atualizar(Cliente cliente) {
+		try {
+			var entity = ClienteEntity.builder()
+					.id(cliente.getId())
+					.nome(cliente.getNomeCompleto().nome())
+					.sobrenome(cliente.getNomeCompleto().sobrenome())
+					.cpf(cliente.getCpf().map(Cpf::getValor).orElse(null))
+					.cnpj(cliente.getCnpj().map(Cnpj::getValor).orElse(null))
+					.build();
+			clienteRepository.save(entity);
+		} catch (Exception e) {
+			log.error("Erro ao atualizar cliente", e);
+			throw new ErroAcessoBaseDeDadosException();
+		}
+	}
+
+	@Override
+	public boolean existePorCpfExcluindoId(String cpf, Long id) {
+		try {
+			return clienteRepository.existsByCpfAndIdNot(cpf, id);
+		} catch (Exception e) {
+			log.error("Erro ao verificar existência de cliente por cpf excluindo id", e);
+			throw new ErroAcessoBaseDeDadosException();
+		}
+	}
+
+	@Override
+	public boolean existePorCnpjExcluindoId(String cnpj, Long id) {
+		try {
+			return clienteRepository.existsByCnpjAndIdNot(cnpj, id);
+		} catch (Exception e) {
+			log.error("Erro ao verificar existência de cliente por cnpj excluindo id", e);
+			throw new ErroAcessoBaseDeDadosException();
+		}
 	}
 
 	@Override
