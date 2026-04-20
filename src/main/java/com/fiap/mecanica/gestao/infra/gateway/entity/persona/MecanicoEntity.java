@@ -1,4 +1,4 @@
-package com.fiap.mecanica.gestao.infra.gateway.entity;
+package com.fiap.mecanica.gestao.infra.gateway.entity.persona;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
