@@ -2,6 +2,7 @@ package com.fiap.mecanica.gestao.infra.gateway.database;
 
 import com.fiap.mecanica.gestao.core.domain.Veiculo;
 import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
+import com.fiap.mecanica.gestao.infra.gateway.entity.ClienteEntity;
 import com.fiap.mecanica.gestao.infra.gateway.entity.VeiculoEntity;
 import com.fiap.mecanica.gestao.infra.gateway.repository.VeiculoRepository;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
@@ -24,7 +25,7 @@ public class VeiculoDatabaseGateway implements VeiculoGateway {
     public void criar(Veiculo veiculo) {
         try {
             var entity = VeiculoEntity.builder()
-                    .clienteId(veiculo.getClienteId())
+                    .cliente(ClienteEntity.builder().id(veiculo.getClienteId()).build())
                     .placa(veiculo.getPlaca().getValor())
                     .modelo(veiculo.getModelo())
                     .ano(veiculo.getAno())
@@ -40,7 +41,7 @@ public class VeiculoDatabaseGateway implements VeiculoGateway {
     public Optional<Veiculo> buscarPorId(Long id) {
         try {
             return veiculoRepository.findById(id)
-                    .map(e -> Veiculo.reconstituir(e.getId(), e.getClienteId(), e.getPlaca(), e.getModelo(), e.getAno()));
+                    .map(e -> Veiculo.reconstituir(e.getId(), e.getCliente().getId(), e.getPlaca(), e.getModelo(), e.getAno()));
         } catch (Exception e) {
             log.error("Erro ao buscar veiculo por id: {}", id, e);
             throw new ErroAcessoBaseDeDadosException();
@@ -52,7 +53,7 @@ public class VeiculoDatabaseGateway implements VeiculoGateway {
         try {
             var entity = VeiculoEntity.builder()
                     .id(veiculo.getId())
-                    .clienteId(veiculo.getClienteId())
+                    .cliente(ClienteEntity.builder().id(veiculo.getClienteId()).build())
                     .placa(veiculo.getPlaca().getValor())
                     .modelo(veiculo.getModelo())
                     .ano(veiculo.getAno())
@@ -99,7 +100,7 @@ public class VeiculoDatabaseGateway implements VeiculoGateway {
         try {
             var resultado = veiculoRepository.findAll(PageRequest.of(page, size));
             var veiculos = resultado.getContent().stream()
-                    .map(e -> Veiculo.reconstituir(e.getId(), e.getClienteId(), e.getPlaca(), e.getModelo(), e.getAno()))
+                    .map(e -> Veiculo.reconstituir(e.getId(), e.getCliente().getId(), e.getPlaca(), e.getModelo(), e.getAno()))
                     .toList();
             return new Pagina<>(veiculos, resultado.getNumber(), resultado.getSize(), resultado.getTotalElements(), resultado.getTotalPages());
         } catch (Exception e) {

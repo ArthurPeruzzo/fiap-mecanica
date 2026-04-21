@@ -1,6 +1,5 @@
 package com.fiap.mecanica.gestao.infra.controller;
 
-import com.fiap.mecanica.gestao.infra.gateway.entity.ClienteEntity;
 import com.fiap.mecanica.gestao.infra.gateway.entity.VeiculoEntity;
 import com.fiap.mecanica.gestao.infra.gateway.repository.ClienteRepository;
 import com.fiap.mecanica.gestao.infra.gateway.repository.VeiculoRepository;
@@ -107,7 +106,7 @@ class VeiculoIntegrationTest extends AbstractContainer {
         List<VeiculoEntity> veiculos = veiculoRepository.findAll();
         Assertions.assertEquals(1, veiculos.size());
         Assertions.assertEquals("ABC1234", veiculos.getFirst().getPlaca());
-        Assertions.assertEquals(clienteId, veiculos.getFirst().getClienteId());
+        Assertions.assertEquals(clienteId, veiculos.getFirst().getCliente().getId());
     }
 
     @Test
@@ -238,7 +237,7 @@ class VeiculoIntegrationTest extends AbstractContainer {
         Assertions.assertEquals("ABC1D23", updated.getPlaca());
         Assertions.assertEquals("Onix", updated.getModelo());
         Assertions.assertEquals(2023, updated.getAno());
-        Assertions.assertEquals(clienteId, updated.getClienteId());
+        Assertions.assertEquals(clienteId, updated.getCliente().getId());
     }
 
     @Test

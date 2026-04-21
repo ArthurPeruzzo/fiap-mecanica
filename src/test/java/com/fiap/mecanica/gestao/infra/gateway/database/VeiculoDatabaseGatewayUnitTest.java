@@ -1,6 +1,7 @@
 package com.fiap.mecanica.gestao.infra.gateway.database;
 
 import com.fiap.mecanica.gestao.core.domain.Veiculo;
+import com.fiap.mecanica.gestao.infra.gateway.entity.ClienteEntity;
 import com.fiap.mecanica.gestao.infra.gateway.entity.VeiculoEntity;
 import com.fiap.mecanica.gestao.infra.gateway.repository.VeiculoRepository;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
@@ -43,7 +44,7 @@ class VeiculoDatabaseGatewayUnitTest {
 
         Mockito.verify(veiculoRepository).save(captor.capture());
         var entity = captor.getValue();
-        assertEquals(1L, entity.getClienteId());
+        assertEquals(1L, entity.getCliente().getId());
         assertEquals("ABC1234", entity.getPlaca());
         assertEquals("Gol", entity.getModelo());
         assertEquals(2020, entity.getAno());
@@ -74,7 +75,8 @@ class VeiculoDatabaseGatewayUnitTest {
 
     @Test
     void buscarPorId_shouldReturnMappedVeiculoWhenFound() {
-        var entity = VeiculoEntity.builder().id(1L).clienteId(2L).placa("ABC1234").modelo("Gol").ano(2020).build();
+        var clienteEntity = ClienteEntity.builder().id(2L).build();
+        var entity = VeiculoEntity.builder().id(1L).cliente(clienteEntity).placa("ABC1234").modelo("Gol").ano(2020).build();
         Mockito.when(veiculoRepository.findById(1L)).thenReturn(java.util.Optional.of(entity));
 
         var result = gateway.buscarPorId(1L);
@@ -113,7 +115,7 @@ class VeiculoDatabaseGatewayUnitTest {
         Mockito.verify(veiculoRepository).save(captor.capture());
         var entity = captor.getValue();
         assertEquals(1L, entity.getId());
-        assertEquals(2L, entity.getClienteId());
+        assertEquals(2L, entity.getCliente().getId());
         assertEquals("ABC1D23", entity.getPlaca());
         assertEquals("Onix", entity.getModelo());
         assertEquals(2023, entity.getAno());
@@ -204,7 +206,8 @@ class VeiculoDatabaseGatewayUnitTest {
 
     @Test
     void listar_shouldReturnMappedPagina() {
-        var entity = VeiculoEntity.builder().id(1L).clienteId(2L).placa("ABC1234").modelo("Gol").ano(2020).build();
+        var clienteEntity2 = ClienteEntity.builder().id(2L).build();
+        var entity = VeiculoEntity.builder().id(1L).cliente(clienteEntity2).placa("ABC1234").modelo("Gol").ano(2020).build();
         var springPage = new PageImpl<>(List.of(entity), PageRequest.of(0, 10), 1);
         Mockito.when(veiculoRepository.findAll(PageRequest.of(0, 10))).thenReturn(springPage);
 
