@@ -36,6 +36,8 @@ public class SecurityConfiguration {
     };
 
     protected static final String [] ENDPOINTS_ATENDENTE = {
+            "/cliente/**",
+            "/veiculo/**"
     };
 
     protected static final String[] ENDPOINTS_MECANICO = {
