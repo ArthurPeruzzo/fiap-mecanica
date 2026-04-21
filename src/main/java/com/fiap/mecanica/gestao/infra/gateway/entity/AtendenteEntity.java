@@ -1,5 +1,6 @@
 package com.fiap.mecanica.gestao.infra.gateway.entity;
 
+import com.fiap.mecanica.gestao.core.domain.Turno;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,6 +23,10 @@ public class AtendenteEntity {
 
 	@Column(name = "sobrenome", nullable = false)
 	private String sobrenome;
+
+	@Column(name = "turno", nullable = false)
+	@Enumerated(EnumType.STRING)
+	private Turno turno;
 
 	@Column(name = "user_id", nullable = false)
 	private Long userId;

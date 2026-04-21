@@ -46,7 +46,7 @@ class ClienteIntegrationTest extends AbstractContainer {
 	}
 
 	private String obterToken() {
-		List<RoleEntity> roles = roleRepository.findByNameIn(List.of(RoleEnum.ROLE_ATENDENTE));
+		List<RoleEntity> roles = roleRepository.findByNameIn(List.of(RoleEnum.ROLE_ADMINISTRADOR));
 
 		userRepository.saveAndFlush(UserEntity.builder()
 				.email("any@any.com")

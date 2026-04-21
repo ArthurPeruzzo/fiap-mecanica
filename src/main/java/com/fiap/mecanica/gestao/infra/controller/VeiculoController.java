@@ -42,7 +42,7 @@ public class VeiculoController {
 
     @Operation(
             summary = "Criar um veiculo",
-            description = "Cria um novo veiculo vinculado ao cliente. Somente um atendente pode criar um veiculo."
+            description = "Cria um novo veiculo vinculado ao cliente"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Veiculo criado com sucesso"),
