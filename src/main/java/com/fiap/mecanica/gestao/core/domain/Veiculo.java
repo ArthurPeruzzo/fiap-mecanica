@@ -18,6 +18,12 @@ public class Veiculo {
         this.ano = ano;
     }
 
+    public void atualizar(String placa, String modelo, Integer ano) {
+        this.placa = new Placa(placa);
+        this.modelo = modelo;
+        this.ano = ano;
+    }
+
     public static Veiculo reconstituir(Long id, Long clienteId, String placa, String modelo, Integer ano) {
         var veiculo = new Veiculo(clienteId, placa, modelo, ano);
         veiculo.id = id;

@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -30,6 +32,44 @@ public class VeiculoDatabaseGateway implements VeiculoGateway {
             veiculoRepository.save(entity);
         } catch (Exception e) {
             log.error("Erro ao criar veiculo", e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+
+    @Override
+    public Optional<Veiculo> buscarPorId(Long id) {
+        try {
+            return veiculoRepository.findById(id)
+                    .map(e -> Veiculo.reconstituir(e.getId(), e.getClienteId(), e.getPlaca(), e.getModelo(), e.getAno()));
+        } catch (Exception e) {
+            log.error("Erro ao buscar veiculo por id: {}", id, e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+
+    @Override
+    public void atualizar(Veiculo veiculo) {
+        try {
+            var entity = VeiculoEntity.builder()
+                    .id(veiculo.getId())
+                    .clienteId(veiculo.getClienteId())
+                    .placa(veiculo.getPlaca().getValor())
+                    .modelo(veiculo.getModelo())
+                    .ano(veiculo.getAno())
+                    .build();
+            veiculoRepository.save(entity);
+        } catch (Exception e) {
+            log.error("Erro ao atualizar veiculo", e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+
+    @Override
+    public boolean existePorPlacaExcluindoId(String placa, Long id) {
+        try {
+            return veiculoRepository.existsByPlacaAndIdNot(placa, id);
+        } catch (Exception e) {
+            log.error("Erro ao verificar existência de veiculo por placa excluindo id", e);
             throw new ErroAcessoBaseDeDadosException();
         }
     }

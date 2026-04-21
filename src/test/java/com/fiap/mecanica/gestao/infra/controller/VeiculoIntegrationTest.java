@@ -210,6 +210,83 @@ class VeiculoIntegrationTest extends AbstractContainer {
     }
 
     // -------------------------------------------------------------------------
+    // PUT /veiculo/{id}
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldUpdateVeiculoSuccessfully() {
+        String token = obterToken();
+        Long clienteId = criarCliente(token);
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body(String.format("{\"clienteId\":%d,\"placa\":\"ABC1234\",\"modelo\":\"Gol\",\"ano\":2020}", clienteId))
+                .when().post("/veiculo").then().statusCode(201);
+
+        Long id = veiculoRepository.findAll().getFirst().getId();
+
+        RestAssured
+                .given()
+                .contentType("application/json")
+                .header("Authorization", "Bearer " + token)
+                .body("{\"placa\":\"ABC1D23\",\"modelo\":\"Onix\",\"ano\":2023}")
+                .when()
+                .put("/veiculo/" + id)
+                .then()
+                .statusCode(204);
+
+        var updated = veiculoRepository.findById(id).orElseThrow();
+        Assertions.assertEquals("ABC1D23", updated.getPlaca());
+        Assertions.assertEquals("Onix", updated.getModelo());
+        Assertions.assertEquals(2023, updated.getAno());
+        Assertions.assertEquals(clienteId, updated.getClienteId());
+    }
+
+    @Test
+    void shouldReturn404WhenVeiculoNotFoundOnUpdate() {
+        String token = obterToken();
+
+        RestAssured
+                .given()
+                .contentType("application/json")
+                .header("Authorization", "Bearer " + token)
+                .body("{\"placa\":\"ABC1234\",\"modelo\":\"Gol\",\"ano\":2020}")
+                .when()
+                .put("/veiculo/9999")
+                .then()
+                .statusCode(404)
+                .body("message", Matchers.equalTo("Veículo não encontrado"));
+    }
+
+    @Test
+    void shouldReturn409WhenUpdatingToExistingPlaca() {
+        String token = obterToken();
+        Long clienteId = criarCliente(token);
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body(String.format("{\"clienteId\":%d,\"placa\":\"ABC1234\",\"modelo\":\"Gol\",\"ano\":2020}", clienteId))
+                .when().post("/veiculo").then().statusCode(201);
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body(String.format("{\"clienteId\":%d,\"placa\":\"ABC1D23\",\"modelo\":\"Onix\",\"ano\":2023}", clienteId))
+                .when().post("/veiculo").then().statusCode(201);
+
+        Long secondId = veiculoRepository.findAll().stream()
+                .filter(v -> "ABC1D23".equals(v.getPlaca()))
+                .findFirst().orElseThrow().getId();
+
+        RestAssured
+                .given()
+                .contentType("application/json")
+                .header("Authorization", "Bearer " + token)
+                .body("{\"placa\":\"ABC1234\",\"modelo\":\"Onix\",\"ano\":2023}")
+                .when()
+                .put("/veiculo/" + secondId)
+                .then()
+                .statusCode(409)
+                .body("message", Matchers.equalTo("Já existe um veículo cadastrado com a placa informada"));
+    }
+
+    // -------------------------------------------------------------------------
     // GET /veiculo
     // -------------------------------------------------------------------------
 

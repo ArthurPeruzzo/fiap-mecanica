@@ -69,6 +69,91 @@ class VeiculoDatabaseGatewayUnitTest {
     }
 
     // -------------------------------------------------------------------------
+    // buscarPorId
+    // -------------------------------------------------------------------------
+
+    @Test
+    void buscarPorId_shouldReturnMappedVeiculoWhenFound() {
+        var entity = VeiculoEntity.builder().id(1L).clienteId(2L).placa("ABC1234").modelo("Gol").ano(2020).build();
+        Mockito.when(veiculoRepository.findById(1L)).thenReturn(java.util.Optional.of(entity));
+
+        var result = gateway.buscarPorId(1L);
+
+        assertTrue(result.isPresent());
+        assertEquals(1L, result.get().getId());
+        assertEquals("ABC1234", result.get().getPlaca().getValor());
+    }
+
+    @Test
+    void buscarPorId_shouldReturnEmptyWhenNotFound() {
+        Mockito.when(veiculoRepository.findById(99L)).thenReturn(java.util.Optional.empty());
+
+        assertTrue(gateway.buscarPorId(99L).isEmpty());
+    }
+
+    @Test
+    void buscarPorId_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.when(veiculoRepository.findById(Mockito.anyLong()))
+                .thenThrow(new RuntimeException("db error"));
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.buscarPorId(1L));
+    }
+
+    // -------------------------------------------------------------------------
+    // atualizar
+    // -------------------------------------------------------------------------
+
+    @Test
+    void atualizar_shouldSaveEntityWithId() {
+        var veiculo = Veiculo.reconstituir(1L, 2L, "ABC1D23", "Onix", 2023);
+        var captor = ArgumentCaptor.forClass(VeiculoEntity.class);
+
+        gateway.atualizar(veiculo);
+
+        Mockito.verify(veiculoRepository).save(captor.capture());
+        var entity = captor.getValue();
+        assertEquals(1L, entity.getId());
+        assertEquals(2L, entity.getClienteId());
+        assertEquals("ABC1D23", entity.getPlaca());
+        assertEquals("Onix", entity.getModelo());
+        assertEquals(2023, entity.getAno());
+    }
+
+    @Test
+    void atualizar_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        var veiculo = Veiculo.reconstituir(1L, 2L, "ABC1234", "Gol", 2020);
+        Mockito.when(veiculoRepository.save(Mockito.any())).thenThrow(new RuntimeException("db error"));
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.atualizar(veiculo));
+    }
+
+    // -------------------------------------------------------------------------
+    // existePorPlacaExcluindoId
+    // -------------------------------------------------------------------------
+
+    @Test
+    void existePorPlacaExcluindoId_shouldReturnTrueWhenAnotherVeiculoHasPlaca() {
+        Mockito.when(veiculoRepository.existsByPlacaAndIdNot("ABC1234", 1L)).thenReturn(true);
+
+        assertTrue(gateway.existePorPlacaExcluindoId("ABC1234", 1L));
+    }
+
+    @Test
+    void existePorPlacaExcluindoId_shouldReturnFalseWhenOnlyCurrentVeiculoHasPlaca() {
+        Mockito.when(veiculoRepository.existsByPlacaAndIdNot("ABC1234", 1L)).thenReturn(false);
+
+        assertFalse(gateway.existePorPlacaExcluindoId("ABC1234", 1L));
+    }
+
+    @Test
+    void existePorPlacaExcluindoId_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.when(veiculoRepository.existsByPlacaAndIdNot(Mockito.anyString(), Mockito.anyLong()))
+                .thenThrow(new RuntimeException("db error"));
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.existePorPlacaExcluindoId("ABC1234", 1L));
+    }
+
+    // -------------------------------------------------------------------------
     // existePorPlaca
     // -------------------------------------------------------------------------
 

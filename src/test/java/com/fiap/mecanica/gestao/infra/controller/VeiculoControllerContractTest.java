@@ -3,6 +3,8 @@ package com.fiap.mecanica.gestao.infra.controller;
 import com.fiap.mecanica.gestao.core.domain.Veiculo;
 import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.VeiculoJaExisteException;
+import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
+import com.fiap.mecanica.gestao.core.usecase.AtualizarVeiculoUseCase;
 import com.fiap.mecanica.gestao.core.usecase.CriarVeiculoUseCase;
 import com.fiap.mecanica.gestao.core.usecase.ListarVeiculosUseCase;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
@@ -35,6 +37,9 @@ class VeiculoControllerContractTest {
 
     @MockitoBean
     private CriarVeiculoUseCase criarVeiculoUseCase;
+
+    @MockitoBean
+    private AtualizarVeiculoUseCase atualizarVeiculoUseCase;
 
     @MockitoBean
     private ListarVeiculosUseCase listarVeiculosUseCase;
@@ -143,6 +148,71 @@ class VeiculoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.post("/veiculo")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"clienteId\":1,\"placa\":\"ABC1234\",\"modelo\":\"Gol\",\"ano\":2020}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Já existe um veículo cadastrado com a placa informada"));
+    }
+
+    // -------------------------------------------------------------------------
+    // PUT /veiculo/{id}
+    // -------------------------------------------------------------------------
+
+    @ParameterizedTest
+    @CsvSource({
+            "'{\"placa\":\"ABC1234\",\"modelo\":\"\",\"ano\":2020}', modelo, 'O modelo deve ser preenchido'",
+            "'{\"placa\":\"ABC1234\",\"modelo\":\"Gol\"}', ano, 'O ano deve ser preenchido'"
+    })
+    void shouldReturn400WithFieldValidationMessageOnUpdate(String requestJson, String field, String expectedMessage) throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.put("/veiculo/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$." + field).value(expectedMessage));
+
+        Mockito.verifyNoInteractions(atualizarVeiculoUseCase);
+    }
+
+    @Test
+    void shouldReturn400WhenPlacaIsInvalidOnUpdate() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.put("/veiculo/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"placa\":\"INVALIDA\",\"modelo\":\"Gol\",\"ano\":2020}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.placa").value(
+                        "A placa informada é inválida. Formatos aceitos: ABC1234 (antiga) ou ABC1D23 (Mercosul), com ou sem hífen"));
+
+        Mockito.verifyNoInteractions(atualizarVeiculoUseCase);
+    }
+
+    @Test
+    void shouldReturn204WhenValidUpdateRequest() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.put("/veiculo/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"placa\":\"ABC1D23\",\"modelo\":\"Onix\",\"ano\":2023}"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(atualizarVeiculoUseCase).atualizar(Mockito.any());
+    }
+
+    @Test
+    void shouldReturn404WhenVeiculoNotFoundOnUpdate() throws Exception {
+        Mockito.doThrow(new VeiculoNaoEncontradoException())
+                .when(atualizarVeiculoUseCase).atualizar(Mockito.any());
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/veiculo/99")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"placa\":\"ABC1234\",\"modelo\":\"Gol\",\"ano\":2020}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Veículo não encontrado"));
+    }
+
+    @Test
+    void shouldReturn409WhenPlacaAlreadyExistsOnUpdate() throws Exception {
+        Mockito.doThrow(new VeiculoJaExisteException())
+                .when(atualizarVeiculoUseCase).atualizar(Mockito.any());
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/veiculo/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"placa\":\"ABC1234\",\"modelo\":\"Gol\",\"ano\":2020}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Já existe um veículo cadastrado com a placa informada"));
     }
