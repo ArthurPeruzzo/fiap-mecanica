@@ -287,6 +287,46 @@ class VeiculoIntegrationTest extends AbstractContainer {
     }
 
     // -------------------------------------------------------------------------
+    // DELETE /veiculo/{id}
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldDeleteVeiculoSuccessfully() {
+        String token = obterToken();
+        Long clienteId = criarCliente(token);
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body(String.format("{\"clienteId\":%d,\"placa\":\"ABC1234\",\"modelo\":\"Gol\",\"ano\":2020}", clienteId))
+                .when().post("/veiculo").then().statusCode(201);
+
+        Long id = veiculoRepository.findAll().getFirst().getId();
+
+        RestAssured
+                .given()
+                .header("Authorization", "Bearer " + token)
+                .when()
+                .delete("/veiculo/" + id)
+                .then()
+                .statusCode(204);
+
+        Assertions.assertTrue(veiculoRepository.findById(id).isEmpty());
+    }
+
+    @Test
+    void shouldReturn404WhenVeiculoNotFoundOnDelete() {
+        String token = obterToken();
+
+        RestAssured
+                .given()
+                .header("Authorization", "Bearer " + token)
+                .when()
+                .delete("/veiculo/9999")
+                .then()
+                .statusCode(404)
+                .body("message", Matchers.equalTo("Veículo não encontrado"));
+    }
+
+    // -------------------------------------------------------------------------
     // GET /veiculo
     // -------------------------------------------------------------------------
 

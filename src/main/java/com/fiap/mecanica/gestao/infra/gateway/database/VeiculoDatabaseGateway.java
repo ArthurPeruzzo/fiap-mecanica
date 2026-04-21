@@ -85,6 +85,16 @@ public class VeiculoDatabaseGateway implements VeiculoGateway {
     }
 
     @Override
+    public void deletar(Long id) {
+        try {
+            veiculoRepository.deleteById(id);
+        } catch (Exception e) {
+            log.error("Erro ao deletar veiculo por id: {}", id, e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+
+    @Override
     public Pagina<Veiculo> listar(int page, int size) {
         try {
             var resultado = veiculoRepository.findAll(PageRequest.of(page, size));

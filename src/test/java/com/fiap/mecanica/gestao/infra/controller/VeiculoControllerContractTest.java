@@ -6,6 +6,7 @@ import com.fiap.mecanica.gestao.core.exception.VeiculoJaExisteException;
 import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.usecase.AtualizarVeiculoUseCase;
 import com.fiap.mecanica.gestao.core.usecase.CriarVeiculoUseCase;
+import com.fiap.mecanica.gestao.core.usecase.DeletarVeiculoUseCase;
 import com.fiap.mecanica.gestao.core.usecase.ListarVeiculosUseCase;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.page.Pagina;
@@ -40,6 +41,9 @@ class VeiculoControllerContractTest {
 
     @MockitoBean
     private AtualizarVeiculoUseCase atualizarVeiculoUseCase;
+
+    @MockitoBean
+    private DeletarVeiculoUseCase deletarVeiculoUseCase;
 
     @MockitoBean
     private ListarVeiculosUseCase listarVeiculosUseCase;
@@ -215,6 +219,28 @@ class VeiculoControllerContractTest {
                         .content("{\"placa\":\"ABC1234\",\"modelo\":\"Gol\",\"ano\":2020}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Já existe um veículo cadastrado com a placa informada"));
+    }
+
+    // -------------------------------------------------------------------------
+    // DELETE /veiculo/{id}
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldReturn204WhenDeletarVeiculoSuccessfully() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.delete("/veiculo/1"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(deletarVeiculoUseCase).deletar(1L);
+    }
+
+    @Test
+    void shouldReturn404WhenVeiculoNotFoundOnDelete() throws Exception {
+        Mockito.doThrow(new VeiculoNaoEncontradoException())
+                .when(deletarVeiculoUseCase).deletar(99L);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/veiculo/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Veículo não encontrado"));
     }
 
     // -------------------------------------------------------------------------

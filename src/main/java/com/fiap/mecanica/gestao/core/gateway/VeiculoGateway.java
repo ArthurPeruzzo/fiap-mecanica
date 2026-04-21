@@ -12,4 +12,5 @@ public interface VeiculoGateway {
     boolean existePorPlaca(String placa);
     boolean existePorPlacaExcluindoId(String placa, Long id);
     Pagina<Veiculo> listar(int page, int size);
+    void deletar(Long id);
 }
