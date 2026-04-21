@@ -70,6 +70,10 @@ class InsumoIntegrationTest extends AbstractContainer {
                 .path("token");
     }
 
+    // -------------------------------------------------------------------------
+    // POST /insumo
+    // -------------------------------------------------------------------------
+
     @Test
     void shouldCreateInsumoSuccessfully() {
         String token = obterToken();
@@ -180,5 +184,213 @@ class InsumoIntegrationTest extends AbstractContainer {
                 .post("/insumo")
                 .then()
                 .statusCode(401);
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /insumo
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldReturnEmptyPageWhenNoInsumosCadastrados() {
+        String token = obterToken();
+
+        RestAssured
+                .given()
+                .header("Authorization", "Bearer " + token)
+                .queryParam("page", 0)
+                .queryParam("size", 10)
+                .when()
+                .get("/insumo")
+                .then()
+                .statusCode(200)
+                .body("content", Matchers.hasSize(0))
+                .body("totalElements", Matchers.equalTo(0))
+                .body("totalPages", Matchers.equalTo(0))
+                .body("page", Matchers.equalTo(0))
+                .body("size", Matchers.equalTo(10));
+    }
+
+    @Test
+    void shouldReturnInsumosPagedAfterCreation() {
+        String token = obterToken();
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Óleo de motor","descricao":"Óleo 5W30","preco":45.90,"quantidadeEstoque":10,"unidadeMedida":"LITRO"}
+                        """)
+                .when().post("/insumo").then().statusCode(201);
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Fluido de freio","descricao":"DOT 4","preco":25.00,"quantidadeEstoque":5,"unidadeMedida":"ML"}
+                        """)
+                .when().post("/insumo").then().statusCode(201);
+
+        RestAssured
+                .given()
+                .header("Authorization", "Bearer " + token)
+                .queryParam("page", 0)
+                .queryParam("size", 10)
+                .when()
+                .get("/insumo")
+                .then()
+                .statusCode(200)
+                .body("content", Matchers.hasSize(2))
+                .body("totalElements", Matchers.equalTo(2))
+                .body("totalPages", Matchers.equalTo(1))
+                .body("content[0].nome", Matchers.notNullValue())
+                .body("content[0].unidadeMedida", Matchers.notNullValue());
+    }
+
+    @Test
+    void shouldRespectPageSizeInPagination() {
+        String token = obterToken();
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Óleo de motor","descricao":"Óleo 5W30","preco":45.90,"quantidadeEstoque":10,"unidadeMedida":"LITRO"}
+                        """)
+                .when().post("/insumo").then().statusCode(201);
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Fluido de freio","descricao":"DOT 4","preco":25.00,"quantidadeEstoque":5,"unidadeMedida":"ML"}
+                        """)
+                .when().post("/insumo").then().statusCode(201);
+
+        RestAssured
+                .given()
+                .header("Authorization", "Bearer " + token)
+                .queryParam("page", 0)
+                .queryParam("size", 1)
+                .when()
+                .get("/insumo")
+                .then()
+                .statusCode(200)
+                .body("content", Matchers.hasSize(1))
+                .body("totalElements", Matchers.equalTo(2))
+                .body("totalPages", Matchers.equalTo(2))
+                .body("size", Matchers.equalTo(1));
+    }
+
+    // -------------------------------------------------------------------------
+    // PUT /insumo/{id}
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldUpdateInsumoSuccessfully() {
+        String token = obterToken();
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Óleo de motor","descricao":"Óleo 5W30","preco":45.90,"quantidadeEstoque":10,"unidadeMedida":"LITRO"}
+                        """)
+                .when().post("/insumo").then().statusCode(201);
+
+        Long id = insumoRepository.findAll().getFirst().getId();
+
+        RestAssured
+                .given()
+                .contentType("application/json")
+                .header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Fluido de freio","descricao":"DOT 4","preco":25.00,"quantidadeEstoque":500,"unidadeMedida":"ML"}
+                        """)
+                .when()
+                .put("/insumo/" + id)
+                .then()
+                .statusCode(204);
+
+        var updated = insumoRepository.findById(id).orElseThrow();
+        Assertions.assertEquals("Fluido de freio", updated.getNome());
+        Assertions.assertEquals("DOT 4", updated.getDescricao());
+        Assertions.assertEquals(0, new java.math.BigDecimal("25.00").compareTo(updated.getPreco()));
+        Assertions.assertEquals(500, updated.getQuantidadeEstoque());
+        Assertions.assertEquals(com.fiap.mecanica.estoque.core.domain.UnidadeMedida.ML, updated.getUnidadeMedida());
+    }
+
+    @Test
+    void shouldReturn404WhenInsumoNotFoundOnUpdate() {
+        String token = obterToken();
+
+        RestAssured
+                .given()
+                .contentType("application/json")
+                .header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Óleo","descricao":"5W30","preco":45.90,"quantidadeEstoque":10,"unidadeMedida":"LITRO"}
+                        """)
+                .when()
+                .put("/insumo/9999")
+                .then()
+                .statusCode(404)
+                .body("message", Matchers.equalTo("Insumo não encontrado"));
+    }
+
+    @Test
+    void shouldReturn400WhenUnidadeMedidaIsMissingOnUpdate() {
+        String token = obterToken();
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Óleo de motor","descricao":"Óleo 5W30","preco":45.90,"quantidadeEstoque":10,"unidadeMedida":"LITRO"}
+                        """)
+                .when().post("/insumo").then().statusCode(201);
+
+        Long id = insumoRepository.findAll().getFirst().getId();
+
+        RestAssured
+                .given()
+                .contentType("application/json")
+                .header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Óleo","descricao":"5W30","preco":45.90,"quantidadeEstoque":10}
+                        """)
+                .when()
+                .put("/insumo/" + id)
+                .then()
+                .statusCode(400)
+                .body("unidadeMedida", Matchers.notNullValue());
+    }
+
+    // -------------------------------------------------------------------------
+    // DELETE /insumo/{id}
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldDeleteInsumoSuccessfully() {
+        String token = obterToken();
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Óleo de motor","descricao":"Óleo 5W30","preco":45.90,"quantidadeEstoque":10,"unidadeMedida":"LITRO"}
+                        """)
+                .when().post("/insumo").then().statusCode(201);
+
+        Long id = insumoRepository.findAll().getFirst().getId();
+
+        RestAssured
+                .given()
+                .header("Authorization", "Bearer " + token)
+                .when()
+                .delete("/insumo/" + id)
+                .then()
+                .statusCode(204);
+
+        Assertions.assertTrue(insumoRepository.findById(id).isEmpty());
+    }
+
+    @Test
+    void shouldReturn404WhenInsumoNotFoundOnDelete() {
+        String token = obterToken();
+
+        RestAssured
+                .given()
+                .header("Authorization", "Bearer " + token)
+                .when()
+                .delete("/insumo/9999")
+                .then()
+                .statusCode(404)
+                .body("message", Matchers.equalTo("Insumo não encontrado"));
     }
 }

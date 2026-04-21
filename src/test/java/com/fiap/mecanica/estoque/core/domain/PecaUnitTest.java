@@ -68,6 +68,27 @@ class PecaUnitTest {
     }
 
     @Test
+    void atualizar_shouldChangeAllFields() {
+        var peca = new Peca(NOME, DESCRICAO, PRECO, 10);
+
+        peca.atualizar("Vela NGK", "Vela de ignição", new BigDecimal("18.00"), 25);
+
+        assertEquals("Vela NGK", peca.getNome());
+        assertEquals("Vela de ignição", peca.getDescricao());
+        assertEquals(new BigDecimal("18.00"), peca.getPreco());
+        assertEquals(25, peca.getEstoqueTotal());
+    }
+
+    @Test
+    void atualizar_shouldAllowZeroQuantidade() {
+        var peca = new Peca(NOME, DESCRICAO, PRECO, 10);
+
+        peca.atualizar(NOME, DESCRICAO, PRECO, 0);
+
+        assertEquals(0, peca.getEstoqueTotal());
+    }
+
+    @Test
     void devolverEstoque_shouldIncrementQuantidade() {
         var peca = new Peca(NOME, DESCRICAO, PRECO, 5);
 

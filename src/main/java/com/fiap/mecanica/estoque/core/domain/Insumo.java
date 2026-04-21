@@ -20,6 +20,14 @@ public class Insumo extends ItemEstoque {
 		this.unidadeMedida = unidadeMedida;
 	}
 
+	public void atualizar(String nome, String descricao, BigDecimal preco, UnidadeMedida unidadeMedida, Integer quantidadeEstoque) {
+		this.nome = nome;
+		this.descricao = descricao;
+		this.preco = preco;
+		this.unidadeMedida = unidadeMedida;
+		ajustarQuantidade(quantidadeEstoque);
+	}
+
 	public static Insumo reconstituir(Long id, String nome, String descricao, BigDecimal preco, UnidadeMedida unidadeMedida, Integer quantidadeEstoque) {
 		var insumo = new Insumo(nome, descricao, preco, unidadeMedida, quantidadeEstoque);
 		insumo.id = id;

@@ -24,6 +24,10 @@ public abstract class ItemEstoque {
 		return this.quantidadeEstoque >= quantidade;
 	}
 
+	protected void ajustarQuantidade(Integer quantidade) {
+		this.quantidadeEstoque = quantidade;
+	}
+
 	public Integer getEstoqueTotal() {
 		return quantidadeEstoque;
 	}

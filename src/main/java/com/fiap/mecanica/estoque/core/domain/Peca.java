@@ -18,6 +18,13 @@ public class Peca extends ItemEstoque {
 		this.preco = preco;
 	}
 
+	public void atualizar(String nome, String descricao, BigDecimal preco, Integer quantidadeEstoque) {
+		this.nome = nome;
+		this.descricao = descricao;
+		this.preco = preco;
+		ajustarQuantidade(quantidadeEstoque);
+	}
+
 	public static Peca reconstituir(Long id, String nome, String descricao, BigDecimal preco, Integer quantidadeEstoque) {
 		var peca = new Peca(nome, descricao, preco, quantidadeEstoque);
 		peca.id = id;

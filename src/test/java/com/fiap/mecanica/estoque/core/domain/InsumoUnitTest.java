@@ -79,6 +79,28 @@ class InsumoUnitTest {
     }
 
     @Test
+    void atualizar_shouldChangeAllFields() {
+        var insumo = new Insumo(NOME, DESCRICAO, PRECO, UNIDADE, 10);
+
+        insumo.atualizar("Fluido de freio", "DOT 4", new BigDecimal("25.00"), UnidadeMedida.ML, 500);
+
+        assertEquals("Fluido de freio", insumo.getNome());
+        assertEquals("DOT 4", insumo.getDescricao());
+        assertEquals(new BigDecimal("25.00"), insumo.getPreco());
+        assertEquals(UnidadeMedida.ML, insumo.getUnidadeMedida());
+        assertEquals(500, insumo.getEstoqueTotal());
+    }
+
+    @Test
+    void atualizar_shouldAllowZeroQuantidade() {
+        var insumo = new Insumo(NOME, DESCRICAO, PRECO, UNIDADE, 10);
+
+        insumo.atualizar(NOME, DESCRICAO, PRECO, UNIDADE, 0);
+
+        assertEquals(0, insumo.getEstoqueTotal());
+    }
+
+    @Test
     void devolverEstoque_shouldIncrementQuantidade() {
         var insumo = new Insumo(NOME, DESCRICAO, PRECO, UNIDADE, 5);
 

@@ -70,6 +70,10 @@ class PecaIntegrationTest extends AbstractContainer {
                 .path("token");
     }
 
+    // -------------------------------------------------------------------------
+    // POST /peca
+    // -------------------------------------------------------------------------
+
     @Test
     void shouldCreatePecaSuccessfully() {
         String token = obterToken();
@@ -177,5 +181,212 @@ class PecaIntegrationTest extends AbstractContainer {
                 .post("/peca")
                 .then()
                 .statusCode(401);
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /peca
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldReturnEmptyPageWhenNoPecasCadastradas() {
+        String token = obterToken();
+
+        RestAssured
+                .given()
+                .header("Authorization", "Bearer " + token)
+                .queryParam("page", 0)
+                .queryParam("size", 10)
+                .when()
+                .get("/peca")
+                .then()
+                .statusCode(200)
+                .body("content", Matchers.hasSize(0))
+                .body("totalElements", Matchers.equalTo(0))
+                .body("totalPages", Matchers.equalTo(0))
+                .body("page", Matchers.equalTo(0))
+                .body("size", Matchers.equalTo(10));
+    }
+
+    @Test
+    void shouldReturnPecasPagedAfterCreation() {
+        String token = obterToken();
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Filtro de óleo","descricao":"Filtro 1.0","preco":29.90,"quantidadeEstoque":10}
+                        """)
+                .when().post("/peca").then().statusCode(201);
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Vela de ignição","descricao":"Vela NGK","preco":15.00,"quantidadeEstoque":5}
+                        """)
+                .when().post("/peca").then().statusCode(201);
+
+        RestAssured
+                .given()
+                .header("Authorization", "Bearer " + token)
+                .queryParam("page", 0)
+                .queryParam("size", 10)
+                .when()
+                .get("/peca")
+                .then()
+                .statusCode(200)
+                .body("content", Matchers.hasSize(2))
+                .body("totalElements", Matchers.equalTo(2))
+                .body("totalPages", Matchers.equalTo(1))
+                .body("content[0].nome", Matchers.notNullValue())
+                .body("content[0].preco", Matchers.notNullValue());
+    }
+
+    @Test
+    void shouldRespectPageSizeInPagination() {
+        String token = obterToken();
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Filtro de óleo","descricao":"Filtro 1.0","preco":29.90,"quantidadeEstoque":10}
+                        """)
+                .when().post("/peca").then().statusCode(201);
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Vela de ignição","descricao":"Vela NGK","preco":15.00,"quantidadeEstoque":5}
+                        """)
+                .when().post("/peca").then().statusCode(201);
+
+        RestAssured
+                .given()
+                .header("Authorization", "Bearer " + token)
+                .queryParam("page", 0)
+                .queryParam("size", 1)
+                .when()
+                .get("/peca")
+                .then()
+                .statusCode(200)
+                .body("content", Matchers.hasSize(1))
+                .body("totalElements", Matchers.equalTo(2))
+                .body("totalPages", Matchers.equalTo(2))
+                .body("size", Matchers.equalTo(1));
+    }
+
+    // -------------------------------------------------------------------------
+    // PUT /peca/{id}
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldUpdatePecaSuccessfully() {
+        String token = obterToken();
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Filtro de óleo","descricao":"Filtro 1.0","preco":29.90,"quantidadeEstoque":10}
+                        """)
+                .when().post("/peca").then().statusCode(201);
+
+        Long id = pecaRepository.findAll().getFirst().getId();
+
+        RestAssured
+                .given()
+                .contentType("application/json")
+                .header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Filtro de ar","descricao":"Filtro novo","preco":35.00,"quantidadeEstoque":20}
+                        """)
+                .when()
+                .put("/peca/" + id)
+                .then()
+                .statusCode(204);
+
+        var updated = pecaRepository.findById(id).orElseThrow();
+        Assertions.assertEquals("Filtro de ar", updated.getNome());
+        Assertions.assertEquals("Filtro novo", updated.getDescricao());
+        Assertions.assertEquals(0, new java.math.BigDecimal("35.00").compareTo(updated.getPreco()));
+        Assertions.assertEquals(20, updated.getQuantidadeEstoque());
+    }
+
+    @Test
+    void shouldReturn404WhenPecaNotFoundOnUpdate() {
+        String token = obterToken();
+
+        RestAssured
+                .given()
+                .contentType("application/json")
+                .header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Filtro","descricao":"Filtro 1.0","preco":29.90,"quantidadeEstoque":10}
+                        """)
+                .when()
+                .put("/peca/9999")
+                .then()
+                .statusCode(404)
+                .body("message", Matchers.equalTo("Peça não encontrada"));
+    }
+
+    @Test
+    void shouldReturn400WhenNomeIsBlankOnUpdate() {
+        String token = obterToken();
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Filtro","descricao":"Filtro 1.0","preco":29.90,"quantidadeEstoque":10}
+                        """)
+                .when().post("/peca").then().statusCode(201);
+
+        Long id = pecaRepository.findAll().getFirst().getId();
+
+        RestAssured
+                .given()
+                .contentType("application/json")
+                .header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"","descricao":"Filtro 1.0","preco":29.90,"quantidadeEstoque":10}
+                        """)
+                .when()
+                .put("/peca/" + id)
+                .then()
+                .statusCode(400)
+                .body("nome", Matchers.notNullValue());
+    }
+
+    // -------------------------------------------------------------------------
+    // DELETE /peca/{id}
+    // -------------------------------------------------------------------------
+
+    @Test
+    void shouldDeletePecaSuccessfully() {
+        String token = obterToken();
+
+        RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
+                .body("""
+                        {"nome":"Filtro de óleo","descricao":"Filtro 1.0","preco":29.90,"quantidadeEstoque":10}
+                        """)
+                .when().post("/peca").then().statusCode(201);
+
+        Long id = pecaRepository.findAll().getFirst().getId();
+
+        RestAssured
+                .given()
+                .header("Authorization", "Bearer " + token)
+                .when()
+                .delete("/peca/" + id)
+                .then()
+                .statusCode(204);
+
+        Assertions.assertTrue(pecaRepository.findById(id).isEmpty());
+    }
+
+    @Test
+    void shouldReturn404WhenPecaNotFoundOnDelete() {
+        String token = obterToken();
+
+        RestAssured
+                .given()
+                .header("Authorization", "Bearer " + token)
+                .when()
+                .delete("/peca/9999")
+                .then()
+                .statusCode(404)
+                .body("message", Matchers.equalTo("Peça não encontrada"));
     }
 }
