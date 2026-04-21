@@ -70,10 +70,6 @@ class ServicoIntegrationTest extends AbstractContainer {
                 .path("token");
     }
 
-    // -------------------------------------------------------------------------
-    // POST /servico
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldCreateServicoSuccessfully() {
         String token = obterToken();
@@ -145,10 +141,6 @@ class ServicoIntegrationTest extends AbstractContainer {
                 .then()
                 .statusCode(401);
     }
-
-    // -------------------------------------------------------------------------
-    // GET /servico
-    // -------------------------------------------------------------------------
 
     @Test
     void shouldReturnEmptyPageWhenNoServicosCadastrados() {
@@ -233,10 +225,6 @@ class ServicoIntegrationTest extends AbstractContainer {
                 .body("size", Matchers.equalTo(1));
     }
 
-    // -------------------------------------------------------------------------
-    // PUT /servico/{id}
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldUpdateServicoSuccessfully() {
         String token = obterToken();
@@ -310,10 +298,6 @@ class ServicoIntegrationTest extends AbstractContainer {
                 .statusCode(400)
                 .body("nome", Matchers.notNullValue());
     }
-
-    // -------------------------------------------------------------------------
-    // DELETE /servico/{id}
-    // -------------------------------------------------------------------------
 
     @Test
     void shouldDeleteServicoSuccessfully() {

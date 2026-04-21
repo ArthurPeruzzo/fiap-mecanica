@@ -47,10 +47,6 @@ class ClienteControllerContractTest {
 	@MockitoBean
 	private ListarClientesUseCase listarClientesUseCase;
 
-	// -------------------------------------------------------------------------
-	// Validações de campos obrigatórios e formato
-	// -------------------------------------------------------------------------
-
 	@ParameterizedTest
 	@CsvSource({
 			"'{\"nome\":\"\",\"sobrenome\":\"Silva\",\"cpf\":\"951.147.520-73\"}', nome, 'O nome deve ser preenchido'",
@@ -67,10 +63,6 @@ class ClienteControllerContractTest {
 
 		Mockito.verifyNoInteractions(criarClienteUseCase);
 	}
-
-	// -------------------------------------------------------------------------
-	// Validação de classe: DocumentoValido
-	// -------------------------------------------------------------------------
 
 	@Test
 	void shouldReturn400WhenBothCpfAndCnpjProvided() throws Exception {
@@ -110,10 +102,6 @@ class ClienteControllerContractTest {
 		Mockito.verifyNoInteractions(criarClienteUseCase);
 	}
 
-	// -------------------------------------------------------------------------
-	// Happy path
-	// -------------------------------------------------------------------------
-
 	@Test
 	void shouldReturn201WhenValidCpfProvided() throws Exception {
 		String json = """
@@ -149,10 +137,6 @@ class ClienteControllerContractTest {
 
 		Mockito.verify(criarClienteUseCase).criar(Mockito.any());
 	}
-
-	// -------------------------------------------------------------------------
-	// GET /cliente
-	// -------------------------------------------------------------------------
 
 	@Test
 	void shouldReturn200WithEmptyPageWhenNoClientes() throws Exception {
@@ -202,10 +186,6 @@ class ClienteControllerContractTest {
 
 		Mockito.verify(listarClientesUseCase).listar(Mockito.any());
 	}
-
-	// -------------------------------------------------------------------------
-	// PUT /cliente/{id}
-	// -------------------------------------------------------------------------
 
 	@ParameterizedTest
 	@CsvSource({
@@ -280,10 +260,6 @@ class ClienteControllerContractTest {
 						.content(json))
 				.andExpect(status().isNotFound());
 	}
-
-	// -------------------------------------------------------------------------
-	// DELETE /cliente/{id}
-	// -------------------------------------------------------------------------
 
 	@Test
 	void shouldReturn204WhenDeletarClienteSuccessfully() throws Exception {

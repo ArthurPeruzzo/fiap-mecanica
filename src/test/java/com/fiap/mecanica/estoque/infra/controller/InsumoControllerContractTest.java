@@ -51,10 +51,6 @@ class InsumoControllerContractTest {
     private static final String VALID_BODY =
             "{\"nome\":\"Óleo de motor\",\"descricao\":\"Óleo 5W30\",\"preco\":45.90,\"quantidadeEstoque\":10,\"unidadeMedida\":\"LITRO\"}";
 
-    // -------------------------------------------------------------------------
-    // POST /insumo
-    // -------------------------------------------------------------------------
-
     @ParameterizedTest
     @CsvSource({
             "'{\"descricao\":\"Óleo 5W30\",\"preco\":45.90,\"quantidadeEstoque\":10,\"unidadeMedida\":\"LITRO\"}', nome, 'O nome deve ser preenchido'",
@@ -82,10 +78,6 @@ class InsumoControllerContractTest {
 
         Mockito.verify(criarInsumoUseCase).criar(Mockito.any());
     }
-
-    // -------------------------------------------------------------------------
-    // GET /insumo
-    // -------------------------------------------------------------------------
 
     @Test
     void shouldReturn200WithEmptyPageWhenNoInsumos() throws Exception {
@@ -116,10 +108,6 @@ class InsumoControllerContractTest {
                 .andExpect(jsonPath("$.content[0].quantidadeEstoque").value(10))
                 .andExpect(jsonPath("$.totalElements").value(1));
     }
-
-    // -------------------------------------------------------------------------
-    // PUT /insumo/{id}
-    // -------------------------------------------------------------------------
 
     @Test
     void shouldReturn204WhenValidUpdate() throws Exception {
@@ -152,10 +140,6 @@ class InsumoControllerContractTest {
 
         Mockito.verifyNoInteractions(atualizarInsumoUseCase);
     }
-
-    // -------------------------------------------------------------------------
-    // DELETE /insumo/{id}
-    // -------------------------------------------------------------------------
 
     @Test
     void shouldReturn204WhenDeletarInsumoSuccessfully() throws Exception {

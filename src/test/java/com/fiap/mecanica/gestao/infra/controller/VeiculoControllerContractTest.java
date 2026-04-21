@@ -48,10 +48,6 @@ class VeiculoControllerContractTest {
     @MockitoBean
     private ListarVeiculosUseCase listarVeiculosUseCase;
 
-    // -------------------------------------------------------------------------
-    // Validações de campos obrigatórios
-    // -------------------------------------------------------------------------
-
     @ParameterizedTest
     @CsvSource({
             "'{\"placa\":\"ABC1234\",\"modelo\":\"Gol\",\"ano\":2020}', clienteId, 'O id do cliente deve ser preenchido'",
@@ -67,10 +63,6 @@ class VeiculoControllerContractTest {
 
         Mockito.verifyNoInteractions(criarVeiculoUseCase);
     }
-
-    // -------------------------------------------------------------------------
-    // Validação de placa: @PlacaValida
-    // -------------------------------------------------------------------------
 
     @ParameterizedTest
     @CsvSource({
@@ -94,43 +86,23 @@ class VeiculoControllerContractTest {
         Mockito.verifyNoInteractions(criarVeiculoUseCase);
     }
 
-    // -------------------------------------------------------------------------
-    // Happy path
-    // -------------------------------------------------------------------------
+    @ParameterizedTest
+    @CsvSource({
+            "ABC1234,  Gol,  2020",
+            "ABC1D23,  Onix, 2023",
+            "ABC-1234, Gol,  2020"
+    })
+    void shouldReturn201WhenValidPlaca(String placa, String modelo, int ano) throws Exception {
+        String json = String.format(
+                "{\"clienteId\":1,\"placa\":\"%s\",\"modelo\":\"%s\",\"ano\":%d}", placa, modelo, ano);
 
-    @Test
-    void shouldReturn201WhenValidPlacaAntiga() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.post("/veiculo")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"clienteId\":1,\"placa\":\"ABC1234\",\"modelo\":\"Gol\",\"ano\":2020}"))
+                        .content(json))
                 .andExpect(status().isCreated());
 
-        Mockito.verify(criarVeiculoUseCase).criar(Mockito.any());
+        Mockito.verify(criarVeiculoUseCase, Mockito.atLeastOnce()).criar(Mockito.any());
     }
-
-    @Test
-    void shouldReturn201WhenValidPlacaMercosul() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.post("/veiculo")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"clienteId\":1,\"placa\":\"ABC1D23\",\"modelo\":\"Onix\",\"ano\":2023}"))
-                .andExpect(status().isCreated());
-
-        Mockito.verify(criarVeiculoUseCase).criar(Mockito.any());
-    }
-
-    @Test
-    void shouldReturn201WhenPlacaWithHyphen() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.post("/veiculo")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"clienteId\":1,\"placa\":\"ABC-1234\",\"modelo\":\"Gol\",\"ano\":2020}"))
-                .andExpect(status().isCreated());
-
-        Mockito.verify(criarVeiculoUseCase).criar(Mockito.any());
-    }
-
-    // -------------------------------------------------------------------------
-    // Erros de negócio
-    // -------------------------------------------------------------------------
 
     @Test
     void shouldReturn404WhenClienteNotFound() throws Exception {
@@ -155,10 +127,6 @@ class VeiculoControllerContractTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Já existe um veículo cadastrado com a placa informada"));
     }
-
-    // -------------------------------------------------------------------------
-    // PUT /veiculo/{id}
-    // -------------------------------------------------------------------------
 
     @ParameterizedTest
     @CsvSource({
@@ -221,10 +189,6 @@ class VeiculoControllerContractTest {
                 .andExpect(jsonPath("$.message").value("Já existe um veículo cadastrado com a placa informada"));
     }
 
-    // -------------------------------------------------------------------------
-    // DELETE /veiculo/{id}
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldReturn204WhenDeletarVeiculoSuccessfully() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.delete("/veiculo/1"))
@@ -242,10 +206,6 @@ class VeiculoControllerContractTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Veículo não encontrado"));
     }
-
-    // -------------------------------------------------------------------------
-    // GET /veiculo
-    // -------------------------------------------------------------------------
 
     @Test
     void shouldReturn200WithEmptyPageWhenNoVeiculos() throws Exception {

@@ -50,10 +50,6 @@ class ServicoControllerContractTest {
     private static final String VALID_BODY =
             "{\"nome\":\"Troca de óleo\",\"descricao\":\"Troca com filtro incluso\",\"preco\":150.00}";
 
-    // -------------------------------------------------------------------------
-    // POST /servico
-    // -------------------------------------------------------------------------
-
     @ParameterizedTest
     @CsvSource({
             "'{\"descricao\":\"Troca com filtro\",\"preco\":150.00}', nome, 'O nome deve ser preenchido'",
@@ -89,10 +85,6 @@ class ServicoControllerContractTest {
         Mockito.verify(criarServicoUseCase).criar(Mockito.any());
     }
 
-    // -------------------------------------------------------------------------
-    // GET /servico
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldReturn200WithEmptyPageWhenNoServicos() throws Exception {
         Mockito.when(listarServicosUseCase.listar(Mockito.any()))
@@ -121,10 +113,6 @@ class ServicoControllerContractTest {
                 .andExpect(jsonPath("$.content[0].preco").value(150.00))
                 .andExpect(jsonPath("$.totalElements").value(1));
     }
-
-    // -------------------------------------------------------------------------
-    // PUT /servico/{id}
-    // -------------------------------------------------------------------------
 
     @Test
     void shouldReturn204WhenValidUpdate() throws Exception {
@@ -161,10 +149,6 @@ class ServicoControllerContractTest {
 
         Mockito.verifyNoInteractions(atualizarServicoUseCase);
     }
-
-    // -------------------------------------------------------------------------
-    // DELETE /servico/{id}
-    // -------------------------------------------------------------------------
 
     @Test
     void shouldReturn204WhenDeleteServicoSuccessfully() throws Exception {

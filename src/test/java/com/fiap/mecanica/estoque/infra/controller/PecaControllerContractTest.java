@@ -50,10 +50,6 @@ class PecaControllerContractTest {
     private static final String VALID_BODY =
             "{\"nome\":\"Filtro de óleo\",\"descricao\":\"Filtro 1.0\",\"preco\":29.90,\"quantidadeEstoque\":10}";
 
-    // -------------------------------------------------------------------------
-    // POST /peca
-    // -------------------------------------------------------------------------
-
     @ParameterizedTest
     @CsvSource({
             "'{\"descricao\":\"Filtro 1.0\",\"preco\":29.90,\"quantidadeEstoque\":10}', nome, 'O nome deve ser preenchido'",
@@ -99,10 +95,6 @@ class PecaControllerContractTest {
         Mockito.verify(criarPecaUseCase).criar(Mockito.any());
     }
 
-    // -------------------------------------------------------------------------
-    // GET /peca
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldReturn200WithEmptyPageWhenNoPecas() throws Exception {
         Mockito.when(listarPecasUseCase.listar(Mockito.any()))
@@ -132,10 +124,6 @@ class PecaControllerContractTest {
                 .andExpect(jsonPath("$.content[0].quantidadeEstoque").value(10))
                 .andExpect(jsonPath("$.totalElements").value(1));
     }
-
-    // -------------------------------------------------------------------------
-    // PUT /peca/{id}
-    // -------------------------------------------------------------------------
 
     @Test
     void shouldReturn204WhenValidUpdate() throws Exception {
@@ -172,10 +160,6 @@ class PecaControllerContractTest {
 
         Mockito.verifyNoInteractions(atualizarPecaUseCase);
     }
-
-    // -------------------------------------------------------------------------
-    // DELETE /peca/{id}
-    // -------------------------------------------------------------------------
 
     @Test
     void shouldReturn204WhenDeletarPecaSuccessfully() throws Exception {

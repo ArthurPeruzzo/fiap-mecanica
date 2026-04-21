@@ -70,10 +70,6 @@ class PecaIntegrationTest extends AbstractContainer {
                 .path("token");
     }
 
-    // -------------------------------------------------------------------------
-    // POST /peca
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldCreatePecaSuccessfully() {
         String token = obterToken();
@@ -183,10 +179,6 @@ class PecaIntegrationTest extends AbstractContainer {
                 .statusCode(401);
     }
 
-    // -------------------------------------------------------------------------
-    // GET /peca
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldReturnEmptyPageWhenNoPecasCadastradas() {
         String token = obterToken();
@@ -270,10 +262,6 @@ class PecaIntegrationTest extends AbstractContainer {
                 .body("size", Matchers.equalTo(1));
     }
 
-    // -------------------------------------------------------------------------
-    // PUT /peca/{id}
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldUpdatePecaSuccessfully() {
         String token = obterToken();
@@ -348,10 +336,6 @@ class PecaIntegrationTest extends AbstractContainer {
                 .statusCode(400)
                 .body("nome", Matchers.notNullValue());
     }
-
-    // -------------------------------------------------------------------------
-    // DELETE /peca/{id}
-    // -------------------------------------------------------------------------
 
     @Test
     void shouldDeletePecaSuccessfully() {

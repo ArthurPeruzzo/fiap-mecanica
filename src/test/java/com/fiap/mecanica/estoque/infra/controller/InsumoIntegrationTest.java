@@ -273,10 +273,6 @@ class InsumoIntegrationTest extends AbstractContainer {
                 .body("size", Matchers.equalTo(1));
     }
 
-    // -------------------------------------------------------------------------
-    // PUT /insumo/{id}
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldUpdateInsumoSuccessfully() {
         String token = obterToken();
@@ -352,10 +348,6 @@ class InsumoIntegrationTest extends AbstractContainer {
                 .statusCode(400)
                 .body("unidadeMedida", Matchers.notNullValue());
     }
-
-    // -------------------------------------------------------------------------
-    // DELETE /insumo/{id}
-    // -------------------------------------------------------------------------
 
     @Test
     void shouldDeleteInsumoSuccessfully() {

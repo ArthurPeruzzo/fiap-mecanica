@@ -45,9 +45,9 @@ class AtualizarServicoUseCaseUnitTest {
     @Test
     void shouldThrowWhenServicoNotFound() {
         Mockito.when(servicoGateway.buscarPorId(99L)).thenReturn(Optional.empty());
+        AtualizarServicoDto dto = new AtualizarServicoDto(99L, "Nome", "Desc", new BigDecimal("10.00"));
 
-        assertThrows(ServicoNaoEncontradoException.class,
-                () -> atualizarServicoUseCase.atualizar(new AtualizarServicoDto(99L, "Nome", "Desc", new BigDecimal("10.00"))));
+        assertThrows(ServicoNaoEncontradoException.class, () -> atualizarServicoUseCase.atualizar(dto));
 
         Mockito.verify(servicoGateway, Mockito.never()).atualizar(Mockito.any());
     }

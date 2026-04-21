@@ -254,10 +254,6 @@ class ClienteIntegrationTest extends AbstractContainer {
 				.body("size", Matchers.equalTo(1));
 	}
 
-	// -------------------------------------------------------------------------
-	// PUT /cliente/{id}
-	// -------------------------------------------------------------------------
-
 	@Test
 	void shouldUpdateClienteSuccessfully() {
 		String token = obterToken();
@@ -347,10 +343,6 @@ class ClienteIntegrationTest extends AbstractContainer {
 				.statusCode(409)
 				.body("message", Matchers.equalTo("Já existe um cliente cadastrado com o documento informado"));
 	}
-
-	// -------------------------------------------------------------------------
-	// DELETE /cliente/{id}
-	// -------------------------------------------------------------------------
 
 	@Test
 	void shouldDeleteClienteSuccessfully() {
