@@ -1,5 +1,6 @@
 package com.fiap.mecanica.gestao.core.domain;
 
+import com.fiap.mecanica.gestao.core.exception.DocumentoInvalidoException;
 import com.fiap.mecanica.shared.valueobjects.Cnpj;
 import com.fiap.mecanica.shared.valueobjects.Cpf;
 import com.fiap.mecanica.shared.valueobjects.Documento;
@@ -21,7 +22,7 @@ public class Cliente {
 		boolean temCpf  = cpf  != null;
 
 		if (temCpf == temCnpj) {
-			throw new IllegalArgumentException("O cnpj ou cpf precisam estar preenchidos");
+			throw new DocumentoInvalidoException();
 		}
 
 		if (cnpj != null) {
@@ -36,7 +37,7 @@ public class Cliente {
 		boolean temCpf  = cpf  != null;
 
 		if (temCpf == temCnpj) {
-			throw new IllegalArgumentException("O cnpj ou cpf precisam estar preenchidos");
+			throw new DocumentoInvalidoException();
 		}
 
 		this.nomeCompleto = nomeCompleto;

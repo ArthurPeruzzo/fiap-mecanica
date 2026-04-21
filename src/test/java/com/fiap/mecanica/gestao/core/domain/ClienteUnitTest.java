@@ -1,5 +1,6 @@
 package com.fiap.mecanica.gestao.core.domain;
 
+import com.fiap.mecanica.gestao.core.exception.DocumentoInvalidoException;
 import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
 import org.junit.jupiter.api.Test;
 
@@ -43,19 +44,19 @@ class ClienteUnitTest {
 
     @Test
     void shouldThrowWhenBothCpfAndCnpjProvided() {
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(DocumentoInvalidoException.class,
                 () -> new Cliente(NOME, "00000000000000", "12345678909"));
     }
 
     @Test
     void shouldThrowWhenNeitherCpfNorCnpjProvided() {
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(DocumentoInvalidoException.class,
                 () -> new Cliente(NOME, null, null));
     }
 
     @Test
     void shouldThrowWithCorrectMessageWhenNeitherDocumentoProvided() {
-        var ex = assertThrows(IllegalArgumentException.class,
+        var ex = assertThrows(DocumentoInvalidoException.class,
                 () -> new Cliente(NOME, null, null));
 
         assertEquals("O cnpj ou cpf precisam estar preenchidos", ex.getMessage());
@@ -95,7 +96,7 @@ class ClienteUnitTest {
     void atualizar_shouldThrowWhenNeitherDocumentoProvided() {
         var cliente = new Cliente(NOME, null, "12345678909");
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(DocumentoInvalidoException.class,
                 () -> cliente.atualizar(NOME, null, null));
     }
 
@@ -103,7 +104,7 @@ class ClienteUnitTest {
     void atualizar_shouldThrowWhenBothDocumentosProvided() {
         var cliente = new Cliente(NOME, null, "12345678909");
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(DocumentoInvalidoException.class,
                 () -> cliente.atualizar(NOME, "00000000000191", "12345678909"));
     }
 

@@ -25,14 +25,18 @@ public class ClienteDatabaseGateway implements ClienteGateway {
 
 	@Override
 	public void criar(Cliente cliente) {
-		var entity = ClienteEntity.builder()
-				.nome(cliente.getNomeCompleto().nome())
-				.sobrenome(cliente.getNomeCompleto().sobrenome())
-				.cpf(cliente.getCpf().map(Cpf::getValor).orElse(null))
-				.cnpj(cliente.getCnpj().map(Cnpj::getValor).orElse(null))
-				.build();
-
-		clienteRepository.save(entity);
+		try {
+			var entity = ClienteEntity.builder()
+					.nome(cliente.getNomeCompleto().nome())
+					.sobrenome(cliente.getNomeCompleto().sobrenome())
+					.cpf(cliente.getCpf().map(Cpf::getValor).orElse(null))
+					.cnpj(cliente.getCnpj().map(Cnpj::getValor).orElse(null))
+					.build();
+			clienteRepository.save(entity);
+		} catch (Exception e) {
+			log.error("Erro ao criar cliente", e);
+			throw new ErroAcessoBaseDeDadosException();
+		}
 	}
 
 	@Override

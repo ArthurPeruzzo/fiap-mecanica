@@ -13,9 +13,9 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -52,7 +52,7 @@ class UserDetailsServiceImplUnitTest {
     void loadUserByUsername_shouldThrowNoSuchElementExceptionWhenUserNotFound() {
         Mockito.when(userGateway.findByEmail("unknown@test.com")).thenReturn(Optional.empty());
 
-        assertThrows(NoSuchElementException.class,
+        assertThrows(UsernameNotFoundException.class,
                 () -> userDetailsService.loadUserByUsername("unknown@test.com"));
     }
 
