@@ -1,0 +1,34 @@
+package com.fiap.mecanica.ordemdeservico.infra.gateway.database;
+
+import com.fiap.mecanica.ordemdeservico.core.domain.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoRepository;
+import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+@Component
+@Slf4j
+@RequiredArgsConstructor
+public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
+
+    private final OrdemDeServicoRepository ordemDeServicoRepository;
+
+    @Override
+    public void criar(OrdemDeServico ordemDeServico) {
+        try {
+            ordemDeServicoRepository.save(OrdemDeServicoEntity.builder()
+                    .clienteId(ordemDeServico.getClienteId())
+                    .veiculoId(ordemDeServico.getVeiculoId())
+                    .atendenteId(ordemDeServico.getAtendenteId())
+                    .status(ordemDeServico.getStatus())
+                    .dataCriacao(ordemDeServico.getDataCriacao())
+                    .build());
+        } catch (Exception e) {
+            log.error("Erro ao criar ordem de servico", e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+}

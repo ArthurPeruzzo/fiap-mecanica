@@ -15,6 +15,8 @@ import org.springframework.context.annotation.Configuration;
                 @Tag(name = "Veículo", description = "Operações relacionadas ao veículo"),
                 @Tag(name = "Peça", description = "Operações relacionadas as peças"),
                 @Tag(name = "Insumo", description = "Operações relacionadas aos insumos"),
+                @Tag(name = "Serviço", description = "Operações relacionadas aos serviços"),
+                @Tag(name = "Ordem de Serviço", description = "Operações relacionadas a ordem de serviços"),
         },
         security = {
                 @SecurityRequirement(name = "bearerAuth")

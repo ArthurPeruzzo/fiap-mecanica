@@ -31,4 +31,18 @@ public class AtendenteDatabaseGateway implements AtendenteGateway {
 			throw new ErroAcessoBaseDeDadosException();
 		}
 	}
+
+	@Override
+	public Optional<Atendente> findByUsuarioId(Long usuarioId) {
+		try {
+			return atendenteRepository.findByUserId(usuarioId)
+					.map(entity -> Atendente.builder()
+							.id(entity.getId())
+							.nomeCompleto(new NomeCompleto(entity.getNome(), entity.getSobrenome()))
+							.build());
+		} catch (Exception e) {
+			log.error("Erro ao buscar atendente por usuarioId: {}", usuarioId, e);
+			throw new ErroAcessoBaseDeDadosException();
+		}
+	}
 }

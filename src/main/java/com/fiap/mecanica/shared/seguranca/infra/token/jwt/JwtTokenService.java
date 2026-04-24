@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -32,7 +33,7 @@ public class JwtTokenService implements TokenGateway {
     private final HttpServletRequest httpServletRequest;
 
     private String getAuthorization() {
-        return httpServletRequest.getHeader(AUTHORIZATION).replace("Bearer ", "");
+        return Optional.ofNullable(httpServletRequest.getHeader(AUTHORIZATION)).map(s -> s.replace("Bearer ", "")).orElse(null);
     }
 
     @Override
