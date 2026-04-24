@@ -45,6 +45,7 @@ public class SecurityConfiguration {
     };
 
     protected static final String [] ENDPOINTS_ATENDENTE = {
+            "/ordem-servico/**"
     };
 
     protected static final String[] ENDPOINTS_MECANICO = {
