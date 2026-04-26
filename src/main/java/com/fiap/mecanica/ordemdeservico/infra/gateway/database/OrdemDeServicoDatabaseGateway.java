@@ -45,7 +45,9 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                             entity.getAtendenteId(),
                             entity.getMecanicoId(),
                             entity.getStatus(),
-                            entity.getDataCriacao()
+                            entity.getDataCriacao(),
+                            entity.getDataInicioDiagnostico(),
+                            entity.getDataConclusaoDiagnostico()
                     ));
         } catch (Exception e) {
             log.error("Erro ao buscar ordem de servico por id: {}", id, e);
@@ -64,6 +66,8 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                     .mecanicoId(ordemDeServico.getMecanicoId())
                     .status(ordemDeServico.getStatus())
                     .dataCriacao(ordemDeServico.getDataCriacao())
+                    .dataInicioDiagnostico(ordemDeServico.getDataInicioDiagnostico())
+                    .dataConclusaoDiagnostico(ordemDeServico.getDataConclusaoDiagnostico())
                     .build());
         } catch (Exception e) {
             log.error("Erro ao atualizar ordem de servico id: {}", ordemDeServico.getId(), e);

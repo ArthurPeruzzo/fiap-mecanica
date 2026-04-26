@@ -1,6 +1,7 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ConcluirDiagnosticoUseCase;
 import com.fiap.mecanica.ordemdeservico.core.usecase.CriarOrdemDeServicoUseCase;
 import com.fiap.mecanica.ordemdeservico.core.usecase.IniciarDiagnosticoUseCase;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.OrdemDeServicoRequestJson;
@@ -25,11 +26,10 @@ public class OrdemDeServicoController {
 
     private final CriarOrdemDeServicoUseCase criarOrdemDeServicoUseCase;
     private final IniciarDiagnosticoUseCase iniciarDiagnosticoUseCase;
+    private final ConcluirDiagnosticoUseCase concluirDiagnosticoUseCase;
 
-    @Operation(
-            summary = "Abrir Ordem de Serviço",
-            description = "Abre uma nova Ordem de Serviço com status RECEBIDA. O atendente é identificado pelo token JWT."
-    )
+    @Operation(summary = "Abrir Ordem de Serviço",
+            description = "Abre uma nova Ordem de Serviço com status RECEBIDA. O atendente é identificado pelo token JWT.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Ordem de Serviço criada com sucesso"),
             @ApiResponse(responseCode = "400", description = "Parâmetros de entrada inválidos",
@@ -47,10 +47,8 @@ public class OrdemDeServicoController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @Operation(
-            summary = "Iniciar Diagnóstico",
-            description = "Atribui o mecânico autenticado à ordem de serviço e avança o status para EM_DIAGNOSTICO."
-    )
+    @Operation(summary = "Iniciar Diagnóstico",
+            description = "Atribui o mecânico autenticado à ordem de serviço e avança o status para EM_DIAGNOSTICO.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Status atualizado com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
@@ -63,6 +61,23 @@ public class OrdemDeServicoController {
     @PatchMapping("/{id}/diagnostico")
     public ResponseEntity<Void> iniciarDiagnostico(@PathVariable Long id) {
         iniciarDiagnosticoUseCase.iniciarDiagnostico(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Concluir Diagnóstico",
+            description = "Conclui o diagnóstico e avança o status para DIAGNOSTICO_CONCLUIDO.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Status atualizado com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou mecânico não encontrado",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está no status EM_DIAGNOSTICO",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+    })
+    @PatchMapping("/{id}/diagnostico/conclusao")
+    public ResponseEntity<Void> concluirDiagnostico(@PathVariable Long id) {
+        concluirDiagnosticoUseCase.concluirDiagnostico(id);
         return ResponseEntity.noContent().build();
     }
 }

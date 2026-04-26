@@ -23,10 +23,10 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
-class IniciarDiagnosticoUseCaseUnitTest {
+class ConcluirDiagnosticoUseCaseUnitTest {
 
     @InjectMocks
-    private IniciarDiagnosticoUseCase iniciarDiagnosticoUseCase;
+    private ConcluirDiagnosticoUseCase concluirDiagnosticoUseCase;
 
     @Mock
     private MecanicoGateway mecanicoGateway;
@@ -47,24 +47,23 @@ class IniciarDiagnosticoUseCaseUnitTest {
                 .thenReturn(Optional.of(Mecanico.builder().id(MECANICO_ID).build()));
     }
 
-    private OrdemDeServico ordemRecebida() {
-        return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, null,
-                StatusOrdemDeServico.RECEBIDA, LocalDateTime.now(), null, null);
+    private OrdemDeServico ordemEmDiagnostico() {
+        return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, MECANICO_ID,
+                StatusOrdemDeServico.EM_DIAGNOSTICO, LocalDateTime.now(), LocalDateTime.now(), null);
     }
 
     @Test
-    void shouldIniciarDiagnostico() {
+    void shouldConcluirDiagnostico() {
         stubMecanico();
-        Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemRecebida()));
+        Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemEmDiagnostico()));
 
-        iniciarDiagnosticoUseCase.iniciarDiagnostico(ORDEM_ID);
+        concluirDiagnosticoUseCase.concluirDiagnostico(ORDEM_ID);
 
         var captor = ArgumentCaptor.forClass(OrdemDeServico.class);
         Mockito.verify(ordemDeServicoGateway).atualizar(captor.capture());
         var os = captor.getValue();
-        assertEquals(MECANICO_ID, os.getMecanicoId());
-        assertEquals(StatusOrdemDeServico.EM_DIAGNOSTICO, os.getStatus());
-        assertNotNull(os.getDataInicioDiagnostico());
+        assertEquals(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, os.getStatus());
+        assertNotNull(os.getDataConclusaoDiagnostico());
     }
 
     @Test
@@ -73,7 +72,7 @@ class IniciarDiagnosticoUseCaseUnitTest {
         Mockito.when(mecanicoGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.empty());
 
         assertThrows(MecanicoNaoEncontradoException.class,
-                () -> iniciarDiagnosticoUseCase.iniciarDiagnostico(ORDEM_ID));
+                () -> concluirDiagnosticoUseCase.concluirDiagnostico(ORDEM_ID));
 
         Mockito.verifyNoInteractions(ordemDeServicoGateway);
     }
@@ -84,7 +83,7 @@ class IniciarDiagnosticoUseCaseUnitTest {
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.empty());
 
         assertThrows(OrdemDeServicoNaoEncontradaException.class,
-                () -> iniciarDiagnosticoUseCase.iniciarDiagnostico(ORDEM_ID));
+                () -> concluirDiagnosticoUseCase.concluirDiagnostico(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
     }
@@ -92,12 +91,12 @@ class IniciarDiagnosticoUseCaseUnitTest {
     @Test
     void shouldThrowWhenTransicaoDeStatusInvalida() {
         stubMecanico();
-        var ordemEmDiagnostico = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, MECANICO_ID,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, LocalDateTime.now(), LocalDateTime.now(), null);
-        Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemEmDiagnostico));
+        var ordemRecebida = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, null,
+                StatusOrdemDeServico.RECEBIDA, LocalDateTime.now(), null, null);
+        Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemRecebida));
 
         assertThrows(TransicaoDeStatusInvalidaException.class,
-                () -> iniciarDiagnosticoUseCase.iniciarDiagnostico(ORDEM_ID));
+                () -> concluirDiagnosticoUseCase.concluirDiagnostico(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
     }

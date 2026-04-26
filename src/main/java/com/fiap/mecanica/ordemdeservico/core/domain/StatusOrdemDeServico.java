@@ -2,5 +2,6 @@ package com.fiap.mecanica.ordemdeservico.core.domain;
 
 public enum StatusOrdemDeServico {
     RECEBIDA,
-    EM_DIAGNOSTICO
+    EM_DIAGNOSTICO,
+    DIAGNOSTICO_CONCLUIDO
 }

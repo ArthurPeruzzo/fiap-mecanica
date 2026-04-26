@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS `ordem_servico` (
     `mecanico_id`  bigint       NULL,
     `status`       varchar(50)  NOT NULL,
     `data_criacao` datetime     NOT NULL,
+    `data_inicio_diagnostico` datetime NULL,
+    `data_conclusao_diagnostico` datetime NULL,
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_ordem_servico_cliente`  FOREIGN KEY (`cliente_id`)  REFERENCES `cliente`  (`id`),
     CONSTRAINT `fk_ordem_servico_veiculo`  FOREIGN KEY (`veiculo_id`)  REFERENCES `veiculo`  (`id`),

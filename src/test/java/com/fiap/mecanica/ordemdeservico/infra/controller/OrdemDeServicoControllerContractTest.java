@@ -7,6 +7,7 @@ import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ConcluirDiagnosticoUseCase;
 import com.fiap.mecanica.ordemdeservico.core.usecase.CriarOrdemDeServicoUseCase;
 import com.fiap.mecanica.ordemdeservico.core.usecase.IniciarDiagnosticoUseCase;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
@@ -39,6 +40,9 @@ class OrdemDeServicoControllerContractTest {
 
     @MockitoBean
     private IniciarDiagnosticoUseCase iniciarDiagnosticoUseCase;
+
+    @MockitoBean
+    private ConcluirDiagnosticoUseCase concluirDiagnosticoUseCase;
 
     private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2}";
 
@@ -111,6 +115,8 @@ class OrdemDeServicoControllerContractTest {
                 .andExpect(jsonPath("$.message").value("Veículo não pertence ao cliente informado"));
     }
 
+    // --- iniciarDiagnostico ---
+
     @Test
     void shouldReturn204WhenIniciarDiagnosticoSuccess() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
@@ -120,7 +126,7 @@ class OrdemDeServicoControllerContractTest {
     }
 
     @Test
-    void shouldReturn404WhenOrdemDeServicoNotFound() throws Exception {
+    void shouldReturn404WhenOrdemDeServicoNotFoundOnIniciar() throws Exception {
         Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
                 .when(iniciarDiagnosticoUseCase).iniciarDiagnostico(99L);
 
@@ -130,7 +136,7 @@ class OrdemDeServicoControllerContractTest {
     }
 
     @Test
-    void shouldReturn404WhenMecanicoNotFound() throws Exception {
+    void shouldReturn404WhenMecanicoNotFoundOnIniciar() throws Exception {
         Mockito.doThrow(new MecanicoNaoEncontradoException())
                 .when(iniciarDiagnosticoUseCase).iniciarDiagnostico(1L);
 
@@ -140,11 +146,51 @@ class OrdemDeServicoControllerContractTest {
     }
 
     @Test
-    void shouldReturn422WhenTransicaoDeStatusInvalida() throws Exception {
+    void shouldReturn422WhenTransicaoInvalidaOnIniciar() throws Exception {
         Mockito.doThrow(new TransicaoDeStatusInvalidaException())
                 .when(iniciarDiagnosticoUseCase).iniciarDiagnostico(1L);
 
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
+    }
+
+    // --- concluirDiagnostico ---
+
+    @Test
+    void shouldReturn204WhenConcluirDiagnosticoSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico/conclusao"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(concluirDiagnosticoUseCase).concluirDiagnostico(1L);
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemDeServicoNotFoundOnConcluir() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
+                .when(concluirDiagnosticoUseCase).concluirDiagnostico(99L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/99/diagnostico/conclusao"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn404WhenMecanicoNotFoundOnConcluir() throws Exception {
+        Mockito.doThrow(new MecanicoNaoEncontradoException())
+                .when(concluirDiagnosticoUseCase).concluirDiagnostico(1L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico/conclusao"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Mecânico não encontrado"));
+    }
+
+    @Test
+    void shouldReturn422WhenTransicaoInvalidaOnConcluir() throws Exception {
+        Mockito.doThrow(new TransicaoDeStatusInvalidaException())
+                .when(concluirDiagnosticoUseCase).concluirDiagnostico(1L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico/conclusao"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
     }

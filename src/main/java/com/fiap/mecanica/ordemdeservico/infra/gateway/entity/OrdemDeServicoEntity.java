@@ -39,4 +39,11 @@ public class OrdemDeServicoEntity {
 
     @Column(name = "data_criacao", nullable = false)
     private LocalDateTime dataCriacao;
+
+    @Column(name = "data_inicio_diagnostico")
+    private LocalDateTime dataInicioDiagnostico;
+
+    @Column(name = "data_conclusao_diagnostico")
+    private LocalDateTime dataConclusaoDiagnostico;
+
 }
