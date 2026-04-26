@@ -48,14 +48,17 @@ public class OrdemDeServicoController {
     }
 
     @Operation(summary = "Iniciar Diagnóstico",
-            description = "Atribui o mecânico autenticado à ordem de serviço e avança o status para EM_DIAGNOSTICO.")
+            description = "Atribui o mecânico autenticado à ordem de serviço e avança o status para EM_DIAGNOSTICO. " +
+                    "Somente permitido se a ordem estiver no status RECEBIDA, sem mecânico vinculado ou com o mesmo mecânico já responsável.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Status atualizado com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
             @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
             @ApiResponse(responseCode = "404", description = "Ordem de serviço ou mecânico não encontrado",
                     content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está no status RECEBIDA",
+            @ApiResponse(responseCode = "409", description = "Ordem de serviço já está em diagnóstico",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "Outro mecânico já é responsável por esta ordem de serviço ou status inválido para a operação",
                     content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
     })
     @PatchMapping("/{id}/diagnostico")

@@ -4,6 +4,9 @@ import com.fiap.mecanica.gestao.core.domain.Mecanico;
 import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.StatusOrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoEmDiagnosticoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoMecanicoResponsavelException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
@@ -22,6 +25,14 @@ public class IniciarDiagnosticoUseCase {
         Mecanico mecanico = buscaMecanicoPorUsuarioId();
         OrdemDeServico ordemDeServico = ordemDeServicoGateway.buscarPorId(ordemId)
                 .orElseThrow(OrdemDeServicoNaoEncontradaException::new);
+
+        if (StatusOrdemDeServico.EM_DIAGNOSTICO.equals(ordemDeServico.getStatus())) {
+            throw new OrdemDeServicoEmDiagnosticoException();
+        }
+
+        if (ordemDeServico.possuiMecanicoResponsavel() && !ordemDeServico.isMecanicoResponsavel(mecanico.getId())) {
+            throw new OrdemDeServicoMecanicoResponsavelException();
+        }
 
         ordemDeServico.iniciarDiagnostico(mecanico.getId());
         ordemDeServicoGateway.atualizar(ordemDeServico);

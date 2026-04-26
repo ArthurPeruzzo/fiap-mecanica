@@ -55,6 +55,14 @@ public class OrdemDeServico {
         this.state = novoState;
     }
 
+    public boolean possuiMecanicoResponsavel() {
+        return mecanicoId != null;
+    }
+
+    public boolean isMecanicoResponsavel(Long mecanicoId) {
+        return this.mecanicoId != null && this.mecanicoId.equals(mecanicoId);
+    }
+
     public static OrdemDeServico reconstituir(Long id, Long clienteId, Long veiculoId, Long atendenteId,
                                               Long mecanicoId, StatusOrdemDeServico status, LocalDateTime dataCriacao,
                                               LocalDateTime dataInicioDiagnostico, LocalDateTime dataConclusaoDiagnostico) {

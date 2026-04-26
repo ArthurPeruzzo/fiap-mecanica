@@ -5,6 +5,8 @@ import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaVeiculoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoEmDiagnosticoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoMecanicoResponsavelException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
@@ -155,6 +157,26 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Mecânico não encontrado"));
+    }
+
+    @Test
+    void shouldReturn409WhenOrdemJaEmDiagnostico() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoEmDiagnosticoException())
+                .when(iniciarDiagnosticoUseCase).iniciarDiagnostico(1L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("A ordem de servico ja esta em diagnostico"));
+    }
+
+    @Test
+    void shouldReturn422WhenOutroMecanicoJaVinculado() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoMecanicoResponsavelException())
+                .when(iniciarDiagnosticoUseCase).iniciarDiagnostico(1L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Já existe um mecanico responsavel pela ordem de serviço"));
     }
 
     @Test
