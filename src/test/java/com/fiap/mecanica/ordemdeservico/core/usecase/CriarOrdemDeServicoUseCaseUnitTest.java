@@ -12,6 +12,7 @@ import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
+import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaVeiculoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
@@ -74,6 +75,7 @@ class CriarOrdemDeServicoUseCaseUnitTest {
     private void stubClienteEVeiculo() {
         Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculoPadrao()));
         Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(clientePadrao()));
+        Mockito.when(ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(VEICULO_ID)).thenReturn(false);
     }
 
     @Test
@@ -99,10 +101,9 @@ class CriarOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenAtendenteNotFound() {
         Mockito.when(tokenGateway.getUserId()).thenReturn(USER_ID);
         Mockito.when(atendenteGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.empty());
-        CriarOrdemDeServicoDto criarOrdemDeServicoDto = new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID);
 
         assertThrows(AtendenteNaoEncontradoException.class,
-                () -> criarOrdemDeServicoUseCase.criar(criarOrdemDeServicoDto));
+                () -> criarOrdemDeServicoUseCase.criar(new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID)));
 
         Mockito.verifyNoInteractions(veiculoGateway, clienteGateway, ordemDeServicoGateway);
     }
@@ -111,12 +112,11 @@ class CriarOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenVeiculoNotFound() {
         stubAtendente();
         Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.empty());
-        CriarOrdemDeServicoDto criarOrdemDeServicoDto = new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID);
 
         assertThrows(VeiculoNaoEncontradoException.class,
-                () -> criarOrdemDeServicoUseCase.criar(criarOrdemDeServicoDto));
+                () -> criarOrdemDeServicoUseCase.criar(new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID)));
 
-        Mockito.verifyNoInteractions(ordemDeServicoGateway);
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).criar(Mockito.any());
     }
 
     @Test
@@ -124,12 +124,11 @@ class CriarOrdemDeServicoUseCaseUnitTest {
         stubAtendente();
         Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculoPadrao()));
         Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.empty());
-        CriarOrdemDeServicoDto criarOrdemDeServicoDto = new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID);
 
         assertThrows(ClienteNaoEncontradoException.class,
-                () -> criarOrdemDeServicoUseCase.criar(criarOrdemDeServicoDto));
+                () -> criarOrdemDeServicoUseCase.criar(new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID)));
 
-        Mockito.verifyNoInteractions(ordemDeServicoGateway);
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).criar(Mockito.any());
     }
 
     @Test
@@ -138,12 +137,24 @@ class CriarOrdemDeServicoUseCaseUnitTest {
         var veiculoDeOutroCliente = Veiculo.reconstituir(VEICULO_ID, 99L, "ABC1234", "Gol", 2020);
         Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculoDeOutroCliente));
         Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(clientePadrao()));
-        CriarOrdemDeServicoDto criarOrdemDeServicoDto = new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID);
 
         assertThrows(VeiculoNaoPertenceAoClienteException.class,
-                () -> criarOrdemDeServicoUseCase.criar(criarOrdemDeServicoDto));
+                () -> criarOrdemDeServicoUseCase.criar(new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID)));
 
-        Mockito.verifyNoInteractions(ordemDeServicoGateway);
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).criar(Mockito.any());
+    }
+
+    @Test
+    void shouldThrowWhenOrdemAbertaExistsForVeiculo() {
+        stubAtendente();
+        Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculoPadrao()));
+        Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(clientePadrao()));
+        Mockito.when(ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(VEICULO_ID)).thenReturn(true);
+
+        assertThrows(OrdemDeServicoAbertaParaVeiculoException.class,
+                () -> criarOrdemDeServicoUseCase.criar(new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID)));
+
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).criar(Mockito.any());
     }
 
     @Test
@@ -151,9 +162,8 @@ class CriarOrdemDeServicoUseCaseUnitTest {
         stubAtendente();
         stubClienteEVeiculo();
         Mockito.doThrow(new RuntimeException("erro no banco")).when(ordemDeServicoGateway).criar(Mockito.any());
-        CriarOrdemDeServicoDto criarOrdemDeServicoDto = new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID);
 
         assertThrows(RuntimeException.class,
-                () -> criarOrdemDeServicoUseCase.criar(criarOrdemDeServicoDto));
+                () -> criarOrdemDeServicoUseCase.criar(new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID)));
     }
 }

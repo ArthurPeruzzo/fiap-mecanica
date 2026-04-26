@@ -169,6 +169,27 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
     }
 
     @Test
+    void shouldReturn422WhenOrdemAbertaExistsForVeiculo() {
+        Long clienteId = criarClienteERetornarId();
+        Long veiculoId = criarVeiculoERetornarId(clienteId);
+        String token = obterTokenAtendente();
+        String body = String.format("{\"clienteId\":%d,\"veiculoId\":%d}", clienteId, veiculoId);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + token)
+                .body(body)
+                .when().post("/ordem-servico")
+                .then().statusCode(201);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + token)
+                .body(body)
+                .when().post("/ordem-servico")
+                .then().statusCode(422)
+                .body("message", Matchers.equalTo("Já existe uma ordem de serviço aberta para este veículo"));
+    }
+
+    @Test
     void shouldReturn400WhenClienteIdIsNull() {
         String token = obterTokenAtendente();
 

@@ -11,6 +11,7 @@ import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
 import com.fiap.mecanica.gestao.core.exception.AtendenteNaoEncontradoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaVeiculoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
@@ -34,6 +35,10 @@ public class CriarOrdemDeServicoUseCase {
 
 		if (!veiculo.pertenceAo(cliente.getId())) {
 			throw new VeiculoNaoPertenceAoClienteException();
+		}
+
+		if (ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(dto.veiculoId())) {
+			throw new OrdemDeServicoAbertaParaVeiculoException();
 		}
 
 		OrdemDeServico ordemDeServico = new OrdemDeServico(dto.clienteId(), dto.veiculoId(), atendente.getId());

@@ -38,7 +38,7 @@ public class OrdemDeServicoController {
             @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil ATENDENTE"),
             @ApiResponse(responseCode = "404", description = "Atendente, cliente ou veículo não encontrado",
                     content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "Veículo não pertence ao cliente informado",
+            @ApiResponse(responseCode = "422", description = "Veículo não pertence ao cliente informado ou já existe uma ordem de serviço aberta para este veículo",
                     content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
     })
     @PostMapping

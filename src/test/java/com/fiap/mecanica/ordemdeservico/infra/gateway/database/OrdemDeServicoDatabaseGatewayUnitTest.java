@@ -3,6 +3,8 @@ package com.fiap.mecanica.ordemdeservico.infra.gateway.database;
 import com.fiap.mecanica.ordemdeservico.core.domain.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
+
+import java.util.List;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoRepository;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import org.junit.jupiter.api.Test;
@@ -124,6 +126,32 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         assertEquals(dataCriacao, entity.getDataCriacao());
         assertEquals(dataInicio, entity.getDataInicioDiagnostico());
         assertEquals(dataConclusao, entity.getDataConclusaoDiagnostico());
+    }
+
+    @Test
+    void existeOrdemAbertaParaVeiculo_shouldReturnTrueWhenExists() {
+        Mockito.when(ordemDeServicoRepository.existsByVeiculoIdAndStatusNotIn(
+                        2L, List.of(StatusOrdemDeServico.FINALIZADA, StatusOrdemDeServico.ENTREGUE)))
+                .thenReturn(true);
+
+        assertTrue(gateway.existeOrdemAbertaParaVeiculo(2L));
+    }
+
+    @Test
+    void existeOrdemAbertaParaVeiculo_shouldReturnFalseWhenNotExists() {
+        Mockito.when(ordemDeServicoRepository.existsByVeiculoIdAndStatusNotIn(
+                        2L, List.of(StatusOrdemDeServico.FINALIZADA, StatusOrdemDeServico.ENTREGUE)))
+                .thenReturn(false);
+
+        assertFalse(gateway.existeOrdemAbertaParaVeiculo(2L));
+    }
+
+    @Test
+    void existeOrdemAbertaParaVeiculo_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.when(ordemDeServicoRepository.existsByVeiculoIdAndStatusNotIn(Mockito.any(), Mockito.any()))
+                .thenThrow(new RuntimeException("db error"));
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.existeOrdemAbertaParaVeiculo(2L));
     }
 
     @Test

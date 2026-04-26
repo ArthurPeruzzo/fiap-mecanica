@@ -4,6 +4,7 @@ import com.fiap.mecanica.gestao.core.exception.AtendenteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaVeiculoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
@@ -113,6 +114,17 @@ class OrdemDeServicoControllerContractTest {
                         .content(VALID_BODY))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.message").value("Veículo não pertence ao cliente informado"));
+    }
+
+    @Test
+    void shouldReturn422WhenOrdemAbertaExistsForVeiculo() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoAbertaParaVeiculoException()).when(criarOrdemDeServicoUseCase).criar(Mockito.any());
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_BODY))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Já existe uma ordem de serviço aberta para este veículo"));
     }
 
     // --- iniciarDiagnostico ---

@@ -1,6 +1,7 @@
 package com.fiap.mecanica.ordemdeservico.infra.gateway.database;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoRepository;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -51,6 +53,19 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                     ));
         } catch (Exception e) {
             log.error("Erro ao buscar ordem de servico por id: {}", id, e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+
+    @Override
+    public boolean existeOrdemAbertaParaVeiculo(Long veiculoId) {
+        try {
+            return ordemDeServicoRepository.existsByVeiculoIdAndStatusNotIn(
+                    veiculoId,
+                    List.of(StatusOrdemDeServico.FINALIZADA, StatusOrdemDeServico.ENTREGUE)
+            );
+        } catch (Exception e) {
+            log.error("Erro ao verificar ordem aberta para veiculo id: {}", veiculoId, e);
             throw new ErroAcessoBaseDeDadosException();
         }
     }
