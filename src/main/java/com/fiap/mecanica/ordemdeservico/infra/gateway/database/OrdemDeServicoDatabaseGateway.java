@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -28,6 +30,43 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                     .build());
         } catch (Exception e) {
             log.error("Erro ao criar ordem de servico", e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+
+    @Override
+    public Optional<OrdemDeServico> buscarPorId(Long id) {
+        try {
+            return ordemDeServicoRepository.findById(id)
+                    .map(entity -> OrdemDeServico.reconstituir(
+                            entity.getId(),
+                            entity.getClienteId(),
+                            entity.getVeiculoId(),
+                            entity.getAtendenteId(),
+                            entity.getMecanicoId(),
+                            entity.getStatus(),
+                            entity.getDataCriacao()
+                    ));
+        } catch (Exception e) {
+            log.error("Erro ao buscar ordem de servico por id: {}", id, e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+
+    @Override
+    public void atualizar(OrdemDeServico ordemDeServico) {
+        try {
+            ordemDeServicoRepository.save(OrdemDeServicoEntity.builder()
+                    .id(ordemDeServico.getId())
+                    .clienteId(ordemDeServico.getClienteId())
+                    .veiculoId(ordemDeServico.getVeiculoId())
+                    .atendenteId(ordemDeServico.getAtendenteId())
+                    .mecanicoId(ordemDeServico.getMecanicoId())
+                    .status(ordemDeServico.getStatus())
+                    .dataCriacao(ordemDeServico.getDataCriacao())
+                    .build());
+        } catch (Exception e) {
+            log.error("Erro ao atualizar ordem de servico id: {}", ordemDeServico.getId(), e);
             throw new ErroAcessoBaseDeDadosException();
         }
     }

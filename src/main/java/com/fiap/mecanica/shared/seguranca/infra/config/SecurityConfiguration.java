@@ -49,6 +49,7 @@ public class SecurityConfiguration {
     };
 
     protected static final String[] ENDPOINTS_MECANICO = {
+            "/ordem-servico/*/diagnostico"
     };
 
 
@@ -59,8 +60,8 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers(ENDPOINTS_SEM_AUTENTICACAO).permitAll()
                                 .requestMatchers(ENDPOINTS_ADMINISTRADOR).hasRole(ADMINISTRADOR)
-                                .requestMatchers(ENDPOINTS_ATENDENTE).hasRole(ATENDENTE)
                                 .requestMatchers(ENDPOINTS_MECANICO).hasRole(MECANICO)
+                                .requestMatchers(ENDPOINTS_ATENDENTE).hasRole(ATENDENTE)
                                 .anyRequest().denyAll()
                 ).exceptionHandling(exception ->
                         exception.authenticationEntryPoint((request, response, authException) -> {

@@ -7,4 +7,5 @@ import java.util.Optional;
 public interface MecanicoGateway {
 
     Optional<Mecanico> findById(Long id);
+    Optional<Mecanico> findByUsuarioId(Long usuarioId);
 }

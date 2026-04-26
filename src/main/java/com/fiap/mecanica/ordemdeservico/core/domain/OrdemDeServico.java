@@ -1,5 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.core.domain;
 
+import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
@@ -10,6 +11,7 @@ public class OrdemDeServico {
     private Long clienteId;
     private Long veiculoId;
     private Long atendenteId;
+    private Long mecanicoId;
     private StatusOrdemDeServico status;
     private LocalDateTime dataCriacao;
 
@@ -21,10 +23,19 @@ public class OrdemDeServico {
         this.dataCriacao = LocalDateTime.now();
     }
 
+    public void iniciarDiagnostico(Long mecanicoId) {
+        if (this.status != StatusOrdemDeServico.RECEBIDA) {
+            throw new TransicaoDeStatusInvalidaException();
+        }
+        this.mecanicoId = mecanicoId;
+        this.status = StatusOrdemDeServico.EM_DIAGNOSTICO;
+    }
+
     public static OrdemDeServico reconstituir(Long id, Long clienteId, Long veiculoId, Long atendenteId,
-                                              StatusOrdemDeServico status, LocalDateTime dataCriacao) {
+                                              Long mecanicoId, StatusOrdemDeServico status, LocalDateTime dataCriacao) {
         var os = new OrdemDeServico(clienteId, veiculoId, atendenteId);
         os.id = id;
+        os.mecanicoId = mecanicoId;
         os.status = status;
         os.dataCriacao = dataCriacao;
         return os;

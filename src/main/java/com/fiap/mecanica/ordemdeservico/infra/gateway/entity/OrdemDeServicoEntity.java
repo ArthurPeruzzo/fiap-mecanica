@@ -30,6 +30,9 @@ public class OrdemDeServicoEntity {
     @Column(name = "atendente_id", nullable = false)
     private Long atendenteId;
 
+    @Column(name = "mecanico_id")
+    private Long mecanicoId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private StatusOrdemDeServico status;

@@ -2,9 +2,13 @@ package com.fiap.mecanica.ordemdeservico.infra.controller;
 
 import com.fiap.mecanica.gestao.core.exception.AtendenteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
+import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
+import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
 import com.fiap.mecanica.ordemdeservico.core.usecase.CriarOrdemDeServicoUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.IniciarDiagnosticoUseCase;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,6 +36,9 @@ class OrdemDeServicoControllerContractTest {
 
     @MockitoBean
     private CriarOrdemDeServicoUseCase criarOrdemDeServicoUseCase;
+
+    @MockitoBean
+    private IniciarDiagnosticoUseCase iniciarDiagnosticoUseCase;
 
     private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2}";
 
@@ -100,7 +107,45 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_BODY))
-                .andExpect(status().isUnprocessableContent())
+                .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.message").value("Veículo não pertence ao cliente informado"));
+    }
+
+    @Test
+    void shouldReturn204WhenIniciarDiagnosticoSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(iniciarDiagnosticoUseCase).iniciarDiagnostico(1L);
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemDeServicoNotFound() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
+                .when(iniciarDiagnosticoUseCase).iniciarDiagnostico(99L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/99/diagnostico"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn404WhenMecanicoNotFound() throws Exception {
+        Mockito.doThrow(new MecanicoNaoEncontradoException())
+                .when(iniciarDiagnosticoUseCase).iniciarDiagnostico(1L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Mecânico não encontrado"));
+    }
+
+    @Test
+    void shouldReturn422WhenTransicaoDeStatusInvalida() throws Exception {
+        Mockito.doThrow(new TransicaoDeStatusInvalidaException())
+                .when(iniciarDiagnosticoUseCase).iniciarDiagnostico(1L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
     }
 }

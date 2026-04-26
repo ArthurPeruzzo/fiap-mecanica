@@ -13,6 +13,9 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,6 +39,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         assertEquals(1L, entity.getClienteId());
         assertEquals(2L, entity.getVeiculoId());
         assertEquals(3L, entity.getAtendenteId());
+        assertNull(entity.getMecanicoId());
         assertEquals(StatusOrdemDeServico.RECEBIDA, entity.getStatus());
         assertNotNull(entity.getDataCriacao());
     }
@@ -47,5 +51,75 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
 
         assertThrows(ErroAcessoBaseDeDadosException.class,
                 () -> gateway.criar(new OrdemDeServico(1L, 2L, 3L)));
+    }
+
+    @Test
+    void buscarPorId_shouldReconstituteDomainFromEntity() {
+        var dataCriacao = LocalDateTime.of(2026, 1, 10, 9, 0);
+        var entity = OrdemDeServicoEntity.builder()
+                .id(10L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .dataCriacao(dataCriacao)
+                .build();
+        Mockito.when(ordemDeServicoRepository.findById(10L)).thenReturn(Optional.of(entity));
+
+        var result = gateway.buscarPorId(10L);
+
+        assertTrue(result.isPresent());
+        var os = result.get();
+        assertEquals(10L, os.getId());
+        assertEquals(1L, os.getClienteId());
+        assertEquals(2L, os.getVeiculoId());
+        assertEquals(3L, os.getAtendenteId());
+        assertEquals(5L, os.getMecanicoId());
+        assertEquals(StatusOrdemDeServico.EM_DIAGNOSTICO, os.getStatus());
+        assertEquals(dataCriacao, os.getDataCriacao());
+    }
+
+    @Test
+    void buscarPorId_shouldReturnEmptyWhenNotFound() {
+        Mockito.when(ordemDeServicoRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertTrue(gateway.buscarPorId(99L).isEmpty());
+    }
+
+    @Test
+    void buscarPorId_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.when(ordemDeServicoRepository.findById(Mockito.any()))
+                .thenThrow(new RuntimeException("db error"));
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.buscarPorId(1L));
+    }
+
+    @Test
+    void atualizar_shouldSaveEntityWithAllFields() {
+        var os = OrdemDeServico.reconstituir(10L, 1L, 2L, 3L, 5L, StatusOrdemDeServico.EM_DIAGNOSTICO,
+                LocalDateTime.of(2026, 1, 10, 9, 0));
+        var captor = ArgumentCaptor.forClass(OrdemDeServicoEntity.class);
+
+        gateway.atualizar(os);
+
+        Mockito.verify(ordemDeServicoRepository).save(captor.capture());
+        var entity = captor.getValue();
+        assertEquals(10L, entity.getId());
+        assertEquals(1L, entity.getClienteId());
+        assertEquals(2L, entity.getVeiculoId());
+        assertEquals(3L, entity.getAtendenteId());
+        assertEquals(5L, entity.getMecanicoId());
+        assertEquals(StatusOrdemDeServico.EM_DIAGNOSTICO, entity.getStatus());
+    }
+
+    @Test
+    void atualizar_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.when(ordemDeServicoRepository.save(Mockito.any()))
+                .thenThrow(new RuntimeException("db error"));
+        var os = OrdemDeServico.reconstituir(10L, 1L, 2L, 3L, 5L, StatusOrdemDeServico.EM_DIAGNOSTICO,
+                LocalDateTime.now());
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.atualizar(os));
     }
 }
