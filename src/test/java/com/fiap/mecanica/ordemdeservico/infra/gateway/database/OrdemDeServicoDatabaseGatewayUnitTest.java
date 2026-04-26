@@ -1,7 +1,7 @@
 package com.fiap.mecanica.ordemdeservico.infra.gateway.database;
 
-import com.fiap.mecanica.ordemdeservico.core.domain.OrdemDeServico;
-import com.fiap.mecanica.ordemdeservico.core.domain.StatusOrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
 
 import java.util.List;

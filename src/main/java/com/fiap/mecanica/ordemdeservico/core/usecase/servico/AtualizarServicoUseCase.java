@@ -1,4 +1,4 @@
-package com.fiap.mecanica.ordemdeservico.core.usecase;
+package com.fiap.mecanica.ordemdeservico.core.usecase.servico;
 
 import com.fiap.mecanica.ordemdeservico.core.dto.AtualizarServicoDto;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;

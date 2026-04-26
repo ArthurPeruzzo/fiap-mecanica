@@ -1,4 +1,4 @@
-package com.fiap.mecanica.ordemdeservico.core.domain;
+package com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico;
 
 class OrdemDeServicoFinalizadaState implements OrdemDeServicoState {
     // estado terminal — nenhuma transição permitida

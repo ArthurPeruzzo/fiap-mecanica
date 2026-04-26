@@ -1,6 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.infra.gateway.entity;
 
-import com.fiap.mecanica.ordemdeservico.core.domain.StatusOrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

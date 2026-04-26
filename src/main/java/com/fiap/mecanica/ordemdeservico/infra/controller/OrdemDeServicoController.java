@@ -1,9 +1,9 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
-import com.fiap.mecanica.ordemdeservico.core.usecase.ConcluirDiagnosticoUseCase;
-import com.fiap.mecanica.ordemdeservico.core.usecase.CriarOrdemDeServicoUseCase;
-import com.fiap.mecanica.ordemdeservico.core.usecase.IniciarDiagnosticoUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.ConcluirDiagnosticoOrdemDeServicoUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.CriarOrdemDeServicoUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.IniciarDiagnosticoOrdemDeServicoUseCase;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.OrdemDeServicoRequestJson;
 import com.fiap.mecanica.shared.exception.dto.ExceptionDto;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,8 +25,8 @@ import org.springframework.web.bind.annotation.*;
 public class OrdemDeServicoController {
 
     private final CriarOrdemDeServicoUseCase criarOrdemDeServicoUseCase;
-    private final IniciarDiagnosticoUseCase iniciarDiagnosticoUseCase;
-    private final ConcluirDiagnosticoUseCase concluirDiagnosticoUseCase;
+    private final IniciarDiagnosticoOrdemDeServicoUseCase iniciarDiagnosticoOrdemDeServicoUseCase;
+    private final ConcluirDiagnosticoOrdemDeServicoUseCase concluirDiagnosticoOrdemDeServicoUseCase;
 
     @Operation(summary = "Abrir Ordem de Serviço",
             description = "Abre uma nova Ordem de Serviço com status RECEBIDA. O atendente é identificado pelo token JWT.")
@@ -63,7 +63,7 @@ public class OrdemDeServicoController {
     })
     @PatchMapping("/{id}/diagnostico")
     public ResponseEntity<Void> iniciarDiagnostico(@PathVariable Long id) {
-        iniciarDiagnosticoUseCase.iniciarDiagnostico(id);
+        iniciarDiagnosticoOrdemDeServicoUseCase.iniciarDiagnostico(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -80,7 +80,7 @@ public class OrdemDeServicoController {
     })
     @PatchMapping("/{id}/diagnostico/conclusao")
     public ResponseEntity<Void> concluirDiagnostico(@PathVariable Long id) {
-        concluirDiagnosticoUseCase.concluirDiagnostico(id);
+        concluirDiagnosticoOrdemDeServicoUseCase.concluirDiagnostico(id);
         return ResponseEntity.noContent().build();
     }
 }

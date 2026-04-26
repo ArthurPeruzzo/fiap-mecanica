@@ -2,10 +2,10 @@ package com.fiap.mecanica.ordemdeservico.infra.controller;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
-import com.fiap.mecanica.ordemdeservico.core.usecase.AtualizarServicoUseCase;
-import com.fiap.mecanica.ordemdeservico.core.usecase.CriarServicoUseCase;
-import com.fiap.mecanica.ordemdeservico.core.usecase.DeletarServicoUseCase;
-import com.fiap.mecanica.ordemdeservico.core.usecase.ListarServicosUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.servico.AtualizarServicoUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.servico.CriarServicoUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.servico.DeletarServicoUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.servico.ListarServicosUseCase;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.page.Pagina;
 import org.junit.jupiter.api.Test;

@@ -1,5 +1,7 @@
 package com.fiap.mecanica.ordemdeservico.core.domain;
 
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import org.junit.jupiter.api.Test;
 

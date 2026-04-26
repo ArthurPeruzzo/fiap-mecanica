@@ -1,4 +1,4 @@
-package com.fiap.mecanica.ordemdeservico.core.usecase;
+package com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico;
 
 import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class ConcluirDiagnosticoUseCase {
+public class ConcluirDiagnosticoOrdemDeServicoUseCase {
 
     private final MecanicoGateway mecanicoGateway;
     private final TokenGateway tokenGateway;

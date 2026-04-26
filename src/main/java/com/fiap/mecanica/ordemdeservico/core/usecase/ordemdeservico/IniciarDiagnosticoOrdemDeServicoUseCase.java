@@ -1,10 +1,10 @@
-package com.fiap.mecanica.ordemdeservico.core.usecase;
+package com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico;
 
 import com.fiap.mecanica.gestao.core.domain.Mecanico;
 import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
-import com.fiap.mecanica.ordemdeservico.core.domain.OrdemDeServico;
-import com.fiap.mecanica.ordemdeservico.core.domain.StatusOrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoEmDiagnosticoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoMecanicoResponsavelException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class IniciarDiagnosticoUseCase {
+public class IniciarDiagnosticoOrdemDeServicoUseCase {
 
     private final MecanicoGateway mecanicoGateway;
     private final TokenGateway tokenGateway;

@@ -1,4 +1,4 @@
-package com.fiap.mecanica.ordemdeservico.core.usecase;
+package com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico;
 
 import com.fiap.mecanica.gestao.core.domain.Atendente;
 import com.fiap.mecanica.gestao.core.domain.Cliente;
@@ -8,7 +8,7 @@ import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.gateway.AtendenteGateway;
 import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
 import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
-import com.fiap.mecanica.ordemdeservico.core.domain.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
 import com.fiap.mecanica.gestao.core.exception.AtendenteNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaVeiculoException;

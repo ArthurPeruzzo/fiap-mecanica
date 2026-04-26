@@ -10,9 +10,9 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoMecanicoRes
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
-import com.fiap.mecanica.ordemdeservico.core.usecase.ConcluirDiagnosticoUseCase;
-import com.fiap.mecanica.ordemdeservico.core.usecase.CriarOrdemDeServicoUseCase;
-import com.fiap.mecanica.ordemdeservico.core.usecase.IniciarDiagnosticoUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.ConcluirDiagnosticoOrdemDeServicoUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.CriarOrdemDeServicoUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.IniciarDiagnosticoOrdemDeServicoUseCase;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -42,10 +42,10 @@ class OrdemDeServicoControllerContractTest {
     private CriarOrdemDeServicoUseCase criarOrdemDeServicoUseCase;
 
     @MockitoBean
-    private IniciarDiagnosticoUseCase iniciarDiagnosticoUseCase;
+    private IniciarDiagnosticoOrdemDeServicoUseCase iniciarDiagnosticoOrdemDeServicoUseCase;
 
     @MockitoBean
-    private ConcluirDiagnosticoUseCase concluirDiagnosticoUseCase;
+    private ConcluirDiagnosticoOrdemDeServicoUseCase concluirDiagnosticoOrdemDeServicoUseCase;
 
     private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2}";
 
@@ -136,13 +136,13 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
                 .andExpect(status().isNoContent());
 
-        Mockito.verify(iniciarDiagnosticoUseCase).iniciarDiagnostico(1L);
+        Mockito.verify(iniciarDiagnosticoOrdemDeServicoUseCase).iniciarDiagnostico(1L);
     }
 
     @Test
     void shouldReturn404WhenOrdemDeServicoNotFoundOnIniciar() throws Exception {
         Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
-                .when(iniciarDiagnosticoUseCase).iniciarDiagnostico(99L);
+                .when(iniciarDiagnosticoOrdemDeServicoUseCase).iniciarDiagnostico(99L);
 
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/99/diagnostico"))
                 .andExpect(status().isNotFound())
@@ -152,7 +152,7 @@ class OrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn404WhenMecanicoNotFoundOnIniciar() throws Exception {
         Mockito.doThrow(new MecanicoNaoEncontradoException())
-                .when(iniciarDiagnosticoUseCase).iniciarDiagnostico(1L);
+                .when(iniciarDiagnosticoOrdemDeServicoUseCase).iniciarDiagnostico(1L);
 
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
                 .andExpect(status().isNotFound())
@@ -162,7 +162,7 @@ class OrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn409WhenOrdemJaEmDiagnostico() throws Exception {
         Mockito.doThrow(new OrdemDeServicoEmDiagnosticoException())
-                .when(iniciarDiagnosticoUseCase).iniciarDiagnostico(1L);
+                .when(iniciarDiagnosticoOrdemDeServicoUseCase).iniciarDiagnostico(1L);
 
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
                 .andExpect(status().isConflict())
@@ -172,7 +172,7 @@ class OrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn422WhenOutroMecanicoJaVinculado() throws Exception {
         Mockito.doThrow(new OrdemDeServicoMecanicoResponsavelException())
-                .when(iniciarDiagnosticoUseCase).iniciarDiagnostico(1L);
+                .when(iniciarDiagnosticoOrdemDeServicoUseCase).iniciarDiagnostico(1L);
 
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
                 .andExpect(status().isUnprocessableEntity())
@@ -182,7 +182,7 @@ class OrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn422WhenTransicaoInvalidaOnIniciar() throws Exception {
         Mockito.doThrow(new TransicaoDeStatusInvalidaException())
-                .when(iniciarDiagnosticoUseCase).iniciarDiagnostico(1L);
+                .when(iniciarDiagnosticoOrdemDeServicoUseCase).iniciarDiagnostico(1L);
 
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
                 .andExpect(status().isUnprocessableEntity())
@@ -196,13 +196,13 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico/conclusao"))
                 .andExpect(status().isNoContent());
 
-        Mockito.verify(concluirDiagnosticoUseCase).concluirDiagnostico(1L);
+        Mockito.verify(concluirDiagnosticoOrdemDeServicoUseCase).concluirDiagnostico(1L);
     }
 
     @Test
     void shouldReturn404WhenOrdemDeServicoNotFoundOnConcluir() throws Exception {
         Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
-                .when(concluirDiagnosticoUseCase).concluirDiagnostico(99L);
+                .when(concluirDiagnosticoOrdemDeServicoUseCase).concluirDiagnostico(99L);
 
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/99/diagnostico/conclusao"))
                 .andExpect(status().isNotFound())
@@ -212,7 +212,7 @@ class OrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn404WhenMecanicoNotFoundOnConcluir() throws Exception {
         Mockito.doThrow(new MecanicoNaoEncontradoException())
-                .when(concluirDiagnosticoUseCase).concluirDiagnostico(1L);
+                .when(concluirDiagnosticoOrdemDeServicoUseCase).concluirDiagnostico(1L);
 
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico/conclusao"))
                 .andExpect(status().isNotFound())
@@ -222,7 +222,7 @@ class OrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn422WhenTransicaoInvalidaOnConcluir() throws Exception {
         Mockito.doThrow(new TransicaoDeStatusInvalidaException())
-                .when(concluirDiagnosticoUseCase).concluirDiagnostico(1L);
+                .when(concluirDiagnosticoOrdemDeServicoUseCase).concluirDiagnostico(1L);
 
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico/conclusao"))
                 .andExpect(status().isUnprocessableEntity())

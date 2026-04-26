@@ -3,13 +3,14 @@ package com.fiap.mecanica.ordemdeservico.core.usecase;
 import com.fiap.mecanica.gestao.core.domain.Mecanico;
 import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
-import com.fiap.mecanica.ordemdeservico.core.domain.OrdemDeServico;
-import com.fiap.mecanica.ordemdeservico.core.domain.StatusOrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoEmDiagnosticoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoMecanicoResponsavelException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.IniciarDiagnosticoOrdemDeServicoUseCase;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,10 +26,10 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
-class IniciarDiagnosticoUseCaseUnitTest {
+class IniciarDiagnosticoOrdemDeServicoUseCaseUnitTest {
 
     @InjectMocks
-    private IniciarDiagnosticoUseCase iniciarDiagnosticoUseCase;
+    private IniciarDiagnosticoOrdemDeServicoUseCase iniciarDiagnosticoOrdemDeServicoUseCase;
 
     @Mock
     private MecanicoGateway mecanicoGateway;
@@ -73,7 +74,7 @@ class IniciarDiagnosticoUseCaseUnitTest {
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID))
                 .thenReturn(Optional.of(ordemRecebidaSemMecanico()));
 
-        iniciarDiagnosticoUseCase.iniciarDiagnostico(ORDEM_ID);
+        iniciarDiagnosticoOrdemDeServicoUseCase.iniciarDiagnostico(ORDEM_ID);
 
         var captor = ArgumentCaptor.forClass(OrdemDeServico.class);
         Mockito.verify(ordemDeServicoGateway).atualizar(captor.capture());
@@ -92,7 +93,7 @@ class IniciarDiagnosticoUseCaseUnitTest {
                 .thenReturn(Optional.of(ordemEmDiagnostico(MECANICO_ID)));
 
         assertThrows(OrdemDeServicoEmDiagnosticoException.class,
-                () -> iniciarDiagnosticoUseCase.iniciarDiagnostico(ORDEM_ID));
+                () -> iniciarDiagnosticoOrdemDeServicoUseCase.iniciarDiagnostico(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
     }
@@ -105,7 +106,7 @@ class IniciarDiagnosticoUseCaseUnitTest {
 
         // status EM_DIAGNOSTICO tem precedência — lança EmDiagnostico, não MecanicoResponsavel
         assertThrows(OrdemDeServicoEmDiagnosticoException.class,
-                () -> iniciarDiagnosticoUseCase.iniciarDiagnostico(ORDEM_ID));
+                () -> iniciarDiagnosticoOrdemDeServicoUseCase.iniciarDiagnostico(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
     }
@@ -122,7 +123,7 @@ class IniciarDiagnosticoUseCaseUnitTest {
                 .thenReturn(Optional.of(ordemComOutroMecanico));
 
         assertThrows(OrdemDeServicoMecanicoResponsavelException.class,
-                () -> iniciarDiagnosticoUseCase.iniciarDiagnostico(ORDEM_ID));
+                () -> iniciarDiagnosticoOrdemDeServicoUseCase.iniciarDiagnostico(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
     }
@@ -136,7 +137,7 @@ class IniciarDiagnosticoUseCaseUnitTest {
                 .thenReturn(Optional.of(ordemEmOutroStatus(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO)));
 
         assertThrows(TransicaoDeStatusInvalidaException.class,
-                () -> iniciarDiagnosticoUseCase.iniciarDiagnostico(ORDEM_ID));
+                () -> iniciarDiagnosticoOrdemDeServicoUseCase.iniciarDiagnostico(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
     }
@@ -149,7 +150,7 @@ class IniciarDiagnosticoUseCaseUnitTest {
         Mockito.when(mecanicoGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.empty());
 
         assertThrows(MecanicoNaoEncontradoException.class,
-                () -> iniciarDiagnosticoUseCase.iniciarDiagnostico(ORDEM_ID));
+                () -> iniciarDiagnosticoOrdemDeServicoUseCase.iniciarDiagnostico(ORDEM_ID));
 
         Mockito.verifyNoInteractions(ordemDeServicoGateway);
     }
@@ -160,7 +161,7 @@ class IniciarDiagnosticoUseCaseUnitTest {
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.empty());
 
         assertThrows(OrdemDeServicoNaoEncontradaException.class,
-                () -> iniciarDiagnosticoUseCase.iniciarDiagnostico(ORDEM_ID));
+                () -> iniciarDiagnosticoOrdemDeServicoUseCase.iniciarDiagnostico(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
     }

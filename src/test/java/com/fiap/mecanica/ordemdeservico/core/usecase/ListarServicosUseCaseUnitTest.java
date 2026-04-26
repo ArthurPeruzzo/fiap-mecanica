@@ -3,6 +3,7 @@ package com.fiap.mecanica.ordemdeservico.core.usecase;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
 import com.fiap.mecanica.ordemdeservico.core.dto.ListarServicosDto;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.usecase.servico.ListarServicosUseCase;
 import com.fiap.mecanica.shared.page.Pagina;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

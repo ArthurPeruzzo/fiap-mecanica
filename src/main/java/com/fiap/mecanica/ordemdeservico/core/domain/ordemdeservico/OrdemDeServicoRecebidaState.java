@@ -1,4 +1,4 @@
-package com.fiap.mecanica.ordemdeservico.core.domain;
+package com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico;
 
 import java.time.LocalDateTime;
 

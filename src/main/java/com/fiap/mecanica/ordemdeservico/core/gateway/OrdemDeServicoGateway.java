@@ -1,6 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.core.gateway;
 
-import com.fiap.mecanica.ordemdeservico.core.domain.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 
 import java.util.Optional;
 
