@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +19,22 @@ public interface OrdemDeServicoRepository extends JpaRepository<OrdemDeServicoEn
 
     @Query("SELECT o FROM OrdemDeServicoEntity o LEFT JOIN FETCH o.servicos WHERE o.id = :id")
     Optional<OrdemDeServicoEntity> findOrdemDeServicoById(@Param("id") Long id);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE OrdemDeServicoEntity o SET " +
+           "o.mecanicoId = :mecanicoId, " +
+           "o.status = :status, " +
+           "o.dataInicioDiagnostico = :dataInicioDiagnostico, " +
+           "o.dataConclusaoDiagnostico = :dataConclusaoDiagnostico " +
+           "WHERE o.id = :id")
+    void atualizar(
+            @Param("id") Long id,
+            @Param("mecanicoId") Long mecanicoId,
+            @Param("status") StatusOrdemDeServico status,
+            @Param("dataInicioDiagnostico") LocalDateTime dataInicioDiagnostico,
+            @Param("dataConclusaoDiagnostico") LocalDateTime dataConclusaoDiagnostico
+    );
 
     @Modifying
     @Transactional

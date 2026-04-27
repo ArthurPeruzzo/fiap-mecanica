@@ -114,34 +114,23 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
     }
 
     @Test
-    void atualizar_shouldSaveEntityWithAllFields() {
-        var dataCriacao = LocalDateTime.of(2026, 1, 10, 9, 0);
+    void atualizar_shouldCallQueryWithMutableFieldsOnly() {
         var dataInicio = LocalDateTime.of(2026, 1, 10, 10, 0);
         var dataConclusao = LocalDateTime.of(2026, 1, 10, 11, 0);
         var os = OrdemDeServico.reconstituir(10L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, dataCriacao, dataInicio, dataConclusao, List.of());
-        var captor = ArgumentCaptor.forClass(OrdemDeServicoEntity.class);
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), dataInicio, dataConclusao, List.of());
 
         gateway.atualizar(os);
 
-        Mockito.verify(ordemDeServicoRepository).save(captor.capture());
-        var entity = captor.getValue();
-        assertEquals(10L, entity.getId());
-        assertEquals(1L, entity.getClienteId());
-        assertEquals(2L, entity.getVeiculoId());
-        assertEquals(3L, entity.getAtendenteId());
-        assertEquals(5L, entity.getMecanicoId());
-        assertEquals(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, entity.getStatus());
-        assertEquals(DESCRICAO, entity.getDescricao());
-        assertEquals(dataCriacao, entity.getDataCriacao());
-        assertEquals(dataInicio, entity.getDataInicioDiagnostico());
-        assertEquals(dataConclusao, entity.getDataConclusaoDiagnostico());
+        Mockito.verify(ordemDeServicoRepository).atualizar(
+                10L, 5L, StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, dataInicio, dataConclusao);
+        Mockito.verify(ordemDeServicoRepository, Mockito.never()).save(Mockito.any());
     }
 
     @Test
     void atualizar_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
-        Mockito.when(ordemDeServicoRepository.save(Mockito.any()))
-                .thenThrow(new RuntimeException("db error"));
+        Mockito.doThrow(new RuntimeException("db error"))
+                .when(ordemDeServicoRepository).atualizar(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
         var os = OrdemDeServico.reconstituir(10L, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of());
 

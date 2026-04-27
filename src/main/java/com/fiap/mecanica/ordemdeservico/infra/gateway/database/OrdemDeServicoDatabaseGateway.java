@@ -77,18 +77,13 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
     @Override
     public void atualizar(OrdemDeServico ordemDeServico) {
         try {
-            ordemDeServicoRepository.save(OrdemDeServicoEntity.builder()
-                    .id(ordemDeServico.getId())
-                    .clienteId(ordemDeServico.getClienteId())
-                    .veiculoId(ordemDeServico.getVeiculoId())
-                    .atendenteId(ordemDeServico.getAtendenteId())
-                    .mecanicoId(ordemDeServico.getMecanicoId())
-                    .status(ordemDeServico.getStatus())
-                    .descricao(ordemDeServico.getDescricao())
-                    .dataCriacao(ordemDeServico.getDataCriacao())
-                    .dataInicioDiagnostico(ordemDeServico.getDataInicioDiagnostico())
-                    .dataConclusaoDiagnostico(ordemDeServico.getDataConclusaoDiagnostico())
-                    .build());
+            ordemDeServicoRepository.atualizar(
+                    ordemDeServico.getId(),
+                    ordemDeServico.getMecanicoId(),
+                    ordemDeServico.getStatus(),
+                    ordemDeServico.getDataInicioDiagnostico(),
+                    ordemDeServico.getDataConclusaoDiagnostico()
+            );
         } catch (Exception e) {
             log.error("Erro ao atualizar ordem de servico id: {}", ordemDeServico.getId(), e);
             throw new ErroAcessoBaseDeDadosException();
