@@ -5,7 +5,6 @@ import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
-import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoEmDiagnosticoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoMecanicoResponsavelException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
@@ -90,25 +89,25 @@ class IniciarDiagnosticoOrdemDeServicoUseCaseUnitTest {
     // --- ordemDeServico já em diagnóstico ---
 
     @Test
-    void shouldThrowOrdemEmDiagnosticoWhenStatusIsEmDiagnostico() {
+    void shouldThrowWhenStatusIsEmDiagnostico() {
         stubMecanico();
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID))
                 .thenReturn(Optional.of(ordemEmDiagnostico(MECANICO_ID)));
 
-        assertThrows(OrdemDeServicoEmDiagnosticoException.class,
+        assertThrows(TransicaoDeStatusInvalidaException.class,
                 () -> iniciarDiagnosticoOrdemDeServicoUseCase.iniciarDiagnostico(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
     }
 
     @Test
-    void shouldThrowOrdemEmDiagnosticoEvenWhenOutroMecanicoAndStatusIsEmDiagnostico() {
+    void shouldThrowMecanicoResponsavelWhenOutroMecanicoEStatusIsEmDiagnostico() {
         stubMecanico();
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID))
                 .thenReturn(Optional.of(ordemEmDiagnostico(OUTRO_MECANICO_ID)));
 
-        // status EM_DIAGNOSTICO tem precedência — lança EmDiagnostico, não MecanicoResponsavel
-        assertThrows(OrdemDeServicoEmDiagnosticoException.class,
+        // check do mecânico tem precedência — lança MecanicoResponsavel, não EmDiagnostico
+        assertThrows(OrdemDeServicoMecanicoResponsavelException.class,
                 () -> iniciarDiagnosticoOrdemDeServicoUseCase.iniciarDiagnostico(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());

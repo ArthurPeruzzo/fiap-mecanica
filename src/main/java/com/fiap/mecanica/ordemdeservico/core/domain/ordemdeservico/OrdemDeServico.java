@@ -1,10 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico;
 
-import com.fiap.mecanica.ordemdeservico.core.exception.MecanicoNaoResponsavelPelaOrdemDeServicoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoSemServicosException;
-import com.fiap.mecanica.ordemdeservico.core.exception.ServicoJaVinculadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.VinculoServicoNaoAutorizadoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.*;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
@@ -53,6 +49,9 @@ public class OrdemDeServico {
     }
 
     public void iniciarDiagnostico(Long mecanicoId) {
+        if (possuiMecanicoResponsavel() && !isMecanicoResponsavel(mecanicoId)) {
+            throw new OrdemDeServicoMecanicoResponsavelException();
+        }
         state.iniciarDiagnostico(this, mecanicoId);
     }
 

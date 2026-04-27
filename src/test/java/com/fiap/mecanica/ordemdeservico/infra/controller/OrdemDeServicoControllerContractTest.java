@@ -7,7 +7,6 @@ import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.MecanicoNaoResponsavelPelaOrdemDeServicoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaVeiculoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoSemServicosException;
-import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoEmDiagnosticoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoMecanicoResponsavelException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoJaVinculadoException;
@@ -175,13 +174,13 @@ class OrdemDeServicoControllerContractTest {
     }
 
     @Test
-    void shouldReturn409WhenOrdemJaEmDiagnostico() throws Exception {
-        Mockito.doThrow(new OrdemDeServicoEmDiagnosticoException())
+    void shouldReturn422WhenOrdemJaEmDiagnostico() throws Exception {
+        Mockito.doThrow(new TransicaoDeStatusInvalidaException())
                 .when(iniciarDiagnosticoOrdemDeServicoUseCase).iniciarDiagnostico(1L);
 
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("A ordem de servico ja esta em diagnostico"));
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
     }
 
     @Test
