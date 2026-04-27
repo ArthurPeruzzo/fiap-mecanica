@@ -8,6 +8,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "ordem_servico")
@@ -45,5 +47,14 @@ public class OrdemDeServicoEntity {
 
     @Column(name = "data_conclusao_diagnostico")
     private LocalDateTime dataConclusaoDiagnostico;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "ordem_servico_servico",
+            joinColumns = @JoinColumn(name = "ordem_servico_id"),
+            inverseJoinColumns = @JoinColumn(name = "servico_id")
+    )
+    @Builder.Default
+    private List<ServicoEntity> servicos = new ArrayList<>();
 
 }

@@ -1,8 +1,13 @@
 package com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico;
 
+import com.fiap.mecanica.ordemdeservico.core.exception.ServicoJaVinculadoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.VinculoServicoNaoAutorizadoException;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 public class OrdemDeServico {
@@ -15,6 +20,7 @@ public class OrdemDeServico {
     private LocalDateTime dataCriacao;
     private LocalDateTime dataInicioDiagnostico;
     private LocalDateTime dataConclusaoDiagnostico;
+    private List<Long> servicoIds = new ArrayList<>();
 
     private OrdemDeServicoState state;
 
@@ -55,6 +61,28 @@ public class OrdemDeServico {
         this.state = novoState;
     }
 
+    public void vincularServico(Long servicoId) {
+        if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
+            throw new VinculoServicoNaoAutorizadoException();
+        }
+
+        if (servicoIds.contains(servicoId)) {
+            throw new ServicoJaVinculadoException();
+        }
+        servicoIds.add(servicoId);
+    }
+
+    public void desvincularServico(Long servicoId) {
+        if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
+            throw new VinculoServicoNaoAutorizadoException();
+        }
+
+        if (!servicoIds.contains(servicoId)) {
+            throw new ServicoNaoVinculadoException();
+        }
+        servicoIds.remove(servicoId);
+    }
+
     public boolean possuiMecanicoResponsavel() {
         return mecanicoId != null;
     }
@@ -65,7 +93,8 @@ public class OrdemDeServico {
 
     public static OrdemDeServico reconstituir(Long id, Long clienteId, Long veiculoId, Long atendenteId,
                                               Long mecanicoId, StatusOrdemDeServico status, LocalDateTime dataCriacao,
-                                              LocalDateTime dataInicioDiagnostico, LocalDateTime dataConclusaoDiagnostico) {
+                                              LocalDateTime dataInicioDiagnostico, LocalDateTime dataConclusaoDiagnostico,
+                                              List<Long> servicoIds) {
         var os = new OrdemDeServico();
         os.id = id;
         os.clienteId = clienteId;
@@ -77,6 +106,7 @@ public class OrdemDeServico {
         os.dataInicioDiagnostico = dataInicioDiagnostico;
         os.dataConclusaoDiagnostico = dataConclusaoDiagnostico;
         os.state = OrdemDeServicoStateFactory.from(status);
+        os.servicoIds = new ArrayList<>(servicoIds);
         return os;
     }
 }

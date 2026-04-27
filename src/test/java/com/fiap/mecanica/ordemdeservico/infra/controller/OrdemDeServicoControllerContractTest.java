@@ -8,11 +8,17 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaV
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoEmDiagnosticoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoMecanicoResponsavelException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
+import com.fiap.mecanica.ordemdeservico.core.exception.ServicoJaVinculadoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
+import com.fiap.mecanica.ordemdeservico.core.exception.VinculoServicoNaoAutorizadoException;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.ConcluirDiagnosticoOrdemDeServicoUseCase;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.CriarOrdemDeServicoUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.DesvincularServicoOrdemDeServicoUseCase;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.IniciarDiagnosticoOrdemDeServicoUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.VincularServicoOrdemDeServicoUseCase;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -46,6 +52,12 @@ class OrdemDeServicoControllerContractTest {
 
     @MockitoBean
     private ConcluirDiagnosticoOrdemDeServicoUseCase concluirDiagnosticoOrdemDeServicoUseCase;
+
+    @MockitoBean
+    private VincularServicoOrdemDeServicoUseCase vincularServicoOrdemDeServicoUseCase;
+
+    @MockitoBean
+    private DesvincularServicoOrdemDeServicoUseCase desvincularServicoOrdemDeServicoUseCase;
 
     private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2}";
 
@@ -227,5 +239,105 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico/conclusao"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
+    }
+
+    // --- vincularServico ---
+
+    @Test
+    void shouldReturn204WhenVincularServicoSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/servicos/10"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(vincularServicoOrdemDeServicoUseCase).vincular(1L, 10L);
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnVincular() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
+                .when(vincularServicoOrdemDeServicoUseCase).vincular(99L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/99/servicos/10"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn404WhenServicoNotFoundOnVincular() throws Exception {
+        Mockito.doThrow(new ServicoNaoEncontradoException())
+                .when(vincularServicoOrdemDeServicoUseCase).vincular(1L, 99L);
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/servicos/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Serviço não encontrado"));
+    }
+
+    @Test
+    void shouldReturn422WhenServicoJaVinculado() throws Exception {
+        Mockito.doThrow(new ServicoJaVinculadoException())
+                .when(vincularServicoOrdemDeServicoUseCase).vincular(1L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/servicos/10"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Este serviço já está vinculado à ordem de serviço"));
+    }
+
+    @Test
+    void shouldReturn422WhenOrdemNaoEmDiagnosticoOnVincular() throws Exception {
+        Mockito.doThrow(new VinculoServicoNaoAutorizadoException())
+                .when(vincularServicoOrdemDeServicoUseCase).vincular(1L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/servicos/10"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Não é possível adicionar ou remover serviços se a ordem de serviço não está em diagnóstico"));
+    }
+
+    // --- desvincularServico ---
+
+    @Test
+    void shouldReturn204WhenDesvincularServicoSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/servicos/10"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(desvincularServicoOrdemDeServicoUseCase).desvincular(1L, 10L);
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnDesvincular() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
+                .when(desvincularServicoOrdemDeServicoUseCase).desvincular(99L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/99/servicos/10"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn404WhenServicoNotFoundOnDesvincular() throws Exception {
+        Mockito.doThrow(new ServicoNaoEncontradoException())
+                .when(desvincularServicoOrdemDeServicoUseCase).desvincular(1L, 99L);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/servicos/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Serviço não encontrado"));
+    }
+
+    @Test
+    void shouldReturn422WhenServicoNaoVinculado() throws Exception {
+        Mockito.doThrow(new ServicoNaoVinculadoException())
+                .when(desvincularServicoOrdemDeServicoUseCase).desvincular(1L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/servicos/10"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Este serviço não está vinculado à ordem de serviço"));
+    }
+
+    @Test
+    void shouldReturn422WhenOrdemNaoEmDiagnosticoOnDesvincular() throws Exception {
+        Mockito.doThrow(new VinculoServicoNaoAutorizadoException())
+                .when(desvincularServicoOrdemDeServicoUseCase).desvincular(1L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/servicos/10"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Não é possível adicionar ou remover serviços se a ordem de serviço não está em diagnóstico"));
     }
 }

@@ -9,4 +9,6 @@ public interface OrdemDeServicoGateway {
 	Optional<OrdemDeServico> buscarPorId(Long id);
 	void atualizar(OrdemDeServico ordemDeServico);
 	boolean existeOrdemAbertaParaVeiculo(Long veiculoId);
+	void vincularServico(Long ordemServicoId, Long servicoId);
+	void desvincularServico(Long ordemServicoId, Long servicoId);
 }

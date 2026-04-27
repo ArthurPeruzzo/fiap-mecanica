@@ -4,6 +4,7 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServic
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.ServicoEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoRepository;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +40,7 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
     @Override
     public Optional<OrdemDeServico> buscarPorId(Long id) {
         try {
-            return ordemDeServicoRepository.findById(id)
+            return ordemDeServicoRepository.findOrdemDeServicoById(id)
                     .map(entity -> OrdemDeServico.reconstituir(
                             entity.getId(),
                             entity.getClienteId(),
@@ -49,7 +50,8 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                             entity.getStatus(),
                             entity.getDataCriacao(),
                             entity.getDataInicioDiagnostico(),
-                            entity.getDataConclusaoDiagnostico()
+                            entity.getDataConclusaoDiagnostico(),
+                            entity.getServicos().stream().map(ServicoEntity::getId).toList()
                     ));
         } catch (Exception e) {
             log.error("Erro ao buscar ordem de servico por id: {}", id, e);
@@ -86,6 +88,26 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                     .build());
         } catch (Exception e) {
             log.error("Erro ao atualizar ordem de servico id: {}", ordemDeServico.getId(), e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+
+    @Override
+    public void vincularServico(Long ordemServicoId, Long servicoId) {
+        try {
+            ordemDeServicoRepository.vincularServico(ordemServicoId, servicoId);
+        } catch (Exception e) {
+            log.error("Erro ao vincular servico {} na ordem de servico {}", servicoId, ordemServicoId, e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+
+    @Override
+    public void desvincularServico(Long ordemServicoId, Long servicoId) {
+        try {
+            ordemDeServicoRepository.desvincularServico(ordemServicoId, servicoId);
+        } catch (Exception e) {
+            log.error("Erro ao desvincular servico {} da ordem de servico {}", servicoId, ordemServicoId, e);
             throw new ErroAcessoBaseDeDadosException();
         }
     }

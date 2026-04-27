@@ -11,7 +11,9 @@ import com.fiap.mecanica.gestao.infra.gateway.entity.VeiculoEntity;
 import com.fiap.mecanica.gestao.infra.gateway.repository.VeiculoRepository;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.ServicoEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoRepository;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.ServicoRepository;
 import com.fiap.mecanica.resources.testcontainer.AbstractContainer;
 import com.fiap.mecanica.shared.seguranca.core.domain.RoleEnum;
 import com.fiap.mecanica.shared.seguranca.infra.config.SecurityConfiguration;
@@ -27,8 +29,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @ActiveProfiles("integration-test")
@@ -43,6 +47,8 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
     @Autowired private ClienteRepository clienteRepository;
     @Autowired private VeiculoRepository veiculoRepository;
     @Autowired private OrdemDeServicoRepository ordemDeServicoRepository;
+    @Autowired private ServicoRepository servicoRepository;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     @LocalServerPort
     private int port;
@@ -103,6 +109,36 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
         return ordemDeServicoRepository.findAll().getFirst().getId();
     }
 
+    private Long criarServicoERetornarId() {
+        return servicoRepository.saveAndFlush(ServicoEntity.builder()
+                .nome("Troca de óleo")
+                .descricao("Serviço de troca de óleo do motor")
+                .preco(new BigDecimal("150.00"))
+                .build()).getId();
+    }
+
+    private Long criarOrdemEmDiagnosticoERetornarId(String tokenAtendente, String tokenMecanico) {
+        Long clienteId = criarClienteERetornarId();
+        Long veiculoId = criarVeiculoERetornarId(clienteId);
+        Long ordemId = criarOrdemERetornarId(tokenAtendente, clienteId, veiculoId);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().patch("/ordem-servico/" + ordemId + "/diagnostico")
+                .then().statusCode(204);
+
+        return ordemId;
+    }
+
+    private int contarVinculosNoBanco(Long ordemId, Long servicoId) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ordem_servico_servico WHERE ordem_servico_id = ? AND servico_id = ?",
+                Integer.class, ordemId, servicoId);
+        return count != null ? count : 0;
+    }
+
+    // --- criar ---
+
     @Test
     void shouldCreateOrdemDeServicoSuccessfully() {
         String token = obterTokenAtendente();
@@ -126,6 +162,8 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
         Assertions.assertNull(ordem.getDataConclusaoDiagnostico());
     }
 
+    // --- iniciarDiagnostico ---
+
     @Test
     void shouldIniciarDiagnosticoSuccessfully() {
         Long clienteId = criarClienteERetornarId();
@@ -143,6 +181,8 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
         Assertions.assertNotNull(ordem.getDataInicioDiagnostico());
         Assertions.assertNull(ordem.getDataConclusaoDiagnostico());
     }
+
+    // --- concluirDiagnostico ---
 
     @Test
     void shouldConcluirDiagnosticoSuccessfully() {
@@ -166,6 +206,170 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
         Assertions.assertNotNull(ordem.getDataInicioDiagnostico());
         Assertions.assertNotNull(ordem.getDataConclusaoDiagnostico());
     }
+
+    // --- vincularServico ---
+
+    @Test
+    void shouldVincularServicoSuccessfully() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+        Long servicoId = criarServicoERetornarId();
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().put("/ordem-servico/" + ordemId + "/servicos/" + servicoId)
+                .then().statusCode(204);
+
+        Assertions.assertEquals(1, contarVinculosNoBanco(ordemId, servicoId));
+    }
+
+    @Test
+    void shouldReturn422WhenServicoJaVinculado() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+        Long servicoId = criarServicoERetornarId();
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().put("/ordem-servico/" + ordemId + "/servicos/" + servicoId)
+                .then().statusCode(204);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().put("/ordem-servico/" + ordemId + "/servicos/" + servicoId)
+                .then().statusCode(422)
+                .body("message", Matchers.equalTo("Este serviço já está vinculado à ordem de serviço"));
+    }
+
+    @Test
+    void shouldReturn422WhenOrdemNaoEmDiagnosticoParaVincular() {
+        String tokenAtendente = obterTokenAtendente();
+        String tokenMecanico = obterTokenMecanico();
+        Long clienteId = criarClienteERetornarId();
+        Long veiculoId = criarVeiculoERetornarId(clienteId);
+        Long ordemId = criarOrdemERetornarId(tokenAtendente, clienteId, veiculoId);
+        Long servicoId = criarServicoERetornarId();
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().put("/ordem-servico/" + ordemId + "/servicos/" + servicoId)
+                .then().statusCode(422)
+                .body("message", Matchers.equalTo("Não é possível adicionar ou remover serviços se a ordem de serviço não está em diagnóstico"));
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnVincular() {
+        String tokenMecanico = obterTokenMecanico();
+        Long servicoId = criarServicoERetornarId();
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().put("/ordem-servico/9999/servicos/" + servicoId)
+                .then().statusCode(404)
+                .body("message", Matchers.equalTo("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn404WhenServicoNotFoundOnVincular() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().put("/ordem-servico/" + ordemId + "/servicos/9999")
+                .then().statusCode(404)
+                .body("message", Matchers.equalTo("Serviço não encontrado"));
+    }
+
+    @Test
+    void shouldReturn401WhenNoTokenOnVincular() {
+        RestAssured.given()
+                .when().put("/ordem-servico/1/servicos/1")
+                .then().statusCode(401);
+    }
+
+    // --- desvincularServico ---
+
+    @Test
+    void shouldDesvincularServicoSuccessfully() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+        Long servicoId = criarServicoERetornarId();
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().put("/ordem-servico/" + ordemId + "/servicos/" + servicoId)
+                .then().statusCode(204);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().delete("/ordem-servico/" + ordemId + "/servicos/" + servicoId)
+                .then().statusCode(204);
+
+        Assertions.assertEquals(0, contarVinculosNoBanco(ordemId, servicoId));
+    }
+
+    @Test
+    void shouldReturn422WhenServicoNaoVinculado() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+        Long servicoId = criarServicoERetornarId();
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().delete("/ordem-servico/" + ordemId + "/servicos/" + servicoId)
+                .then().statusCode(422)
+                .body("message", Matchers.equalTo("Este serviço não está vinculado à ordem de serviço"));
+    }
+
+    @Test
+    void shouldReturn422WhenOrdemNaoEmDiagnosticoParaDesvincular() {
+        String tokenAtendente = obterTokenAtendente();
+        String tokenMecanico = obterTokenMecanico();
+        Long clienteId = criarClienteERetornarId();
+        Long veiculoId = criarVeiculoERetornarId(clienteId);
+        Long ordemId = criarOrdemERetornarId(tokenAtendente, clienteId, veiculoId);
+        Long servicoId = criarServicoERetornarId();
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().delete("/ordem-servico/" + ordemId + "/servicos/" + servicoId)
+                .then().statusCode(422)
+                .body("message", Matchers.equalTo("Não é possível adicionar ou remover serviços se a ordem de serviço não está em diagnóstico"));
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnDesvincular() {
+        String tokenMecanico = obterTokenMecanico();
+        Long servicoId = criarServicoERetornarId();
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().delete("/ordem-servico/9999/servicos/" + servicoId)
+                .then().statusCode(404)
+                .body("message", Matchers.equalTo("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn404WhenServicoNotFoundOnDesvincular() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().delete("/ordem-servico/" + ordemId + "/servicos/9999")
+                .then().statusCode(404)
+                .body("message", Matchers.equalTo("Serviço não encontrado"));
+    }
+
+    @Test
+    void shouldReturn401WhenNoTokenOnDesvincular() {
+        RestAssured.given()
+                .when().delete("/ordem-servico/1/servicos/1")
+                .then().statusCode(401);
+    }
+
+    // --- erros gerais ---
 
     @Test
     void shouldReturn422WhenOrdemAbertaExistsForVeiculo() {

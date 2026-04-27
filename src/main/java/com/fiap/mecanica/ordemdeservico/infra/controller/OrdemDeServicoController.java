@@ -3,7 +3,9 @@ package com.fiap.mecanica.ordemdeservico.infra.controller;
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.ConcluirDiagnosticoOrdemDeServicoUseCase;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.CriarOrdemDeServicoUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.DesvincularServicoOrdemDeServicoUseCase;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.IniciarDiagnosticoOrdemDeServicoUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.VincularServicoOrdemDeServicoUseCase;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.OrdemDeServicoRequestJson;
 import com.fiap.mecanica.shared.exception.dto.ExceptionDto;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +29,8 @@ public class OrdemDeServicoController {
     private final CriarOrdemDeServicoUseCase criarOrdemDeServicoUseCase;
     private final IniciarDiagnosticoOrdemDeServicoUseCase iniciarDiagnosticoOrdemDeServicoUseCase;
     private final ConcluirDiagnosticoOrdemDeServicoUseCase concluirDiagnosticoOrdemDeServicoUseCase;
+    private final VincularServicoOrdemDeServicoUseCase vincularServicoOrdemDeServicoUseCase;
+    private final DesvincularServicoOrdemDeServicoUseCase desvincularServicoOrdemDeServicoUseCase;
 
     @Operation(summary = "Abrir Ordem de Serviço",
             description = "Abre uma nova Ordem de Serviço com status RECEBIDA. O atendente é identificado pelo token JWT.")
@@ -81,6 +85,38 @@ public class OrdemDeServicoController {
     @PatchMapping("/{id}/diagnostico/conclusao")
     public ResponseEntity<Void> concluirDiagnostico(@PathVariable Long id) {
         concluirDiagnosticoOrdemDeServicoUseCase.concluirDiagnostico(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Vincular Serviço",
+            description = "Vincula um serviço à ordem de serviço.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Serviço vinculado com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou serviço não encontrado",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "Serviço já está vinculado à ordem de serviço ou ordem de serviço não está em diagnóstico",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+    })
+    @PutMapping("/{ordemServicoId}/servicos/{servicoId}")
+    public ResponseEntity<Void> vincularServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
+        vincularServicoOrdemDeServicoUseCase.vincular(ordemServicoId, servicoId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Desvincular Serviço",
+            description = "Remove o vínculo de um serviço da ordem de serviço.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Serviço desvinculado com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou serviço não encontrado",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "Serviço não está vinculado à ordem de serviço ou ordem de serviço não está em diagnóstico",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+    })
+    @DeleteMapping("/{ordemServicoId}/servicos/{servicoId}")
+    public ResponseEntity<Void> desvincularServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
+        desvincularServicoOrdemDeServicoUseCase.desvincular(ordemServicoId, servicoId);
         return ResponseEntity.noContent().build();
     }
 }
