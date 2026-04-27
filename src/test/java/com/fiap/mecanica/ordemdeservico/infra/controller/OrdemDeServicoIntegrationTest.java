@@ -199,10 +199,16 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
         Long veiculoId = criarVeiculoERetornarId(clienteId);
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemERetornarId(obterTokenAtendente(), clienteId, veiculoId);
+        Long servicoId = criarServicoERetornarId();
 
         RestAssured.given()
                 .header("Authorization", "Bearer " + tokenMecanico)
                 .when().patch("/ordem-servico/" + ordemId + "/diagnostico")
+                .then().statusCode(204);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().put("/ordem-servico/" + ordemId + "/servicos/" + servicoId)
                 .then().statusCode(204);
 
         RestAssured.given()
@@ -214,6 +220,25 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
         Assertions.assertEquals(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, ordem.getStatus());
         Assertions.assertNotNull(ordem.getDataInicioDiagnostico());
         Assertions.assertNotNull(ordem.getDataConclusaoDiagnostico());
+    }
+
+    @Test
+    void shouldReturn422WhenSemServicosVinculadosOnConcluir() {
+        Long clienteId = criarClienteERetornarId();
+        Long veiculoId = criarVeiculoERetornarId(clienteId);
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemERetornarId(obterTokenAtendente(), clienteId, veiculoId);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().patch("/ordem-servico/" + ordemId + "/diagnostico")
+                .then().statusCode(204);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().patch("/ordem-servico/" + ordemId + "/diagnostico/conclusao")
+                .then().statusCode(422)
+                .body("message", Matchers.equalTo("Não é possível concluir o diagnóstico sem ao menos um serviço vinculado"));
     }
 
     @Test

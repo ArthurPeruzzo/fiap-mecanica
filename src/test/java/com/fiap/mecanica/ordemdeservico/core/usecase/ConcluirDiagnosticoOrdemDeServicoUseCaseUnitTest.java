@@ -7,6 +7,7 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServic
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.MecanicoNaoResponsavelPelaOrdemDeServicoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
+import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoSemServicosException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.ConcluirDiagnosticoOrdemDeServicoUseCase;
@@ -54,6 +55,11 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
 
     private OrdemDeServico ordemEmDiagnostico() {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, MECANICO_ID,
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(10L));
+    }
+
+    private OrdemDeServico ordemEmDiagnosticoSemServicos() {
+        return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, MECANICO_ID,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of());
     }
 
@@ -97,7 +103,7 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenMecanicoNaoEhResponsavel() {
         stubMecanico();
         var ordemDeOutroMecanico = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 99L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of());
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(10L));
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemDeOutroMecanico));
 
         assertThrows(MecanicoNaoResponsavelPelaOrdemDeServicoException.class,
@@ -107,10 +113,21 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
     }
 
     @Test
+    void shouldThrowWhenSemServicosVinculados() {
+        stubMecanico();
+        Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemEmDiagnosticoSemServicos()));
+
+        assertThrows(OrdemDeServicoSemServicosException.class,
+                () -> concluirDiagnosticoOrdemDeServicoUseCase.concluirDiagnostico(ORDEM_ID));
+
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
+    }
+
+    @Test
     void shouldThrowWhenTransicaoDeStatusInvalida() {
         stubMecanico();
         var ordemConcluida = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, MECANICO_ID,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), List.of());
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(1L));
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemConcluida));
 
         assertThrows(TransicaoDeStatusInvalidaException.class,

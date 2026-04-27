@@ -79,7 +79,7 @@ public class OrdemDeServicoController {
             @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
             @ApiResponse(responseCode = "404", description = "Ordem de serviço ou mecânico não encontrado",
                     content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "Mecânico não é o responsável pelo diagnóstico ou status inválido para a operação",
+            @ApiResponse(responseCode = "422", description = "Mecânico não é o responsável, nenhum serviço vinculado ou status inválido para a operação",
                     content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
     })
     @PatchMapping("/{ordemServicoId}/diagnostico/conclusao")
