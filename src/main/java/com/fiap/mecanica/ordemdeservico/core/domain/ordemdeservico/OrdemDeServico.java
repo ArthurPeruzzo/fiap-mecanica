@@ -1,5 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico;
 
+import com.fiap.mecanica.ordemdeservico.core.exception.MecanicoNaoResponsavelPelaOrdemDeServicoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoJaVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VinculoServicoNaoAutorizadoException;
@@ -54,7 +55,10 @@ public class OrdemDeServico {
         state.iniciarDiagnostico(this, mecanicoId);
     }
 
-    public void concluirDiagnostico() {
+    public void concluirDiagnostico(Long mecanicoId) {
+        if (!isMecanicoResponsavel(mecanicoId)) {
+            throw new MecanicoNaoResponsavelPelaOrdemDeServicoException();
+        }
         state.concluirDiagnostico(this);
     }
 

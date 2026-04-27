@@ -79,12 +79,12 @@ public class OrdemDeServicoController {
             @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
             @ApiResponse(responseCode = "404", description = "Ordem de serviço ou mecânico não encontrado",
                     content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está no status EM_DIAGNOSTICO",
+            @ApiResponse(responseCode = "422", description = "Mecânico não é o responsável pelo diagnóstico ou status inválido para a operação",
                     content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
     })
-    @PatchMapping("/{id}/diagnostico/conclusao")
-    public ResponseEntity<Void> concluirDiagnostico(@PathVariable Long id) {
-        concluirDiagnosticoOrdemDeServicoUseCase.concluirDiagnostico(id);
+    @PatchMapping("/{ordemServicoId}/diagnostico/conclusao")
+    public ResponseEntity<Void> concluirDiagnostico(@PathVariable Long ordemServicoId) {
+        concluirDiagnosticoOrdemDeServicoUseCase.concluirDiagnostico(ordemServicoId);
         return ResponseEntity.noContent().build();
     }
 

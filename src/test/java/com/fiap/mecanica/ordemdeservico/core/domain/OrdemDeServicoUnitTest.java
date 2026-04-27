@@ -2,6 +2,7 @@ package com.fiap.mecanica.ordemdeservico.core.domain;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.exception.MecanicoNaoResponsavelPelaOrdemDeServicoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoJaVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
@@ -111,7 +112,7 @@ class OrdemDeServicoUnitTest {
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of());
 
-        os.concluirDiagnostico();
+        os.concluirDiagnostico(7L);
 
         var after = LocalDateTime.now().plusSeconds(1);
         assertEquals(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, os.getStatus());
@@ -121,10 +122,19 @@ class OrdemDeServicoUnitTest {
     }
 
     @Test
-    void concluirDiagnostico_shouldThrowWhenStatusIsNotEmDiagnostico() {
-        var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
+    void concluirDiagnostico_shouldThrowWhenMecanicoNaoEhResponsavel() {
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of());
 
-        assertThrows(TransicaoDeStatusInvalidaException.class, os::concluirDiagnostico);
+        assertThrows(MecanicoNaoResponsavelPelaOrdemDeServicoException.class, () -> os.concluirDiagnostico(99L));
+    }
+
+    @Test
+    void concluirDiagnostico_shouldThrowWhenStatusIsNotEmDiagnostico() {
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), List.of());
+
+        assertThrows(TransicaoDeStatusInvalidaException.class, () -> os.concluirDiagnostico(7L));
     }
 
     // --- vincularServico ---

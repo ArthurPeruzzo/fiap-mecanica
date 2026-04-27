@@ -1,5 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico;
 
+import com.fiap.mecanica.gestao.core.domain.Mecanico;
 import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
@@ -16,17 +17,17 @@ public class ConcluirDiagnosticoOrdemDeServicoUseCase {
     private final TokenGateway tokenGateway;
     private final OrdemDeServicoGateway ordemDeServicoGateway;
 
-    public void concluirDiagnostico(Long ordemId) {
-        verificaMecanico();
-        var ordemDeServico = ordemDeServicoGateway.buscarPorId(ordemId)
+    public void concluirDiagnostico(Long ordemServicoId) {
+        Mecanico mecanico = buscaMecanico();
+        var ordemDeServico = ordemDeServicoGateway.buscarPorId(ordemServicoId)
                 .orElseThrow(OrdemDeServicoNaoEncontradaException::new);
 
-        ordemDeServico.concluirDiagnostico();
+        ordemDeServico.concluirDiagnostico(mecanico.getId());
         ordemDeServicoGateway.atualizar(ordemDeServico);
     }
 
-    private void verificaMecanico() {
+    private Mecanico buscaMecanico() {
         Long userId = tokenGateway.getUserId();
-        mecanicoGateway.findByUsuarioId(userId).orElseThrow(MecanicoNaoEncontradoException::new);
+        return mecanicoGateway.findByUsuarioId(userId).orElseThrow(MecanicoNaoEncontradoException::new);
     }
 }

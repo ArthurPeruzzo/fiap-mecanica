@@ -89,6 +89,14 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
         return token;
     }
 
+    private String obterTokenOutroMecanico() {
+        String token = obterToken(RoleEnum.ROLE_MECANICO, "mecanico2@test.com");
+        UserEntity user = userRepository.findByEmail("mecanico2@test.com").orElseThrow();
+        mecanicoRepository.saveAndFlush(MecanicoEntity.builder()
+                .nome("Pedro").sobrenome("Costa").especialidade("Freios").userId(user.getId()).build());
+        return token;
+    }
+
     private Long criarClienteERetornarId() {
         return clienteRepository.saveAndFlush(ClienteEntity.builder()
                 .nome("Maria").sobrenome("Santos").cpf("12345678900").build()).getId();
@@ -206,6 +214,25 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
         Assertions.assertEquals(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, ordem.getStatus());
         Assertions.assertNotNull(ordem.getDataInicioDiagnostico());
         Assertions.assertNotNull(ordem.getDataConclusaoDiagnostico());
+    }
+
+    @Test
+    void shouldReturn422WhenMecanicoNaoEhResponsavelOnConcluir() {
+        Long clienteId = criarClienteERetornarId();
+        Long veiculoId = criarVeiculoERetornarId(clienteId);
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemERetornarId(obterTokenAtendente(), clienteId, veiculoId);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().patch("/ordem-servico/" + ordemId + "/diagnostico")
+                .then().statusCode(204);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + obterTokenOutroMecanico())
+                .when().patch("/ordem-servico/" + ordemId + "/diagnostico/conclusao")
+                .then().statusCode(422)
+                .body("message", Matchers.equalTo("Somente o mecânico responsável pelo diagnóstico pode concluí-lo"));
     }
 
     // --- vincularServico ---
