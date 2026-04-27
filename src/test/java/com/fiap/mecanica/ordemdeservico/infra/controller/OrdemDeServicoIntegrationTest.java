@@ -103,7 +103,7 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
     private Long criarOrdemERetornarId(String token, Long clienteId, Long veiculoId) {
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + token)
-                .body(String.format("{\"clienteId\":%d,\"veiculoId\":%d}", clienteId, veiculoId))
+                .body(String.format("{\"clienteId\":%d,\"veiculoId\":%d,\"descricao\":\"Barulho ao frear\"}", clienteId, veiculoId))
                 .when().post("/ordem-servico")
                 .then().statusCode(201);
         return ordemDeServicoRepository.findAll().getFirst().getId();
@@ -147,7 +147,7 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + token)
-                .body(String.format("{\"clienteId\":%d,\"veiculoId\":%d}", clienteId, veiculoId))
+                .body(String.format("{\"clienteId\":%d,\"veiculoId\":%d,\"descricao\":\"Barulho ao frear\"}", clienteId, veiculoId))
                 .when().post("/ordem-servico")
                 .then().statusCode(201);
 
@@ -157,6 +157,7 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
         Assertions.assertEquals(StatusOrdemDeServico.RECEBIDA, ordem.getStatus());
         Assertions.assertEquals(clienteId, ordem.getClienteId());
         Assertions.assertEquals(veiculoId, ordem.getVeiculoId());
+        Assertions.assertEquals("Barulho ao frear", ordem.getDescricao());
         Assertions.assertNotNull(ordem.getDataCriacao());
         Assertions.assertNull(ordem.getDataInicioDiagnostico());
         Assertions.assertNull(ordem.getDataConclusaoDiagnostico());
@@ -376,7 +377,7 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
         Long clienteId = criarClienteERetornarId();
         Long veiculoId = criarVeiculoERetornarId(clienteId);
         String token = obterTokenAtendente();
-        String body = String.format("{\"clienteId\":%d,\"veiculoId\":%d}", clienteId, veiculoId);
+        String body = String.format("{\"clienteId\":%d,\"veiculoId\":%d,\"descricao\":\"Barulho ao frear\"}", clienteId, veiculoId);
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + token)
@@ -398,7 +399,7 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + token)
-                .body("{\"veiculoId\":1}")
+                .body("{\"veiculoId\":1,\"descricao\":\"Barulho ao frear\"}")
                 .when().post("/ordem-servico")
                 .then().statusCode(400)
                 .body("clienteId", Matchers.equalTo("O cliente deve ser informado"));
@@ -410,16 +411,28 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + token)
-                .body("{\"clienteId\":1}")
+                .body("{\"clienteId\":1,\"descricao\":\"Barulho ao frear\"}")
                 .when().post("/ordem-servico")
                 .then().statusCode(400)
                 .body("veiculoId", Matchers.equalTo("O veículo deve ser informado"));
     }
 
     @Test
+    void shouldReturn400WhenDescricaoIsNull() {
+        String token = obterTokenAtendente();
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + token)
+                .body("{\"clienteId\":1,\"veiculoId\":1}")
+                .when().post("/ordem-servico")
+                .then().statusCode(400)
+                .body("descricao", Matchers.equalTo("A descrição deve ser informada"));
+    }
+
+    @Test
     void shouldReturn401WhenNoTokenProvided() {
         RestAssured.given().contentType("application/json")
-                .body("{\"clienteId\":1,\"veiculoId\":1}")
+                .body("{\"clienteId\":1,\"veiculoId\":1,\"descricao\":\"Barulho ao frear\"}")
                 .when().post("/ordem-servico")
                 .then().statusCode(401);
     }
@@ -430,7 +443,7 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + token)
-                .body("{\"clienteId\":1,\"veiculoId\":1}")
+                .body("{\"clienteId\":1,\"veiculoId\":1,\"descricao\":\"Barulho ao frear\"}")
                 .when().post("/ordem-servico")
                 .then().statusCode(403);
     }

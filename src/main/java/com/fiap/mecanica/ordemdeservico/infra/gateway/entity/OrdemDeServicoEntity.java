@@ -39,6 +39,9 @@ public class OrdemDeServicoEntity {
     @Column(name = "status", nullable = false)
     private StatusOrdemDeServico status;
 
+    @Column(name = "descricao", nullable = false)
+    private String descricao;
+
     @Column(name = "data_criacao", nullable = false)
     private LocalDateTime dataCriacao;
 

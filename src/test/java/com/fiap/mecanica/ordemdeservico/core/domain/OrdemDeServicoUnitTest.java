@@ -15,18 +15,21 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class OrdemDeServicoUnitTest {
 
+    private static final String DESCRICAO = "Barulho ao frear";
+
     private OrdemDeServico ordemEmDiagnostico() {
         return OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, LocalDateTime.now(), LocalDateTime.now(), null, List.of());
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of());
     }
 
     @Test
     void shouldCreateOrdemDeServicoWithStatusRecebidaAndDataCriacao() {
-        var os = new OrdemDeServico(1L, 2L, 3L);
+        var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
 
         assertEquals(1L, os.getClienteId());
         assertEquals(2L, os.getVeiculoId());
         assertEquals(3L, os.getAtendenteId());
+        assertEquals(DESCRICAO, os.getDescricao());
         assertEquals(StatusOrdemDeServico.RECEBIDA, os.getStatus());
         assertNotNull(os.getDataCriacao());
         assertNull(os.getId());
@@ -39,7 +42,7 @@ class OrdemDeServicoUnitTest {
     @Test
     void shouldSetDataCriacaoToNow() {
         var before = LocalDateTime.now().minusSeconds(1);
-        var os = new OrdemDeServico(1L, 2L, 3L);
+        var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
         var after = LocalDateTime.now().plusSeconds(1);
 
         assertTrue(os.getDataCriacao().isAfter(before));
@@ -53,7 +56,7 @@ class OrdemDeServicoUnitTest {
         var dataConclusao = LocalDateTime.of(2026, 1, 10, 11, 0);
 
         var os = OrdemDeServico.reconstituir(10L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, dataCriacao, dataInicio, dataConclusao,
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, dataCriacao, dataInicio, dataConclusao,
                 List.of(7L, 8L));
 
         assertEquals(10L, os.getId());
@@ -62,6 +65,7 @@ class OrdemDeServicoUnitTest {
         assertEquals(3L, os.getAtendenteId());
         assertEquals(5L, os.getMecanicoId());
         assertEquals(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, os.getStatus());
+        assertEquals(DESCRICAO, os.getDescricao());
         assertEquals(dataCriacao, os.getDataCriacao());
         assertEquals(dataInicio, os.getDataInicioDiagnostico());
         assertEquals(dataConclusao, os.getDataConclusaoDiagnostico());
@@ -71,7 +75,7 @@ class OrdemDeServicoUnitTest {
     @Test
     void reconstituir_shouldAllowNullDates() {
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, null,
-                StatusOrdemDeServico.RECEBIDA, LocalDateTime.now(), null, null, List.of());
+                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null, List.of());
 
         assertNull(os.getMecanicoId());
         assertNull(os.getDataInicioDiagnostico());
@@ -81,7 +85,7 @@ class OrdemDeServicoUnitTest {
     @Test
     void iniciarDiagnostico_shouldSetMecanicoIdAndStatusAndDataInicio() {
         var before = LocalDateTime.now().minusSeconds(1);
-        var os = new OrdemDeServico(1L, 2L, 3L);
+        var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
 
         os.iniciarDiagnostico(7L);
 
@@ -96,7 +100,7 @@ class OrdemDeServicoUnitTest {
     @Test
     void iniciarDiagnostico_shouldThrowWhenStatusIsNotRecebida() {
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, LocalDateTime.now(), LocalDateTime.now(), null, List.of());
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of());
 
         assertThrows(TransicaoDeStatusInvalidaException.class, () -> os.iniciarDiagnostico(7L));
     }
@@ -105,7 +109,7 @@ class OrdemDeServicoUnitTest {
     void concluirDiagnostico_shouldSetStatusAndDataConclusao() {
         var before = LocalDateTime.now().minusSeconds(1);
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, LocalDateTime.now(), LocalDateTime.now(), null, List.of());
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of());
 
         os.concluirDiagnostico();
 
@@ -118,7 +122,7 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void concluirDiagnostico_shouldThrowWhenStatusIsNotEmDiagnostico() {
-        var os = new OrdemDeServico(1L, 2L, 3L);
+        var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
 
         assertThrows(TransicaoDeStatusInvalidaException.class, os::concluirDiagnostico);
     }
@@ -136,7 +140,7 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void vincularServico_shouldThrowWhenStatusIsNotEmDiagnostico() {
-        var os = new OrdemDeServico(1L, 2L, 3L);
+        var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
 
         assertThrows(VinculoServicoNaoAutorizadoException.class, () -> os.vincularServico(10L));
     }
@@ -144,7 +148,7 @@ class OrdemDeServicoUnitTest {
     @Test
     void vincularServico_shouldThrowWhenServicoAlreadyLinked() {
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(10L));
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(10L));
 
         assertThrows(ServicoJaVinculadoException.class, () -> os.vincularServico(10L));
     }
@@ -154,7 +158,7 @@ class OrdemDeServicoUnitTest {
     @Test
     void desvincularServico_shouldRemoveServicoFromListWhenStatusIsEmDiagnostico() {
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(10L));
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(10L));
 
         os.desvincularServico(10L);
 
@@ -164,7 +168,7 @@ class OrdemDeServicoUnitTest {
     @Test
     void desvincularServico_shouldThrowWhenStatusIsNotEmDiagnostico() {
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, null,
-                StatusOrdemDeServico.RECEBIDA, LocalDateTime.now(), null, null, List.of(10L));
+                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null, List.of(10L));
 
         assertThrows(VinculoServicoNaoAutorizadoException.class, () -> os.desvincularServico(10L));
     }

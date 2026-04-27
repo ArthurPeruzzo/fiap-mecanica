@@ -30,9 +30,11 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
     @Mock
     private OrdemDeServicoRepository ordemDeServicoRepository;
 
+    private static final String DESCRICAO = "Barulho ao frear";
+
     @Test
     void criar_shouldSaveEntityWithAllFields() {
-        var os = new OrdemDeServico(1L, 2L, 3L);
+        var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
         var captor = ArgumentCaptor.forClass(OrdemDeServicoEntity.class);
 
         gateway.criar(os);
@@ -42,6 +44,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         assertEquals(1L, entity.getClienteId());
         assertEquals(2L, entity.getVeiculoId());
         assertEquals(3L, entity.getAtendenteId());
+        assertEquals(DESCRICAO, entity.getDescricao());
         assertNull(entity.getMecanicoId());
         assertEquals(StatusOrdemDeServico.RECEBIDA, entity.getStatus());
         assertNotNull(entity.getDataCriacao());
@@ -55,7 +58,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
                 .thenThrow(new RuntimeException("db error"));
 
         assertThrows(ErroAcessoBaseDeDadosException.class,
-                () -> gateway.criar(new OrdemDeServico(1L, 2L, 3L)));
+                () -> gateway.criar(new OrdemDeServico(1L, 2L, 3L, DESCRICAO)));
     }
 
     @Test
@@ -70,6 +73,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
                 .atendenteId(3L)
                 .mecanicoId(5L)
                 .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
                 .dataCriacao(dataCriacao)
                 .dataInicioDiagnostico(dataInicio)
                 .dataConclusaoDiagnostico(null)
@@ -87,6 +91,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         assertEquals(3L, os.getAtendenteId());
         assertEquals(5L, os.getMecanicoId());
         assertEquals(StatusOrdemDeServico.EM_DIAGNOSTICO, os.getStatus());
+        assertEquals(DESCRICAO, os.getDescricao());
         assertEquals(dataCriacao, os.getDataCriacao());
         assertEquals(dataInicio, os.getDataInicioDiagnostico());
         assertNull(os.getDataConclusaoDiagnostico());
@@ -114,7 +119,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         var dataInicio = LocalDateTime.of(2026, 1, 10, 10, 0);
         var dataConclusao = LocalDateTime.of(2026, 1, 10, 11, 0);
         var os = OrdemDeServico.reconstituir(10L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, dataCriacao, dataInicio, dataConclusao, List.of());
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, dataCriacao, dataInicio, dataConclusao, List.of());
         var captor = ArgumentCaptor.forClass(OrdemDeServicoEntity.class);
 
         gateway.atualizar(os);
@@ -127,6 +132,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         assertEquals(3L, entity.getAtendenteId());
         assertEquals(5L, entity.getMecanicoId());
         assertEquals(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, entity.getStatus());
+        assertEquals(DESCRICAO, entity.getDescricao());
         assertEquals(dataCriacao, entity.getDataCriacao());
         assertEquals(dataInicio, entity.getDataInicioDiagnostico());
         assertEquals(dataConclusao, entity.getDataConclusaoDiagnostico());
@@ -137,7 +143,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         Mockito.when(ordemDeServicoRepository.save(Mockito.any()))
                 .thenThrow(new RuntimeException("db error"));
         var os = OrdemDeServico.reconstituir(10L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, LocalDateTime.now(), LocalDateTime.now(), null, List.of());
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of());
 
         assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.atualizar(os));
     }

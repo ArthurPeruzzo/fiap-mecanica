@@ -41,7 +41,7 @@ public class CriarOrdemDeServicoUseCase {
 			throw new OrdemDeServicoAbertaParaVeiculoException();
 		}
 
-		OrdemDeServico ordemDeServico = new OrdemDeServico(dto.clienteId(), dto.veiculoId(), atendente.getId());
+		OrdemDeServico ordemDeServico = new OrdemDeServico(dto.clienteId(), dto.veiculoId(), atendente.getId(), dto.descricao());
 		ordemDeServicoGateway.criar(ordemDeServico);
 	}
 

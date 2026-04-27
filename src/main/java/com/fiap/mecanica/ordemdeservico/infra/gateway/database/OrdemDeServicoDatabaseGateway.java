@@ -29,6 +29,7 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                     .veiculoId(ordemDeServico.getVeiculoId())
                     .atendenteId(ordemDeServico.getAtendenteId())
                     .status(ordemDeServico.getStatus())
+                    .descricao(ordemDeServico.getDescricao())
                     .dataCriacao(ordemDeServico.getDataCriacao())
                     .build());
         } catch (Exception e) {
@@ -48,6 +49,7 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                             entity.getAtendenteId(),
                             entity.getMecanicoId(),
                             entity.getStatus(),
+                            entity.getDescricao(),
                             entity.getDataCriacao(),
                             entity.getDataInicioDiagnostico(),
                             entity.getDataConclusaoDiagnostico(),
@@ -82,6 +84,7 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                     .atendenteId(ordemDeServico.getAtendenteId())
                     .mecanicoId(ordemDeServico.getMecanicoId())
                     .status(ordemDeServico.getStatus())
+                    .descricao(ordemDeServico.getDescricao())
                     .dataCriacao(ordemDeServico.getDataCriacao())
                     .dataInicioDiagnostico(ordemDeServico.getDataInicioDiagnostico())
                     .dataConclusaoDiagnostico(ordemDeServico.getDataConclusaoDiagnostico())

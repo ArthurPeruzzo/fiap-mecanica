@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS `ordem_servico` (
     `atendente_id` bigint       NOT NULL,
     `mecanico_id`  bigint       NULL,
     `status`       varchar(50)  NOT NULL,
+    `descricao`    varchar(300) NOT NULL,
     `data_criacao` datetime     NOT NULL,
     `data_inicio_diagnostico` datetime NULL,
     `data_conclusao_diagnostico` datetime NULL,

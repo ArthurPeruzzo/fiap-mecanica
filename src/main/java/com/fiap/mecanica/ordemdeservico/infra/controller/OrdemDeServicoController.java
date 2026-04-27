@@ -33,7 +33,7 @@ public class OrdemDeServicoController {
     private final DesvincularServicoOrdemDeServicoUseCase desvincularServicoOrdemDeServicoUseCase;
 
     @Operation(summary = "Abrir Ordem de Serviço",
-            description = "Abre uma nova Ordem de Serviço com status RECEBIDA. O atendente é identificado pelo token JWT.")
+            description = "Abre uma nova Ordem de Serviço com status RECEBIDA. A descrição registra o relato do cliente. O atendente é identificado pelo token JWT.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Ordem de Serviço criada com sucesso"),
             @ApiResponse(responseCode = "400", description = "Parâmetros de entrada inválidos",
@@ -47,7 +47,7 @@ public class OrdemDeServicoController {
     })
     @PostMapping
     public ResponseEntity<Void> criar(@RequestBody @Valid OrdemDeServicoRequestJson request) {
-        criarOrdemDeServicoUseCase.criar(new CriarOrdemDeServicoDto(request.clienteId(), request.veiculoId()));
+        criarOrdemDeServicoUseCase.criar(new CriarOrdemDeServicoDto(request.clienteId(), request.veiculoId(), request.descricao()));
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

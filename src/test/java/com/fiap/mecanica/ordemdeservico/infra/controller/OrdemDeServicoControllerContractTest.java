@@ -59,7 +59,7 @@ class OrdemDeServicoControllerContractTest {
     @MockitoBean
     private DesvincularServicoOrdemDeServicoUseCase desvincularServicoOrdemDeServicoUseCase;
 
-    private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2}";
+    private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"}";
 
     @Test
     void shouldReturn201WhenValidRequest() throws Exception {
@@ -73,8 +73,9 @@ class OrdemDeServicoControllerContractTest {
 
     @ParameterizedTest
     @CsvSource({
-            "'{\"veiculoId\":2}', clienteId, 'O cliente deve ser informado'",
-            "'{\"clienteId\":1}', veiculoId, 'O veículo deve ser informado'"
+            "'{\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"}', clienteId, 'O cliente deve ser informado'",
+            "'{\"clienteId\":1,\"descricao\":\"Barulho ao frear\"}', veiculoId, 'O veículo deve ser informado'",
+            "'{\"clienteId\":1,\"veiculoId\":2}', descricao, 'A descrição deve ser informada'"
     })
     void shouldReturn400WhenRequiredFieldIsMissing(String requestJson, String field, String expectedMessage) throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")

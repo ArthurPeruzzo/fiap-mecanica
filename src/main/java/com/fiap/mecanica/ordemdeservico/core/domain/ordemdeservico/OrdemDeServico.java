@@ -17,6 +17,7 @@ public class OrdemDeServico {
     private Long atendenteId;
     private Long mecanicoId;
     private StatusOrdemDeServico status;
+    private String descricao;
     private LocalDateTime dataCriacao;
     private LocalDateTime dataInicioDiagnostico;
     private LocalDateTime dataConclusaoDiagnostico;
@@ -24,10 +25,11 @@ public class OrdemDeServico {
 
     private OrdemDeServicoState state;
 
-    public OrdemDeServico(Long clienteId, Long veiculoId, Long atendenteId) {
+    public OrdemDeServico(Long clienteId, Long veiculoId, Long atendenteId, String descricao) {
         this.clienteId = clienteId;
         this.veiculoId = veiculoId;
         this.atendenteId = atendenteId;
+        this.descricao = descricao;
         this.status = StatusOrdemDeServico.RECEBIDA;
         this.dataCriacao = LocalDateTime.now();
         this.state = new OrdemDeServicoRecebidaState();
@@ -92,9 +94,9 @@ public class OrdemDeServico {
     }
 
     public static OrdemDeServico reconstituir(Long id, Long clienteId, Long veiculoId, Long atendenteId,
-                                              Long mecanicoId, StatusOrdemDeServico status, LocalDateTime dataCriacao,
-                                              LocalDateTime dataInicioDiagnostico, LocalDateTime dataConclusaoDiagnostico,
-                                              List<Long> servicoIds) {
+                                              Long mecanicoId, StatusOrdemDeServico status, String descricao,
+                                              LocalDateTime dataCriacao, LocalDateTime dataInicioDiagnostico,
+                                              LocalDateTime dataConclusaoDiagnostico, List<Long> servicoIds) {
         var os = new OrdemDeServico();
         os.id = id;
         os.clienteId = clienteId;
@@ -102,6 +104,7 @@ public class OrdemDeServico {
         os.atendenteId = atendenteId;
         os.mecanicoId = mecanicoId;
         os.status = status;
+        os.descricao = descricao;
         os.dataCriacao = dataCriacao;
         os.dataInicioDiagnostico = dataInicioDiagnostico;
         os.dataConclusaoDiagnostico = dataConclusaoDiagnostico;
