@@ -1,10 +1,13 @@
 package com.fiap.mecanica.ordemdeservico.infra.gateway.database;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.PecaVinculada;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoPecaEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.ServicoEntity;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoPecaRepository;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoRepository;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +23,7 @@ import java.util.Optional;
 public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
 
     private final OrdemDeServicoRepository ordemDeServicoRepository;
+    private final OrdemDeServicoPecaRepository ordemDeServicoPecaRepository;
 
     @Override
     public void criar(OrdemDeServico ordemDeServico) {
@@ -42,19 +46,25 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
     public Optional<OrdemDeServico> buscarPorId(Long id) {
         try {
             return ordemDeServicoRepository.findOrdemDeServicoById(id)
-                    .map(entity -> OrdemDeServico.reconstituir(
-                            entity.getId(),
-                            entity.getClienteId(),
-                            entity.getVeiculoId(),
-                            entity.getAtendenteId(),
-                            entity.getMecanicoId(),
-                            entity.getStatus(),
-                            entity.getDescricao(),
-                            entity.getDataCriacao(),
-                            entity.getDataInicioDiagnostico(),
-                            entity.getDataConclusaoDiagnostico(),
-                            entity.getServicos().stream().map(ServicoEntity::getId).toList()
-                    ));
+                    .map(entity -> {
+                        var pecasVinculadas = ordemDeServicoPecaRepository.findByOrdemServicoId(id).stream()
+                                .map(p -> new PecaVinculada(p.getPecaId(), p.getQuantidade()))
+                                .toList();
+                        return OrdemDeServico.reconstituir(
+                                entity.getId(),
+                                entity.getClienteId(),
+                                entity.getVeiculoId(),
+                                entity.getAtendenteId(),
+                                entity.getMecanicoId(),
+                                entity.getStatus(),
+                                entity.getDescricao(),
+                                entity.getDataCriacao(),
+                                entity.getDataInicioDiagnostico(),
+                                entity.getDataConclusaoDiagnostico(),
+                                entity.getServicos().stream().map(ServicoEntity::getId).toList(),
+                                pecasVinculadas
+                        );
+                    });
         } catch (Exception e) {
             log.error("Erro ao buscar ordem de servico por id: {}", id, e);
             throw new ErroAcessoBaseDeDadosException();
@@ -106,6 +116,26 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
             ordemDeServicoRepository.desvincularServico(ordemServicoId, servicoId);
         } catch (Exception e) {
             log.error("Erro ao desvincular servico {} da ordem de servico {}", servicoId, ordemServicoId, e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+
+    @Override
+    public void vincularOuSomarPeca(Long ordemServicoId, Long pecaId, Integer quantidade) {
+        try {
+            ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(ordemServicoId, pecaId)
+                    .ifPresentOrElse(
+                            e -> ordemDeServicoPecaRepository.somarQuantidade(ordemServicoId, pecaId, quantidade),
+                            () -> ordemDeServicoPecaRepository.save(
+                                    OrdemDeServicoPecaEntity.builder()
+                                            .ordemServicoId(ordemServicoId)
+                                            .pecaId(pecaId)
+                                            .quantidade(quantidade)
+                                            .build()
+                            )
+                    );
+        } catch (Exception e) {
+            log.error("Erro ao vincular peca {} na ordem de servico {}", pecaId, ordemServicoId, e);
             throw new ErroAcessoBaseDeDadosException();
         }
     }

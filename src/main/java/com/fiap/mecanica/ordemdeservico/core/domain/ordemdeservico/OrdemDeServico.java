@@ -20,6 +20,7 @@ public class OrdemDeServico {
     private LocalDateTime dataInicioDiagnostico;
     private LocalDateTime dataConclusaoDiagnostico;
     private List<Long> servicoIds = new ArrayList<>();
+    private List<PecaVinculada> pecasVinculadas = new ArrayList<>();
 
     private OrdemDeServicoState state;
 
@@ -101,10 +102,26 @@ public class OrdemDeServico {
         return this.mecanicoId != null && this.mecanicoId.equals(mecanicoId);
     }
 
+    public void vincularPeca(Long pecaId, Integer quantidade) {
+        if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
+            throw new VinculoPecaNaoAutorizadaException();
+        }
+        var existente = pecasVinculadas.stream()
+                .filter(p -> p.pecaId().equals(pecaId))
+                .findFirst();
+        if (existente.isPresent()) {
+            pecasVinculadas.remove(existente.get());
+            pecasVinculadas.add(new PecaVinculada(pecaId, existente.get().quantidade() + quantidade));
+        } else {
+            pecasVinculadas.add(new PecaVinculada(pecaId, quantidade));
+        }
+    }
+
     public static OrdemDeServico reconstituir(Long id, Long clienteId, Long veiculoId, Long atendenteId,
                                               Long mecanicoId, StatusOrdemDeServico status, String descricao,
                                               LocalDateTime dataCriacao, LocalDateTime dataInicioDiagnostico,
-                                              LocalDateTime dataConclusaoDiagnostico, List<Long> servicoIds) {
+                                              LocalDateTime dataConclusaoDiagnostico, List<Long> servicoIds,
+                                              List<PecaVinculada> pecasVinculadas) {
         var os = new OrdemDeServico();
         os.id = id;
         os.clienteId = clienteId;
@@ -118,6 +135,7 @@ public class OrdemDeServico {
         os.dataConclusaoDiagnostico = dataConclusaoDiagnostico;
         os.state = OrdemDeServicoStateFactory.from(status);
         os.servicoIds = new ArrayList<>(servicoIds);
+        os.pecasVinculadas = new ArrayList<>(pecasVinculadas);
         return os;
     }
 }

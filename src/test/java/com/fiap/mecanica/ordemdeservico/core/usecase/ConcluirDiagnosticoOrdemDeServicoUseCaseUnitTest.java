@@ -55,12 +55,12 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
 
     private OrdemDeServico ordemEmDiagnostico() {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, MECANICO_ID,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(10L));
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(10L), List.of());
     }
 
     private OrdemDeServico ordemEmDiagnosticoSemServicos() {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, MECANICO_ID,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of());
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(), List.of());
     }
 
     @Test
@@ -103,7 +103,7 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenMecanicoNaoEhResponsavel() {
         stubMecanico();
         var ordemDeOutroMecanico = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 99L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(10L));
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(10L), List.of());
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemDeOutroMecanico));
 
         assertThrows(MecanicoNaoResponsavelPelaOrdemDeServicoException.class,
@@ -127,7 +127,7 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenTransicaoDeStatusInvalida() {
         stubMecanico();
         var ordemConcluida = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, MECANICO_ID,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(1L));
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(1L), List.of());
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemConcluida));
 
         assertThrows(TransicaoDeStatusInvalidaException.class,
