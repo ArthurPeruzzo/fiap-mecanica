@@ -7,7 +7,9 @@ import com.fiap.mecanica.gestao.core.exception.AtendenteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularInsumoNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularPecaNaoAutorizadaException;
+import com.fiap.mecanica.ordemdeservico.core.exception.InsumoNaoVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.MecanicoNaoResponsavelPelaOrdemDeServicoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaVeiculoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoSemServicosException;
@@ -72,6 +74,9 @@ class OrdemDeServicoControllerContractTest {
 
     @MockitoBean
     private VincularInsumoOrdemDeServicoUseCase vincularInsumoOrdemDeServicoUseCase;
+
+    @MockitoBean
+    private DesvincularInsumoOrdemDeServicoUseCase desvincularInsumoOrdemDeServicoUseCase;
 
     private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"}";
 
@@ -618,5 +623,93 @@ class OrdemDeServicoControllerContractTest {
                         .content(VALID_INSUMO_BODY))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.message").value("Não é possível vincular insumos se a ordem de serviço não está em diagnóstico"));
+    }
+
+    // --- desvincularInsumo ---
+
+    @Test
+    void shouldReturn204WhenDesvincularInsumoSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_INSUMO_BODY))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(desvincularInsumoOrdemDeServicoUseCase).desvincular(1L, 30L, 3);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "'{}'                 , quantidade, 'A quantidade deve ser informada'",
+            "'{\"quantidade\":0}' , quantidade, 'A quantidade deve ser no mínimo 1'",
+            "'{\"quantidade\":-1}', quantidade, 'A quantidade deve ser no mínimo 1'"
+    })
+    void shouldReturn400WhenDesvincularInsumoRequestIsInvalid(String requestJson, String field, String expectedMessage) throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$." + field).value(expectedMessage));
+
+        Mockito.verifyNoInteractions(desvincularInsumoOrdemDeServicoUseCase);
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnDesvincularInsumo() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
+                .when(desvincularInsumoOrdemDeServicoUseCase).desvincular(99L, 30L, 3);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/99/insumos/30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_INSUMO_BODY))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn404WhenInsumoNotFoundOnDesvincularInsumo() throws Exception {
+        Mockito.doThrow(new InsumoNaoEncontradoException())
+                .when(desvincularInsumoOrdemDeServicoUseCase).desvincular(1L, 99L, 3);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/99")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_INSUMO_BODY))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Insumo não encontrado"));
+    }
+
+    @Test
+    void shouldReturn422WhenOrdemNaoEmDiagnosticoOnDesvincularInsumo() throws Exception {
+        Mockito.doThrow(new DesvincularInsumoNaoAutorizadaException())
+                .when(desvincularInsumoOrdemDeServicoUseCase).desvincular(1L, 30L, 3);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_INSUMO_BODY))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Não é possível desvincular insumos se a ordem de serviço não está em diagnóstico"));
+    }
+
+    @Test
+    void shouldReturn422WhenInsumoNaoVinculadoOnDesvincularInsumo() throws Exception {
+        Mockito.doThrow(new InsumoNaoVinculadoException())
+                .when(desvincularInsumoOrdemDeServicoUseCase).desvincular(1L, 30L, 3);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_INSUMO_BODY))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Insumo não está vinculado à ordem de serviço"));
+    }
+
+    @Test
+    void shouldReturn422WhenQuantidadeDesvincularInvalidaOnDesvincularInsumo() throws Exception {
+        Mockito.doThrow(new QuantidadeDesvincularInvalidaException())
+                .when(desvincularInsumoOrdemDeServicoUseCase).desvincular(1L, 30L, 3);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_INSUMO_BODY))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Quantidade a desvincular é maior que a quantidade vinculada"));
     }
 }

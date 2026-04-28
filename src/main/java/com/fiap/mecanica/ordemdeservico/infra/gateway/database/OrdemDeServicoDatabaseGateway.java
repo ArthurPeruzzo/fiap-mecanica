@@ -184,4 +184,21 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
             throw new ErroAcessoBaseDeDadosException();
         }
     }
+
+    @Override
+    public void desvincularOuSubtrairInsumo(Long ordemServicoId, Long insumoId, Integer quantidade) {
+        try {
+            ordemDeServicoInsumoRepository.findByOrdemServicoIdAndInsumoId(ordemServicoId, insumoId)
+                    .ifPresent(entity -> {
+                        if (entity.getQuantidade() - quantidade <= 0) {
+                            ordemDeServicoInsumoRepository.delete(entity);
+                        } else {
+                            ordemDeServicoInsumoRepository.diminuirQuantidade(ordemServicoId, insumoId, quantidade);
+                        }
+                    });
+        } catch (Exception e) {
+            log.error("Erro ao desvincular insumo {} na ordem de servico {}", insumoId, ordemServicoId, e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
 }

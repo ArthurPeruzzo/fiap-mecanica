@@ -2,10 +2,7 @@ package com.fiap.mecanica.ordemdeservico.infra.controller;
 
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
-import com.fiap.mecanica.ordemdeservico.infra.controller.json.DesvincularPecaRequestJson;
-import com.fiap.mecanica.ordemdeservico.infra.controller.json.OrdemDeServicoRequestJson;
-import com.fiap.mecanica.ordemdeservico.infra.controller.json.VincularInsumoRequestJson;
-import com.fiap.mecanica.ordemdeservico.infra.controller.json.VincularPecaRequestJson;
+import com.fiap.mecanica.ordemdeservico.infra.controller.json.*;
 import com.fiap.mecanica.shared.exception.dto.ExceptionDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -33,6 +30,7 @@ public class OrdemDeServicoController {
     private final VincularPecaOrdemDeServicoUseCase vincularPecaOrdemDeServicoUseCase;
     private final DesvincularPecaOrdemDeServicoUseCase desvincularPecaOrdemDeServicoUseCase;
     private final VincularInsumoOrdemDeServicoUseCase vincularInsumoOrdemDeServicoUseCase;
+    private final DesvincularInsumoOrdemDeServicoUseCase desvincularInsumoOrdemDeServicoUseCase;
 
     @Operation(summary = "Abrir Ordem de Serviço",
             description = "Abre uma nova Ordem de Serviço com status RECEBIDA. A descrição registra o relato do cliente. O atendente é identificado pelo token JWT.")
@@ -176,6 +174,26 @@ public class OrdemDeServicoController {
     public ResponseEntity<Void> vincularInsumo(@PathVariable Long ordemServicoId, @PathVariable Long insumoId,
                                                @RequestBody @Valid VincularInsumoRequestJson request) {
         vincularInsumoOrdemDeServicoUseCase.vincular(ordemServicoId, insumoId, request.quantidade());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Desvincular Insumo",
+            description = "Remove ou subtrai a quantidade de um insumo vinculado à ordem de serviço, devolvendo o estoque correspondente. " +
+                    "Se a quantidade informada for igual à vinculada, o vínculo é removido integralmente.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Insumo desvinculado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Quantidade inválida",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou insumo não encontrado",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está em diagnóstico, insumo não está vinculado ou quantidade a desvincular é maior que a vinculada",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+    })
+    @DeleteMapping("/{ordemServicoId}/insumos/{insumoId}")
+    public ResponseEntity<Void> desvincularInsumo(@PathVariable Long ordemServicoId, @PathVariable Long insumoId,
+                                                @RequestBody @Valid DesvincularInsumoRequestJson request) {
+        desvincularInsumoOrdemDeServicoUseCase.desvincular(ordemServicoId, insumoId, request.quantidade());
         return ResponseEntity.noContent().build();
     }
 }

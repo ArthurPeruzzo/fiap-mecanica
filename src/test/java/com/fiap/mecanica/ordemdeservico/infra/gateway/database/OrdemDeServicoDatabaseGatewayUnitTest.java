@@ -305,6 +305,40 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
     }
 
     @Test
+    void desvincularOuSubtrairInsumo_shouldDiminuirQuantidadeWhenParcial() {
+        var existingEntity = OrdemDeServicoInsumoEntity.builder()
+                .id(1L).ordemServicoId(1L).insumoId(30L).quantidade(6).build();
+        Mockito.when(ordemDeServicoInsumoRepository.findByOrdemServicoIdAndInsumoId(1L, 30L))
+                .thenReturn(Optional.of(existingEntity));
+
+        gateway.desvincularOuSubtrairInsumo(1L, 30L, 2);
+
+        Mockito.verify(ordemDeServicoInsumoRepository).diminuirQuantidade(1L, 30L, 2);
+        Mockito.verify(ordemDeServicoInsumoRepository, Mockito.never()).delete(Mockito.any());
+    }
+
+    @Test
+    void desvincularOuSubtrairInsumo_shouldDeleteWhenQuantidadeChegaAZero() {
+        var existingEntity = OrdemDeServicoInsumoEntity.builder()
+                .id(1L).ordemServicoId(1L).insumoId(30L).quantidade(4).build();
+        Mockito.when(ordemDeServicoInsumoRepository.findByOrdemServicoIdAndInsumoId(1L, 30L))
+                .thenReturn(Optional.of(existingEntity));
+
+        gateway.desvincularOuSubtrairInsumo(1L, 30L, 4);
+
+        Mockito.verify(ordemDeServicoInsumoRepository).delete(existingEntity);
+        Mockito.verify(ordemDeServicoInsumoRepository, Mockito.never()).diminuirQuantidade(Mockito.any(), Mockito.any(), Mockito.any());
+    }
+
+    @Test
+    void desvincularOuSubtrairInsumo_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.when(ordemDeServicoInsumoRepository.findByOrdemServicoIdAndInsumoId(Mockito.any(), Mockito.any()))
+                .thenThrow(new RuntimeException("db error"));
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.desvincularOuSubtrairInsumo(1L, 30L, 2));
+    }
+
+    @Test
     void vincularOuSomarInsumo_shouldSaveNewEntityWhenInsumoNaoVinculado() {
         Mockito.when(ordemDeServicoInsumoRepository.findByOrdemServicoIdAndInsumoId(1L, 30L))
                 .thenReturn(Optional.empty());

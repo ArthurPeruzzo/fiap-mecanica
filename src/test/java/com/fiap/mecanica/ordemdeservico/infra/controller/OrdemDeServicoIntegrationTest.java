@@ -886,6 +886,150 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
                 .then().statusCode(401);
     }
 
+    // --- desvincularInsumo ---
+
+    @Test
+    void shouldDesvincularInsumoParcialmenteSuccessfully() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+        Long insumoId = criarInsumoERetornarId(10);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":5}")
+                .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(204);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":2}")
+                .when().delete("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(204);
+
+        Assertions.assertEquals(1, contarVinculosInsumoNoBanco(ordemId, insumoId));
+        Assertions.assertEquals(3, obterQuantidadeInsumoNoBanco(ordemId, insumoId));
+    }
+
+    @Test
+    void shouldDesvincularInsumoIntegralmenteEDeletarVinculo() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+        Long insumoId = criarInsumoERetornarId(10);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":4}")
+                .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(204);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":4}")
+                .when().delete("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(204);
+
+        Assertions.assertEquals(0, contarVinculosInsumoNoBanco(ordemId, insumoId));
+    }
+
+    @Test
+    void shouldReturn422WhenOrdemNaoEmDiagnosticoParaDesvincularInsumo() {
+        String tokenAtendente = obterTokenAtendente();
+        String tokenMecanico = obterTokenMecanico();
+        Long clienteId = criarClienteERetornarId();
+        Long veiculoId = criarVeiculoERetornarId(clienteId);
+        Long ordemId = criarOrdemERetornarId(tokenAtendente, clienteId, veiculoId);
+        Long insumoId = criarInsumoERetornarId(10);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":2}")
+                .when().delete("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(422)
+                .body("message", Matchers.equalTo("Não é possível desvincular insumos se a ordem de serviço não está em diagnóstico"));
+    }
+
+    @Test
+    void shouldReturn422WhenInsumoNaoVinculadoOnDesvincularInsumo() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+        Long insumoId = criarInsumoERetornarId(10);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":2}")
+                .when().delete("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(422)
+                .body("message", Matchers.equalTo("Insumo não está vinculado à ordem de serviço"));
+    }
+
+    @Test
+    void shouldReturn422WhenQuantidadeMaiorQueVinculadaOnDesvincularInsumo() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+        Long insumoId = criarInsumoERetornarId(10);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":4}")
+                .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(204);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":10}")
+                .when().delete("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(422)
+                .body("message", Matchers.equalTo("Quantidade a desvincular é maior que a quantidade vinculada"));
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnDesvincularInsumo() {
+        String tokenMecanico = obterTokenMecanico();
+        Long insumoId = criarInsumoERetornarId(10);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":2}")
+                .when().delete("/ordem-servico/9999/insumos/" + insumoId)
+                .then().statusCode(404)
+                .body("message", Matchers.equalTo("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn404WhenInsumoNotFoundOnDesvincularInsumo() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":2}")
+                .when().delete("/ordem-servico/" + ordemId + "/insumos/9999")
+                .then().statusCode(404)
+                .body("message", Matchers.equalTo("Insumo não encontrado"));
+    }
+
+    @Test
+    void shouldReturn400WhenQuantidadeIsNullOnDesvincularInsumo() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+        Long insumoId = criarInsumoERetornarId(10);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{}")
+                .when().delete("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(400)
+                .body("quantidade", Matchers.equalTo("A quantidade deve ser informada"));
+    }
+
+    @Test
+    void shouldReturn401WhenNoTokenOnDesvincularInsumo() {
+        RestAssured.given().contentType("application/json")
+                .body("{\"quantidade\":2}")
+                .when().delete("/ordem-servico/1/insumos/1")
+                .then().statusCode(401);
+    }
+
     // --- erros gerais ---
 
     @Test

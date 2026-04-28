@@ -26,4 +26,13 @@ public interface OrdemDeServicoInsumoRepository extends JpaRepository<OrdemDeSer
             @Param("insumoId") Long insumoId,
             @Param("quantidade") Integer quantidade
     );
+
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE ordem_servico_insumo SET quantidade = quantidade - :quantidade WHERE ordem_servico_id = :ordemServicoId AND insumo_id = :insumoId", nativeQuery = true)
+    void diminuirQuantidade(
+            @Param("ordemServicoId") Long ordemServicoId,
+            @Param("insumoId") Long insumoId,
+            @Param("quantidade") Integer quantidade
+    );
 }

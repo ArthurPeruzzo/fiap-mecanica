@@ -4,7 +4,9 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServic
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.InsumoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.PecaVinculada;
+import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularInsumoNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularPecaNaoAutorizadaException;
+import com.fiap.mecanica.ordemdeservico.core.exception.InsumoNaoVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.MecanicoNaoResponsavelPelaOrdemDeServicoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoMecanicoResponsavelException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoSemServicosException;
@@ -340,5 +342,56 @@ class OrdemDeServicoUnitTest {
         var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
 
         assertThrows(VinculoInsumoNaoAutorizadaException.class, () -> os.vincularInsumo(30L, 5));
+    }
+
+    // --- desvincularInsumo ---
+
+    @Test
+    void desvincularInsumo_shouldRemoveInsumoWhenQuantidadeIgualAVinculada() {
+        var insumoExistente = new InsumoVinculado(30L, 4);
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                List.of(), List.of(), List.of(insumoExistente));
+
+        os.desvincularInsumo(30L, 4);
+
+        assertTrue(os.getInsumosVinculados().isEmpty());
+    }
+
+    @Test
+    void desvincularInsumo_shouldSubtrairQuantidadeWhenParcial() {
+        var insumoExistente = new InsumoVinculado(30L, 6);
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                List.of(), List.of(), List.of(insumoExistente));
+
+        os.desvincularInsumo(30L, 2);
+
+        assertEquals(1, os.getInsumosVinculados().size());
+        assertEquals(4, os.getInsumosVinculados().getFirst().quantidade());
+    }
+
+    @Test
+    void desvincularInsumo_shouldThrowWhenStatusIsNotEmDiagnostico() {
+        var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
+
+        assertThrows(DesvincularInsumoNaoAutorizadaException.class, () -> os.desvincularInsumo(30L, 1));
+    }
+
+    @Test
+    void desvincularInsumo_shouldThrowWhenInsumoNaoVinculado() {
+        var os = ordemEmDiagnostico();
+
+        assertThrows(InsumoNaoVinculadoException.class, () -> os.desvincularInsumo(99L, 1));
+    }
+
+    @Test
+    void desvincularInsumo_shouldThrowWhenQuantidadeMaiorQueVinculada() {
+        var insumoExistente = new InsumoVinculado(30L, 2);
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                List.of(), List.of(), List.of(insumoExistente));
+
+        assertThrows(QuantidadeDesvincularInvalidaException.class, () -> os.desvincularInsumo(30L, 5));
     }
 }

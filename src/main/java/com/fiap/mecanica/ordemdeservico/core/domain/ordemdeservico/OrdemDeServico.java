@@ -153,6 +153,26 @@ public class OrdemDeServico {
         }
     }
 
+    public void desvincularInsumo(Long insumoId, Integer quantidade) {
+        if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
+            throw new DesvincularInsumoNaoAutorizadaException();
+        }
+
+        var existente = insumosVinculados.stream()
+                .filter(i -> i.insumoId().equals(insumoId))
+                .findFirst().orElseThrow(InsumoNaoVinculadoException::new);
+
+        if (quantidade > existente.quantidade()) {
+            throw new QuantidadeDesvincularInvalidaException();
+        }
+
+        insumosVinculados.remove(existente);
+        int novaQuantidade = existente.quantidade() - quantidade;
+        if (novaQuantidade > 0) {
+            insumosVinculados.add(new InsumoVinculado(insumoId, novaQuantidade));
+        }
+    }
+
     public static OrdemDeServico reconstituir(Long id, Long clienteId, Long veiculoId, Long atendenteId,
                                               Long mecanicoId, StatusOrdemDeServico status, String descricao,
                                               LocalDateTime dataCriacao, LocalDateTime dataInicioDiagnostico,
