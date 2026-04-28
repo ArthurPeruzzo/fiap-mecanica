@@ -7,11 +7,14 @@ import com.fiap.mecanica.gestao.core.exception.AtendenteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularPecaNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.MecanicoNaoResponsavelPelaOrdemDeServicoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaVeiculoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoSemServicosException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoMecanicoResponsavelException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
+import com.fiap.mecanica.ordemdeservico.core.exception.PecaNaoVinculadaException;
+import com.fiap.mecanica.ordemdeservico.core.exception.QuantidadeDesvincularInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoJaVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
@@ -63,6 +66,9 @@ class OrdemDeServicoControllerContractTest {
 
     @MockitoBean
     private VincularPecaOrdemDeServicoUseCase vincularPecaOrdemDeServicoUseCase;
+
+    @MockitoBean
+    private DesvincularPecaOrdemDeServicoUseCase desvincularPecaOrdemDeServicoUseCase;
 
     @MockitoBean
     private VincularInsumoOrdemDeServicoUseCase vincularInsumoOrdemDeServicoUseCase;
@@ -446,6 +452,94 @@ class OrdemDeServicoControllerContractTest {
                         .content(VALID_PECA_BODY))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.message").value("Não é possível vincular peças se a ordem de serviço não está em diagnóstico"));
+    }
+
+    // --- desvincularPeca ---
+
+    @Test
+    void shouldReturn204WhenDesvincularPecaSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_PECA_BODY))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(desvincularPecaOrdemDeServicoUseCase).desvincular(1L, 5L, 2);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "'{}'                 , quantidade, 'A quantidade deve ser informada'",
+            "'{\"quantidade\":0}' , quantidade, 'A quantidade deve ser no mínimo 1'",
+            "'{\"quantidade\":-1}', quantidade, 'A quantidade deve ser no mínimo 1'"
+    })
+    void shouldReturn400WhenDesvincularPecaRequestIsInvalid(String requestJson, String field, String expectedMessage) throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$." + field).value(expectedMessage));
+
+        Mockito.verifyNoInteractions(desvincularPecaOrdemDeServicoUseCase);
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnDesvincularPeca() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
+                .when(desvincularPecaOrdemDeServicoUseCase).desvincular(99L, 5L, 2);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/99/pecas/5")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_PECA_BODY))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn404WhenPecaNotFoundOnDesvincularPeca() throws Exception {
+        Mockito.doThrow(new PecaNaoEncontradaException())
+                .when(desvincularPecaOrdemDeServicoUseCase).desvincular(1L, 99L, 2);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/99")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_PECA_BODY))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Peça não encontrada"));
+    }
+
+    @Test
+    void shouldReturn422WhenOrdemNaoEmDiagnosticoOnDesvincularPeca() throws Exception {
+        Mockito.doThrow(new DesvincularPecaNaoAutorizadaException())
+                .when(desvincularPecaOrdemDeServicoUseCase).desvincular(1L, 5L, 2);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_PECA_BODY))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Não é possível desvincular peças se a ordem de serviço não está em diagnóstico"));
+    }
+
+    @Test
+    void shouldReturn422WhenPecaNaoVinculadaOnDesvincularPeca() throws Exception {
+        Mockito.doThrow(new PecaNaoVinculadaException())
+                .when(desvincularPecaOrdemDeServicoUseCase).desvincular(1L, 5L, 2);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_PECA_BODY))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Peça não está vinculada à ordem de serviço"));
+    }
+
+    @Test
+    void shouldReturn422WhenQuantidadeDesvincularInvalidaOnDesvincularPeca() throws Exception {
+        Mockito.doThrow(new QuantidadeDesvincularInvalidaException())
+                .when(desvincularPecaOrdemDeServicoUseCase).desvincular(1L, 5L, 2);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_PECA_BODY))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Quantidade a desvincular é maior que a quantidade vinculada"));
     }
 
     // --- vincularInsumo ---

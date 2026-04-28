@@ -26,4 +26,13 @@ public interface OrdemDeServicoPecaRepository extends JpaRepository<OrdemDeServi
             @Param("pecaId") Long pecaId,
             @Param("quantidade") Integer quantidade
     );
+
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE ordem_servico_peca SET quantidade = quantidade - :quantidade WHERE ordem_servico_id = :ordemServicoId AND peca_id = :pecaId", nativeQuery = true)
+    void diminuirQuantidade(
+            @Param("ordemServicoId") Long ordemServicoId,
+            @Param("pecaId") Long pecaId,
+            @Param("quantidade") Integer quantidade
+    );
 }

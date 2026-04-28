@@ -4,9 +4,12 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServic
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.InsumoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.PecaVinculada;
+import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularPecaNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.MecanicoNaoResponsavelPelaOrdemDeServicoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoMecanicoResponsavelException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoSemServicosException;
+import com.fiap.mecanica.ordemdeservico.core.exception.PecaNaoVinculadaException;
+import com.fiap.mecanica.ordemdeservico.core.exception.QuantidadeDesvincularInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoJaVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
@@ -252,6 +255,57 @@ class OrdemDeServicoUnitTest {
         var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
 
         assertThrows(VinculoPecaNaoAutorizadaException.class, () -> os.vincularPeca(20L, 3));
+    }
+
+    // --- desvincularPeca ---
+
+    @Test
+    void desvincularPeca_shouldRemovePecaWhenQuantidadeIgualAVinculada() {
+        var pecaExistente = new PecaVinculada(20L, 3);
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                List.of(), List.of(pecaExistente), List.of());
+
+        os.desvincularPeca(20L, 3);
+
+        assertTrue(os.getPecasVinculadas().isEmpty());
+    }
+
+    @Test
+    void desvincularPeca_shouldSubtrairQuantidadeWhenParcial() {
+        var pecaExistente = new PecaVinculada(20L, 5);
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                List.of(), List.of(pecaExistente), List.of());
+
+        os.desvincularPeca(20L, 2);
+
+        assertEquals(1, os.getPecasVinculadas().size());
+        assertEquals(3, os.getPecasVinculadas().getFirst().quantidade());
+    }
+
+    @Test
+    void desvincularPeca_shouldThrowWhenStatusIsNotEmDiagnostico() {
+        var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
+
+        assertThrows(DesvincularPecaNaoAutorizadaException.class, () -> os.desvincularPeca(20L, 1));
+    }
+
+    @Test
+    void desvincularPeca_shouldThrowWhenPecaNaoVinculada() {
+        var os = ordemEmDiagnostico();
+
+        assertThrows(PecaNaoVinculadaException.class, () -> os.desvincularPeca(99L, 1));
+    }
+
+    @Test
+    void desvincularPeca_shouldThrowWhenQuantidadeMaiorQueVinculada() {
+        var pecaExistente = new PecaVinculada(20L, 2);
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                List.of(), List.of(pecaExistente), List.of());
+
+        assertThrows(QuantidadeDesvincularInvalidaException.class, () -> os.desvincularPeca(20L, 5));
     }
 
     // --- vincularInsumo ---

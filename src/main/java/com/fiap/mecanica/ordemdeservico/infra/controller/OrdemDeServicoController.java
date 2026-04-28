@@ -2,6 +2,7 @@ package com.fiap.mecanica.ordemdeservico.infra.controller;
 
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
+import com.fiap.mecanica.ordemdeservico.infra.controller.json.DesvincularPecaRequestJson;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.OrdemDeServicoRequestJson;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.VincularInsumoRequestJson;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.VincularPecaRequestJson;
@@ -30,6 +31,7 @@ public class OrdemDeServicoController {
     private final VincularServicoOrdemDeServicoUseCase vincularServicoOrdemDeServicoUseCase;
     private final DesvincularServicoOrdemDeServicoUseCase desvincularServicoOrdemDeServicoUseCase;
     private final VincularPecaOrdemDeServicoUseCase vincularPecaOrdemDeServicoUseCase;
+    private final DesvincularPecaOrdemDeServicoUseCase desvincularPecaOrdemDeServicoUseCase;
     private final VincularInsumoOrdemDeServicoUseCase vincularInsumoOrdemDeServicoUseCase;
 
     @Operation(summary = "Abrir Ordem de Serviço",
@@ -134,6 +136,26 @@ public class OrdemDeServicoController {
     public ResponseEntity<Void> vincularPeca(@PathVariable Long ordemServicoId, @PathVariable Long pecaId,
                                              @RequestBody @Valid VincularPecaRequestJson request) {
         vincularPecaOrdemDeServicoUseCase.vincular(ordemServicoId, pecaId, request.quantidade());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Desvincular Peça",
+            description = "Remove ou subtrai a quantidade de uma peça vinculada à ordem de serviço, devolvendo o estoque correspondente. " +
+                    "Se a quantidade informada for igual à vinculada, o vínculo é removido integralmente.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Peça desvinculada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Quantidade inválida",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou peça não encontrada",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está em diagnóstico, peça não está vinculada ou quantidade a desvincular é maior que a vinculada",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+    })
+    @DeleteMapping("/{ordemServicoId}/pecas/{pecaId}")
+    public ResponseEntity<Void> desvincularPeca(@PathVariable Long ordemServicoId, @PathVariable Long pecaId,
+                                             @RequestBody @Valid DesvincularPecaRequestJson request) {
+        desvincularPecaOrdemDeServicoUseCase.desvincular(ordemServicoId, pecaId, request.quantidade());
         return ResponseEntity.noContent().build();
     }
 

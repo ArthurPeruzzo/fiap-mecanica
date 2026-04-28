@@ -118,6 +118,26 @@ public class OrdemDeServico {
         }
     }
 
+    public void desvincularPeca(Long pecaId, Integer quantidade) {
+        if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
+            throw new DesvincularPecaNaoAutorizadaException();
+        }
+
+        var existente = pecasVinculadas.stream()
+                .filter(p -> p.pecaId().equals(pecaId))
+                .findFirst().orElseThrow(PecaNaoVinculadaException::new);
+
+        if (quantidade > existente.quantidade()) {
+            throw new QuantidadeDesvincularInvalidaException();
+        }
+
+        pecasVinculadas.remove(existente);
+        int novaQuantidade = existente.quantidade() - quantidade;
+        if (novaQuantidade > 0) {
+            pecasVinculadas.add(new PecaVinculada(pecaId, novaQuantidade));
+        }
+    }
+
     public void vincularInsumo(Long insumoId, Integer quantidade) {
         if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
             throw new VinculoInsumoNaoAutorizadaException();

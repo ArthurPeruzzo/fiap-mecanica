@@ -234,6 +234,40 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
 
 
     @Test
+    void desvincularOuSubtrairPeca_shouldDiminuirQuantidadeWhenParcial() {
+        var existingEntity = OrdemDeServicoPecaEntity.builder()
+                .id(1L).ordemServicoId(1L).pecaId(20L).quantidade(5).build();
+        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(1L, 20L))
+                .thenReturn(Optional.of(existingEntity));
+
+        gateway.desvincularOuSubtrairPeca(1L, 20L, 2);
+
+        Mockito.verify(ordemDeServicoPecaRepository).diminuirQuantidade(1L, 20L, 2);
+        Mockito.verify(ordemDeServicoPecaRepository, Mockito.never()).delete(Mockito.any());
+    }
+
+    @Test
+    void desvincularOuSubtrairPeca_shouldDeleteWhenQuantidadeChegaAZero() {
+        var existingEntity = OrdemDeServicoPecaEntity.builder()
+                .id(1L).ordemServicoId(1L).pecaId(20L).quantidade(3).build();
+        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(1L, 20L))
+                .thenReturn(Optional.of(existingEntity));
+
+        gateway.desvincularOuSubtrairPeca(1L, 20L, 3);
+
+        Mockito.verify(ordemDeServicoPecaRepository).delete(existingEntity);
+        Mockito.verify(ordemDeServicoPecaRepository, Mockito.never()).diminuirQuantidade(Mockito.any(), Mockito.any(), Mockito.any());
+    }
+
+    @Test
+    void desvincularOuSubtrairPeca_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(Mockito.any(), Mockito.any()))
+                .thenThrow(new RuntimeException("db error"));
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.desvincularOuSubtrairPeca(1L, 20L, 2));
+    }
+
+    @Test
     void vincularOuSomarPeca_shouldSaveNewEntityWhenPecaNaoVinculada() {
         Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(1L, 20L))
                 .thenReturn(Optional.empty());
