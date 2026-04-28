@@ -55,17 +55,17 @@ class IniciarDiagnosticoOrdemDeServicoUseCaseUnitTest {
 
     private OrdemDeServico ordemRecebidaSemMecanico() {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, null,
-                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null, List.of(), List.of());
+                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null, List.of(), List.of(), List.of());
     }
 
     private OrdemDeServico ordemEmDiagnostico(Long mecanicoId) {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, mecanicoId,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(), List.of());
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(), List.of(), List.of());
     }
 
     private OrdemDeServico ordemEmOutroStatus(StatusOrdemDeServico status) {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, MECANICO_ID,
-                status, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), List.of(), List.of());
+                status, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), List.of(), List.of(), List.of());
     }
 
     // --- happy path ---
@@ -120,7 +120,7 @@ class IniciarDiagnosticoOrdemDeServicoUseCaseUnitTest {
         stubMecanico();
         // OS ainda RECEBIDA mas com outro mecânico registrado
         var ordemComOutroMecanico = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, OUTRO_MECANICO_ID,
-                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null, List.of(), List.of());
+                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null, List.of(), List.of(), List.of());
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID))
                 .thenReturn(Optional.of(ordemComOutroMecanico));
 

@@ -9,7 +9,10 @@ import com.fiap.mecanica.gestao.infra.gateway.entity.MecanicoEntity;
 import com.fiap.mecanica.gestao.infra.gateway.repository.MecanicoRepository;
 import com.fiap.mecanica.gestao.infra.gateway.entity.VeiculoEntity;
 import com.fiap.mecanica.gestao.infra.gateway.repository.VeiculoRepository;
+import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
+import com.fiap.mecanica.estoque.infra.gateway.entity.InsumoEntity;
 import com.fiap.mecanica.estoque.infra.gateway.entity.PecaEntity;
+import com.fiap.mecanica.estoque.infra.gateway.repository.InsumoRepository;
 import com.fiap.mecanica.estoque.infra.gateway.repository.PecaRepository;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
@@ -52,6 +55,7 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
     @Autowired private OrdemDeServicoRepository ordemDeServicoRepository;
     @Autowired private ServicoRepository servicoRepository;
     @Autowired private PecaRepository pecaRepository;
+    @Autowired private InsumoRepository insumoRepository;
     @Autowired private OrdemDeServicoPecaRepository ordemDeServicoPecaRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
 
@@ -150,6 +154,29 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
         return jdbcTemplate.queryForObject(
                 "SELECT quantidade FROM ordem_servico_peca WHERE ordem_servico_id = ? AND peca_id = ?",
                 Integer.class, ordemId, pecaId);
+    }
+
+    private Long criarInsumoERetornarId(Integer quantidadeEstoque) {
+        return insumoRepository.saveAndFlush(InsumoEntity.builder()
+                .nome("Óleo motor 5W30")
+                .descricao("Óleo sintético")
+                .preco(new BigDecimal("35.00"))
+                .quantidadeEstoque(quantidadeEstoque)
+                .unidadeMedida(UnidadeMedida.LITRO)
+                .build()).getId();
+    }
+
+    private int contarVinculosInsumoNoBanco(Long ordemId, Long insumoId) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ordem_servico_insumo WHERE ordem_servico_id = ? AND insumo_id = ?",
+                Integer.class, ordemId, insumoId);
+        return count != null ? count : 0;
+    }
+
+    private Integer obterQuantidadeInsumoNoBanco(Long ordemId, Long insumoId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT quantidade FROM ordem_servico_insumo WHERE ordem_servico_id = ? AND insumo_id = ?",
+                Integer.class, ordemId, insumoId);
     }
 
     private Long criarOrdemEmDiagnosticoERetornarId(String tokenAtendente, String tokenMecanico) {
@@ -579,6 +606,139 @@ class OrdemDeServicoIntegrationTest extends AbstractContainer {
         RestAssured.given().contentType("application/json")
                 .body("{\"quantidade\":2}")
                 .when().put("/ordem-servico/1/pecas/1")
+                .then().statusCode(401);
+    }
+
+    // --- vincularInsumo ---
+
+    @Test
+    void shouldVincularInsumoSuccessfully() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+        Long insumoId = criarInsumoERetornarId(10);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":4}")
+                .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(204);
+
+        Assertions.assertEquals(1, contarVinculosInsumoNoBanco(ordemId, insumoId));
+        Assertions.assertEquals(4, obterQuantidadeInsumoNoBanco(ordemId, insumoId));
+    }
+
+    @Test
+    void shouldSomarQuantidadeWhenInsumoVinculadoJaExiste() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+        Long insumoId = criarInsumoERetornarId(10);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":4}")
+                .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(204);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":3}")
+                .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(204);
+
+        Assertions.assertEquals(1, contarVinculosInsumoNoBanco(ordemId, insumoId));
+        Assertions.assertEquals(7, obterQuantidadeInsumoNoBanco(ordemId, insumoId));
+    }
+
+    @Test
+    void shouldReturn422WhenEstoqueInsuficienteOnVincularInsumo() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+        Long insumoId = criarInsumoERetornarId(1);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":5}")
+                .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(422)
+                .body("message", Matchers.equalTo("Estoque insuficiente para realizar a operação"));
+    }
+
+    @Test
+    void shouldReturn422WhenOrdemNaoEmDiagnosticoParaVincularInsumo() {
+        String tokenAtendente = obterTokenAtendente();
+        String tokenMecanico = obterTokenMecanico();
+        Long clienteId = criarClienteERetornarId();
+        Long veiculoId = criarVeiculoERetornarId(clienteId);
+        Long ordemId = criarOrdemERetornarId(tokenAtendente, clienteId, veiculoId);
+        Long insumoId = criarInsumoERetornarId(10);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":3}")
+                .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(422)
+                .body("message", Matchers.equalTo("Não é possível vincular insumos se a ordem de serviço não está em diagnóstico"));
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnVincularInsumo() {
+        String tokenMecanico = obterTokenMecanico();
+        Long insumoId = criarInsumoERetornarId(10);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":3}")
+                .when().put("/ordem-servico/9999/insumos/" + insumoId)
+                .then().statusCode(404)
+                .body("message", Matchers.equalTo("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn404WhenInsumoNotFoundOnVincularInsumo() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":3}")
+                .when().put("/ordem-servico/" + ordemId + "/insumos/9999")
+                .then().statusCode(404)
+                .body("message", Matchers.equalTo("Insumo não encontrado"));
+    }
+
+    @Test
+    void shouldReturn400WhenQuantidadeIsNullOnVincularInsumo() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+        Long insumoId = criarInsumoERetornarId(10);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{}")
+                .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(400)
+                .body("quantidade", Matchers.equalTo("A quantidade deve ser informada"));
+    }
+
+    @Test
+    void shouldReturn400WhenQuantidadeIsZeroOnVincularInsumo() {
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+        Long insumoId = criarInsumoERetornarId(10);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":0}")
+                .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(400)
+                .body("quantidade", Matchers.equalTo("A quantidade deve ser no mínimo 1"));
+    }
+
+    @Test
+    void shouldReturn401WhenNoTokenOnVincularInsumo() {
+        RestAssured.given().contentType("application/json")
+                .body("{\"quantidade\":3}")
+                .when().put("/ordem-servico/1/insumos/1")
                 .then().statusCode(401);
     }
 

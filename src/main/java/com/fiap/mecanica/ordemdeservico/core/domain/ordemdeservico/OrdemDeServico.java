@@ -21,6 +21,7 @@ public class OrdemDeServico {
     private LocalDateTime dataConclusaoDiagnostico;
     private List<Long> servicoIds = new ArrayList<>();
     private List<PecaVinculada> pecasVinculadas = new ArrayList<>();
+    private List<InsumoVinculado> insumosVinculados = new ArrayList<>();
 
     private OrdemDeServicoState state;
 
@@ -117,11 +118,27 @@ public class OrdemDeServico {
         }
     }
 
+    public void vincularInsumo(Long insumoId, Integer quantidade) {
+        if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
+            throw new VinculoInsumoNaoAutorizadaException();
+        }
+        var existente = insumosVinculados.stream()
+                .filter(i -> i.insumoId().equals(insumoId))
+                .findFirst();
+        if (existente.isPresent()) {
+            insumosVinculados.remove(existente.get());
+            insumosVinculados.add(new InsumoVinculado(insumoId, existente.get().quantidade() + quantidade));
+        } else {
+            insumosVinculados.add(new InsumoVinculado(insumoId, quantidade));
+        }
+    }
+
     public static OrdemDeServico reconstituir(Long id, Long clienteId, Long veiculoId, Long atendenteId,
                                               Long mecanicoId, StatusOrdemDeServico status, String descricao,
                                               LocalDateTime dataCriacao, LocalDateTime dataInicioDiagnostico,
                                               LocalDateTime dataConclusaoDiagnostico, List<Long> servicoIds,
-                                              List<PecaVinculada> pecasVinculadas) {
+                                              List<PecaVinculada> pecasVinculadas,
+                                              List<InsumoVinculado> insumosVinculados) {
         var os = new OrdemDeServico();
         os.id = id;
         os.clienteId = clienteId;
@@ -136,6 +153,7 @@ public class OrdemDeServico {
         os.state = OrdemDeServicoStateFactory.from(status);
         os.servicoIds = new ArrayList<>(servicoIds);
         os.pecasVinculadas = new ArrayList<>(pecasVinculadas);
+        os.insumosVinculados = new ArrayList<>(insumosVinculados);
         return os;
     }
 }

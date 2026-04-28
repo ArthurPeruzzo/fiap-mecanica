@@ -1,12 +1,15 @@
 package com.fiap.mecanica.ordemdeservico.infra.gateway.database;
 
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.InsumoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.PecaVinculada;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoInsumoEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoPecaEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.ServicoEntity;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoInsumoRepository;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoPecaRepository;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoRepository;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
@@ -24,6 +27,7 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
 
     private final OrdemDeServicoRepository ordemDeServicoRepository;
     private final OrdemDeServicoPecaRepository ordemDeServicoPecaRepository;
+    private final OrdemDeServicoInsumoRepository ordemDeServicoInsumoRepository;
 
     @Override
     public void criar(OrdemDeServico ordemDeServico) {
@@ -50,6 +54,9 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                         var pecasVinculadas = ordemDeServicoPecaRepository.findByOrdemServicoId(id).stream()
                                 .map(p -> new PecaVinculada(p.getPecaId(), p.getQuantidade()))
                                 .toList();
+                        var insumosVinculados = ordemDeServicoInsumoRepository.findByOrdemServicoId(id).stream()
+                                .map(i -> new InsumoVinculado(i.getInsumoId(), i.getQuantidade()))
+                                .toList();
                         return OrdemDeServico.reconstituir(
                                 entity.getId(),
                                 entity.getClienteId(),
@@ -62,7 +69,8 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                                 entity.getDataInicioDiagnostico(),
                                 entity.getDataConclusaoDiagnostico(),
                                 entity.getServicos().stream().map(ServicoEntity::getId).toList(),
-                                pecasVinculadas
+                                pecasVinculadas,
+                                insumosVinculados
                         );
                     });
         } catch (Exception e) {
@@ -136,6 +144,26 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                     );
         } catch (Exception e) {
             log.error("Erro ao vincular peca {} na ordem de servico {}", pecaId, ordemServicoId, e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+
+    @Override
+    public void vincularOuSomarInsumo(Long ordemServicoId, Long insumoId, Integer quantidade) {
+        try {
+            ordemDeServicoInsumoRepository.findByOrdemServicoIdAndInsumoId(ordemServicoId, insumoId)
+                    .ifPresentOrElse(
+                            e -> ordemDeServicoInsumoRepository.somarQuantidade(ordemServicoId, insumoId, quantidade),
+                            () -> ordemDeServicoInsumoRepository.save(
+                                    OrdemDeServicoInsumoEntity.builder()
+                                            .ordemServicoId(ordemServicoId)
+                                            .insumoId(insumoId)
+                                            .quantidade(quantidade)
+                                            .build()
+                            )
+                    );
+        } catch (Exception e) {
+            log.error("Erro ao vincular insumo {} na ordem de servico {}", insumoId, ordemServicoId, e);
             throw new ErroAcessoBaseDeDadosException();
         }
     }

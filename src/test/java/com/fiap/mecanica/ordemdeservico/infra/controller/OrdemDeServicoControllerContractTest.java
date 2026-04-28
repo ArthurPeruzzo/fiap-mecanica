@@ -1,6 +1,7 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
 import com.fiap.mecanica.estoque.core.exception.EstoqueInsuficienteException;
+import com.fiap.mecanica.estoque.core.exception.InsumoNaoEncontradoException;
 import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
 import com.fiap.mecanica.gestao.core.exception.AtendenteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
@@ -16,6 +17,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoExcep
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
+import com.fiap.mecanica.ordemdeservico.core.exception.VinculoInsumoNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VinculoPecaNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VinculoServicoNaoAutorizadoException;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
@@ -61,6 +63,9 @@ class OrdemDeServicoControllerContractTest {
 
     @MockitoBean
     private VincularPecaOrdemDeServicoUseCase vincularPecaOrdemDeServicoUseCase;
+
+    @MockitoBean
+    private VincularInsumoOrdemDeServicoUseCase vincularInsumoOrdemDeServicoUseCase;
 
     private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"}";
 
@@ -441,5 +446,83 @@ class OrdemDeServicoControllerContractTest {
                         .content(VALID_PECA_BODY))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.message").value("Não é possível vincular peças se a ordem de serviço não está em diagnóstico"));
+    }
+
+    // --- vincularInsumo ---
+
+    private static final String VALID_INSUMO_BODY = "{\"quantidade\":3}";
+
+    @Test
+    void shouldReturn204WhenVincularInsumoSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/insumos/30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_INSUMO_BODY))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(vincularInsumoOrdemDeServicoUseCase).vincular(1L, 30L, 3);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "'{}'                 , quantidade, 'A quantidade deve ser informada'",
+            "'{\"quantidade\":0}' , quantidade, 'A quantidade deve ser no mínimo 1'",
+            "'{\"quantidade\":-1}', quantidade, 'A quantidade deve ser no mínimo 1'"
+    })
+    void shouldReturn400WhenVincularInsumoRequestIsInvalid(String requestJson, String field, String expectedMessage) throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/insumos/30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$." + field).value(expectedMessage));
+
+        Mockito.verifyNoInteractions(vincularInsumoOrdemDeServicoUseCase);
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnVincularInsumo() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
+                .when(vincularInsumoOrdemDeServicoUseCase).vincular(99L, 30L, 3);
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/99/insumos/30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_INSUMO_BODY))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn404WhenInsumoNotFoundOnVincularInsumo() throws Exception {
+        Mockito.doThrow(new InsumoNaoEncontradoException())
+                .when(vincularInsumoOrdemDeServicoUseCase).vincular(1L, 99L, 3);
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/insumos/99")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_INSUMO_BODY))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Insumo não encontrado"));
+    }
+
+    @Test
+    void shouldReturn422WhenEstoqueInsuficienteOnVincularInsumo() throws Exception {
+        Mockito.doThrow(new EstoqueInsuficienteException())
+                .when(vincularInsumoOrdemDeServicoUseCase).vincular(1L, 30L, 3);
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/insumos/30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_INSUMO_BODY))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Estoque insuficiente para realizar a operação"));
+    }
+
+    @Test
+    void shouldReturn422WhenOrdemNaoEmDiagnosticoOnVincularInsumo() throws Exception {
+        Mockito.doThrow(new VinculoInsumoNaoAutorizadaException())
+                .when(vincularInsumoOrdemDeServicoUseCase).vincular(1L, 30L, 3);
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/insumos/30")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_INSUMO_BODY))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Não é possível vincular insumos se a ordem de serviço não está em diagnóstico"));
     }
 }

@@ -51,7 +51,8 @@ public class SecurityConfiguration {
     protected static final String[] ENDPOINTS_MECANICO = {
             "/ordem-servico/*/diagnostico/**",
             "/ordem-servico/*/servicos/**",
-            "/ordem-servico/*/pecas/**"
+            "/ordem-servico/*/pecas/**",
+            "/ordem-servico/*/insumos/**"
     };
 
 

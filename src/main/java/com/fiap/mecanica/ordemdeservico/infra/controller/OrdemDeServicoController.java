@@ -3,6 +3,7 @@ package com.fiap.mecanica.ordemdeservico.infra.controller;
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.OrdemDeServicoRequestJson;
+import com.fiap.mecanica.ordemdeservico.infra.controller.json.VincularInsumoRequestJson;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.VincularPecaRequestJson;
 import com.fiap.mecanica.shared.exception.dto.ExceptionDto;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +30,7 @@ public class OrdemDeServicoController {
     private final VincularServicoOrdemDeServicoUseCase vincularServicoOrdemDeServicoUseCase;
     private final DesvincularServicoOrdemDeServicoUseCase desvincularServicoOrdemDeServicoUseCase;
     private final VincularPecaOrdemDeServicoUseCase vincularPecaOrdemDeServicoUseCase;
+    private final VincularInsumoOrdemDeServicoUseCase vincularInsumoOrdemDeServicoUseCase;
 
     @Operation(summary = "Abrir Ordem de Serviço",
             description = "Abre uma nova Ordem de Serviço com status RECEBIDA. A descrição registra o relato do cliente. O atendente é identificado pelo token JWT.")
@@ -121,17 +123,37 @@ public class OrdemDeServicoController {
     @Operation(summary = "Vincular Peça",
             description = "Vincula uma peça à ordem de serviço.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "peça vinculada com sucesso"),
+            @ApiResponse(responseCode = "204", description = "Peça vinculada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
             @ApiResponse(responseCode = "404", description = "Ordem de serviço ou peça não encontrada",
                     content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "Estoque insuficiente para realizar a operacao ou ordem de serviço não está em diagnóstico",
+            @ApiResponse(responseCode = "422", description = "Estoque insuficiente para realizar a operação ou ordem de serviço não está em diagnóstico",
                     content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
     })
     @PutMapping("/{ordemServicoId}/pecas/{pecaId}")
     public ResponseEntity<Void> vincularPeca(@PathVariable Long ordemServicoId, @PathVariable Long pecaId,
                                              @RequestBody @Valid VincularPecaRequestJson request) {
         vincularPecaOrdemDeServicoUseCase.vincular(ordemServicoId, pecaId, request.quantidade());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Vincular Insumo",
+            description = "Vincula um insumo à ordem de serviço, baixando o estoque correspondente. " +
+                    "Se o insumo já estiver vinculado, soma a quantidade informada.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Insumo vinculado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Quantidade inválida",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou insumo não encontrado",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "Estoque insuficiente para realizar a operação ou ordem de serviço não está em diagnóstico",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+    })
+    @PutMapping("/{ordemServicoId}/insumos/{insumoId}")
+    public ResponseEntity<Void> vincularInsumo(@PathVariable Long ordemServicoId, @PathVariable Long insumoId,
+                                               @RequestBody @Valid VincularInsumoRequestJson request) {
+        vincularInsumoOrdemDeServicoUseCase.vincular(ordemServicoId, insumoId, request.quantidade());
         return ResponseEntity.noContent().build();
     }
 }

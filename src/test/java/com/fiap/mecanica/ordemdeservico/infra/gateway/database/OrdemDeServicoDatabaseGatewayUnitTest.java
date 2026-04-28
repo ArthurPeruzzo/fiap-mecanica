@@ -2,9 +2,11 @@ package com.fiap.mecanica.ordemdeservico.infra.gateway.database;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoInsumoEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoPecaEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.ServicoEntity;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoInsumoRepository;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoPecaRepository;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoRepository;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
@@ -34,6 +36,9 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
 
     @Mock
     private OrdemDeServicoPecaRepository ordemDeServicoPecaRepository;
+
+    @Mock
+    private OrdemDeServicoInsumoRepository ordemDeServicoInsumoRepository;
 
     private static final String DESCRICAO = "Barulho ao frear";
 
@@ -86,6 +91,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
                 .build();
         Mockito.when(ordemDeServicoRepository.findOrdemDeServicoById(10L)).thenReturn(Optional.of(entity));
         Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoId(10L)).thenReturn(List.of());
+        Mockito.when(ordemDeServicoInsumoRepository.findByOrdemServicoId(10L)).thenReturn(List.of());
 
         var result = gateway.buscarPorId(10L);
 
@@ -102,6 +108,33 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         assertEquals(dataInicio, os.getDataInicioDiagnostico());
         assertNull(os.getDataConclusaoDiagnostico());
         assertEquals(List.of(7L), os.getServicoIds());
+    }
+
+    @Test
+    void buscarPorId_shouldReconstitutePecasEInsumosVinculados() {
+        var pecaEntity = OrdemDeServicoPecaEntity.builder()
+                .id(1L).ordemServicoId(10L).pecaId(20L).quantidade(3).build();
+        var insumoEntity = OrdemDeServicoInsumoEntity.builder()
+                .id(2L).ordemServicoId(10L).insumoId(30L).quantidade(5).build();
+        var entity = OrdemDeServicoEntity.builder()
+                .id(10L).clienteId(1L).veiculoId(2L).atendenteId(3L).mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO).descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now()).dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null).servicos(List.of()).build();
+        Mockito.when(ordemDeServicoRepository.findOrdemDeServicoById(10L)).thenReturn(Optional.of(entity));
+        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoId(10L)).thenReturn(List.of(pecaEntity));
+        Mockito.when(ordemDeServicoInsumoRepository.findByOrdemServicoId(10L)).thenReturn(List.of(insumoEntity));
+
+        var result = gateway.buscarPorId(10L);
+
+        assertTrue(result.isPresent());
+        var os = result.get();
+        assertEquals(1, os.getPecasVinculadas().size());
+        assertEquals(20L, os.getPecasVinculadas().getFirst().pecaId());
+        assertEquals(3, os.getPecasVinculadas().getFirst().quantidade());
+        assertEquals(1, os.getInsumosVinculados().size());
+        assertEquals(30L, os.getInsumosVinculados().getFirst().insumoId());
+        assertEquals(5, os.getInsumosVinculados().getFirst().quantidade());
     }
 
     @Test
@@ -124,7 +157,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         var dataInicio = LocalDateTime.of(2026, 1, 10, 10, 0);
         var dataConclusao = LocalDateTime.of(2026, 1, 10, 11, 0);
         var os = OrdemDeServico.reconstituir(10L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), dataInicio, dataConclusao, List.of(), List.of());
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), dataInicio, dataConclusao, List.of(), List.of(), List.of());
 
         gateway.atualizar(os);
 
@@ -138,7 +171,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         Mockito.doThrow(new RuntimeException("db error"))
                 .when(ordemDeServicoRepository).atualizar(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
         var os = OrdemDeServico.reconstituir(10L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(), List.of());
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(), List.of(), List.of());
 
         assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.atualizar(os));
     }
@@ -199,26 +232,6 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.desvincularServico(1L, 10L));
     }
 
-    @Test
-    void buscarPorId_shouldReconstitutePecasVinculadas() {
-        var pecaEntity = OrdemDeServicoPecaEntity.builder()
-                .id(1L).ordemServicoId(10L).pecaId(20L).quantidade(3).build();
-        var entity = OrdemDeServicoEntity.builder()
-                .id(10L).clienteId(1L).veiculoId(2L).atendenteId(3L).mecanicoId(5L)
-                .status(StatusOrdemDeServico.EM_DIAGNOSTICO).descricao(DESCRICAO)
-                .dataCriacao(LocalDateTime.now()).dataInicioDiagnostico(LocalDateTime.now())
-                .dataConclusaoDiagnostico(null).servicos(List.of()).build();
-        Mockito.when(ordemDeServicoRepository.findOrdemDeServicoById(10L)).thenReturn(Optional.of(entity));
-        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoId(10L)).thenReturn(List.of(pecaEntity));
-
-        var result = gateway.buscarPorId(10L);
-
-        assertTrue(result.isPresent());
-        var os = result.get();
-        assertEquals(1, os.getPecasVinculadas().size());
-        assertEquals(20L, os.getPecasVinculadas().getFirst().pecaId());
-        assertEquals(3, os.getPecasVinculadas().getFirst().quantidade());
-    }
 
     @Test
     void vincularOuSomarPeca_shouldSaveNewEntityWhenPecaNaoVinculada() {
@@ -255,5 +268,42 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
                 .thenThrow(new RuntimeException("db error"));
 
         assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.vincularOuSomarPeca(1L, 20L, 2));
+    }
+
+    @Test
+    void vincularOuSomarInsumo_shouldSaveNewEntityWhenInsumoNaoVinculado() {
+        Mockito.when(ordemDeServicoInsumoRepository.findByOrdemServicoIdAndInsumoId(1L, 30L))
+                .thenReturn(Optional.empty());
+        var captor = ArgumentCaptor.forClass(OrdemDeServicoInsumoEntity.class);
+
+        gateway.vincularOuSomarInsumo(1L, 30L, 5);
+
+        Mockito.verify(ordemDeServicoInsumoRepository).save(captor.capture());
+        var entity = captor.getValue();
+        assertEquals(1L, entity.getOrdemServicoId());
+        assertEquals(30L, entity.getInsumoId());
+        assertEquals(5, entity.getQuantidade());
+        Mockito.verify(ordemDeServicoInsumoRepository, Mockito.never()).somarQuantidade(Mockito.any(), Mockito.any(), Mockito.any());
+    }
+
+    @Test
+    void vincularOuSomarInsumo_shouldSomarQuantidadeWhenInsumoJaVinculado() {
+        var existingEntity = OrdemDeServicoInsumoEntity.builder()
+                .id(1L).ordemServicoId(1L).insumoId(30L).quantidade(5).build();
+        Mockito.when(ordemDeServicoInsumoRepository.findByOrdemServicoIdAndInsumoId(1L, 30L))
+                .thenReturn(Optional.of(existingEntity));
+
+        gateway.vincularOuSomarInsumo(1L, 30L, 3);
+
+        Mockito.verify(ordemDeServicoInsumoRepository).somarQuantidade(1L, 30L, 3);
+        Mockito.verify(ordemDeServicoInsumoRepository, Mockito.never()).save(Mockito.any());
+    }
+
+    @Test
+    void vincularOuSomarInsumo_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.when(ordemDeServicoInsumoRepository.findByOrdemServicoIdAndInsumoId(Mockito.any(), Mockito.any()))
+                .thenThrow(new RuntimeException("db error"));
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.vincularOuSomarInsumo(1L, 30L, 3));
     }
 }

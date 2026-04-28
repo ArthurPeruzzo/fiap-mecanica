@@ -12,4 +12,5 @@ public interface OrdemDeServicoGateway {
 	void vincularServico(Long ordemServicoId, Long servicoId);
 	void desvincularServico(Long ordemServicoId, Long servicoId);
 	void vincularOuSomarPeca(Long ordemServicoId, Long pecaId, Integer quantidade);
+	void vincularOuSomarInsumo(Long ordemServicoId, Long insumoId, Integer quantidade);
 }
