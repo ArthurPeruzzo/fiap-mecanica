@@ -32,8 +32,8 @@ public class OrdemDeServicoController {
     private final VincularInsumoOrdemDeServicoUseCase vincularInsumoOrdemDeServicoUseCase;
     private final DesvincularInsumoOrdemDeServicoUseCase desvincularInsumoOrdemDeServicoUseCase;
 
-    @Operation(summary = "Abrir Ordem de Serviço",
-            description = "Abre uma nova Ordem de Serviço com status RECEBIDA. A descrição registra o relato do cliente. O atendente é identificado pelo token JWT.")
+    @Operation(summary = "Criar Ordem de Serviço",
+            description = "Cria uma nova Ordem de Serviço com status RECEBIDA. A descrição registra o relato do cliente. O atendente é identificado pelo token JWT.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Ordem de Serviço criada com sucesso"),
             @ApiResponse(responseCode = "400", description = "Parâmetros de entrada inválidos",
