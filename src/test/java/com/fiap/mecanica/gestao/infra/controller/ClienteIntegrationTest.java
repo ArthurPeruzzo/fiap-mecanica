@@ -46,7 +46,7 @@ class ClienteIntegrationTest extends AbstractContainer {
 	}
 
 	private String obterToken() {
-		List<RoleEntity> roles = roleRepository.findByNameIn(List.of(RoleEnum.ROLE_ATENDENTE));
+		List<RoleEntity> roles = roleRepository.findByNameIn(List.of(RoleEnum.ROLE_ADMINISTRADOR));
 
 		userRepository.saveAndFlush(UserEntity.builder()
 				.email("any@any.com")
@@ -254,10 +254,6 @@ class ClienteIntegrationTest extends AbstractContainer {
 				.body("size", Matchers.equalTo(1));
 	}
 
-	// -------------------------------------------------------------------------
-	// PUT /cliente/{id}
-	// -------------------------------------------------------------------------
-
 	@Test
 	void shouldUpdateClienteSuccessfully() {
 		String token = obterToken();
@@ -347,10 +343,6 @@ class ClienteIntegrationTest extends AbstractContainer {
 				.statusCode(409)
 				.body("message", Matchers.equalTo("Já existe um cliente cadastrado com o documento informado"));
 	}
-
-	// -------------------------------------------------------------------------
-	// DELETE /cliente/{id}
-	// -------------------------------------------------------------------------
 
 	@Test
 	void shouldDeleteClienteSuccessfully() {

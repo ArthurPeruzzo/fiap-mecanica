@@ -27,7 +27,11 @@ public class AuthenticateUserUseCase {
 	public String authenticate(LoginInputDto loginInputDto) {
 		Authentication authenticate = authentication(loginInputDto);
 
-		UserDetailsImpl userDetails = (UserDetailsImpl) authenticate.getPrincipal();
+		Object principal = authenticate.getPrincipal();
+		if (!(principal instanceof UserDetailsImpl userDetails)) {
+			log.error("Principal retornado nao e do tipo esperado: {}", principal);
+			throw new UnexpectedErrorAuthenticateException();
+		}
 		User user = userDetails.getUser();
 
 		TokenParams tokenParams = new TokenParams(user.getId(), user.getEmail().value(), user.getRolesFormattedAsString());

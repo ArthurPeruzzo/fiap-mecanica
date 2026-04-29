@@ -7,7 +7,6 @@ import com.fiap.mecanica.shared.seguranca.core.domain.User;
 import com.fiap.mecanica.shared.seguranca.core.domain.password.PasswordHash;
 import com.fiap.mecanica.shared.seguranca.core.exception.BadCredentialsAuthenticateException;
 import com.fiap.mecanica.shared.seguranca.core.exception.UnexpectedErrorAuthenticateException;
-import com.fiap.mecanica.shared.seguranca.core.usecase.AuthenticateUserUseCase;
 import com.fiap.mecanica.shared.seguranca.infra.controller.dto.LoginInputDto;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import com.fiap.mecanica.shared.seguranca.infra.token.dto.TokenParams;
@@ -88,6 +87,44 @@ class AuthenticateUserUseCaseUnitTest {
 
         Mockito.verify(authenticationManager).authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class));
         Mockito.verifyNoMoreInteractions(authenticationManager);
+
+        Mockito.verifyNoInteractions(tokenGateway);
+
+        Assertions.assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatus());
+        Assertions.assertEquals("Não foi possível realizar a autenticação", exception.getMessage());
+    }
+
+    @Test
+    void shouldThrowUnexpectedErrorWhenPrincipalIsNotUserDetailsImpl() {
+        LoginInputDto loginInputDto = new LoginInputDto("any-email", "any-password");
+        Authentication authenticationMock = Mockito.mock(Authentication.class);
+
+        Mockito.when(authenticationManager.authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authenticationMock);
+
+        Mockito.when(authenticationMock.getPrincipal()).thenReturn("principal-inesperado");
+
+        var exception = Assertions.assertThrows(UnexpectedErrorAuthenticateException.class,
+                () -> useCase.authenticate(loginInputDto));
+
+        Mockito.verifyNoInteractions(tokenGateway);
+
+        Assertions.assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatus());
+        Assertions.assertEquals("Não foi possível realizar a autenticação", exception.getMessage());
+    }
+
+    @Test
+    void shouldThrowUnexpectedErrorWhenPrincipalIsNull() {
+        LoginInputDto loginInputDto = new LoginInputDto("any-email", "any-password");
+        Authentication authenticationMock = Mockito.mock(Authentication.class);
+
+        Mockito.when(authenticationManager.authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class)))
+                .thenReturn(authenticationMock);
+
+        Mockito.when(authenticationMock.getPrincipal()).thenReturn(null);
+
+        var exception = Assertions.assertThrows(UnexpectedErrorAuthenticateException.class,
+                () -> useCase.authenticate(loginInputDto));
 
         Mockito.verifyNoInteractions(tokenGateway);
 

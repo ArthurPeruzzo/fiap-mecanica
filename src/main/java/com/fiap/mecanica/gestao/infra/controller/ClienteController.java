@@ -41,7 +41,7 @@ public class ClienteController {
 
 	@Operation(
 			summary = "Criar um cliente",
-			description = "Cria um novo cliente. Somente um atendente pode criar um cliente"
+			description = "Cria um novo cliente"
 	)
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "201", description = "Cliente criado com sucesso"),

@@ -32,4 +32,19 @@ public class MecanicoDatabaseGateway implements MecanicoGateway {
 			throw new ErroAcessoBaseDeDadosException();
 		}
 	}
+
+	@Override
+	public Optional<Mecanico> findByUsuarioId(Long usuarioId) {
+		try {
+			return mecanicoRepository.findByUserId(usuarioId)
+					.map(entity -> Mecanico.builder()
+							.id(entity.getId())
+							.nomeCompleto(new NomeCompleto(entity.getNome(), entity.getSobrenome()))
+							.especialidade(entity.getEspecialidade())
+							.build());
+		} catch (Exception e) {
+			log.error("Erro ao buscar mecanico por usuarioId: {}", usuarioId, e);
+			throw new ErroAcessoBaseDeDadosException();
+		}
+	}
 }

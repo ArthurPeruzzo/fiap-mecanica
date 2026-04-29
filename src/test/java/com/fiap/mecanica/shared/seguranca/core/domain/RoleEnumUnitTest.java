@@ -17,8 +17,13 @@ class RoleEnumUnitTest {
     }
 
     @Test
+    void shouldContainRoleAdministrador() {
+        assertDoesNotThrow(() -> RoleEnum.valueOf("ROLE_ADMINISTRADOR"));
+    }
+
+    @Test
     void shouldHaveExactlyTwoValues() {
-        assertEquals(2, RoleEnum.values().length);
+        assertEquals(3, RoleEnum.values().length);
     }
 
     @Test
@@ -29,6 +34,11 @@ class RoleEnumUnitTest {
     @Test
     void shouldReturnCorrectNameForMecanico() {
         assertEquals("ROLE_MECANICO", RoleEnum.ROLE_MECANICO.name());
+    }
+
+    @Test
+    void shouldReturnCorrectNameForAdministrador() {
+        assertEquals("ROLE_ADMINISTRADOR", RoleEnum.ROLE_ADMINISTRADOR.name());
     }
 
     @Test

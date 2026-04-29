@@ -1,5 +1,6 @@
 package com.fiap.mecanica.gestao.infra.gateway.entity;
 
+import com.fiap.mecanica.gestao.core.domain.Turno;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -7,13 +8,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class AtendenteEntityUnitTest {
 
     @Test
-    void shouldCreateWithNoArgsConstructor() {
-        assertNotNull(new AtendenteEntity());
-    }
-
-    @Test
     void shouldCreateWithAllArgsConstructor() {
-        var entity = new AtendenteEntity(1L, "Ana", "Costa", 10L);
+        var entity = new AtendenteEntity(1L, "Ana", "Costa", Turno.INTEGRAL, 10L);
 
         assertEquals(1L, entity.getId());
         assertEquals("Ana", entity.getNome());

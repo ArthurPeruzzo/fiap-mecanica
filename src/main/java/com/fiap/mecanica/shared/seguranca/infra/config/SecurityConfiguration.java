@@ -23,6 +23,7 @@ public class SecurityConfiguration {
 
     private final UserAuthenticationFilter userAuthenticationFilter;
 
+    protected static final String ADMINISTRADOR = "ADMINISTRADOR";
     protected static final String ATENDENTE = "ATENDENTE";
     protected static final String MECANICO = "MECANICO";
 
@@ -35,12 +36,23 @@ public class SecurityConfiguration {
             "/favicon.ico"
     };
 
-    protected static final String [] ENDPOINTS_ATENDENTE = {
+    protected static final String [] ENDPOINTS_ADMINISTRADOR = {
             "/cliente/**",
-            "/veiculo/**"
+            "/veiculo/**",
+            "/peca/**",
+            "/insumo/**",
+            "/servico/**"
+    };
+
+    protected static final String [] ENDPOINTS_ATENDENTE = {
+            "/ordem-servico/**"
     };
 
     protected static final String[] ENDPOINTS_MECANICO = {
+            "/ordem-servico/*/diagnostico/**",
+            "/ordem-servico/*/servicos/**",
+            "/ordem-servico/*/pecas/**",
+            "/ordem-servico/*/insumos/**"
     };
 
 
@@ -50,8 +62,9 @@ public class SecurityConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth ->
                         auth.requestMatchers(ENDPOINTS_SEM_AUTENTICACAO).permitAll()
-                                .requestMatchers(ENDPOINTS_ATENDENTE).hasRole(ATENDENTE)
+                                .requestMatchers(ENDPOINTS_ADMINISTRADOR).hasRole(ADMINISTRADOR)
                                 .requestMatchers(ENDPOINTS_MECANICO).hasRole(MECANICO)
+                                .requestMatchers(ENDPOINTS_ATENDENTE).hasRole(ATENDENTE)
                                 .anyRequest().denyAll()
                 ).exceptionHandling(exception ->
                         exception.authenticationEntryPoint((request, response, authException) -> {

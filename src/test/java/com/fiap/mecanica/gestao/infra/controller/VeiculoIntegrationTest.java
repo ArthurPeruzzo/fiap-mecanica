@@ -50,7 +50,7 @@ class VeiculoIntegrationTest extends AbstractContainer {
     }
 
     private String obterToken() {
-        List<RoleEntity> roles = roleRepository.findByNameIn(List.of(RoleEnum.ROLE_ATENDENTE));
+        List<RoleEntity> roles = roleRepository.findByNameIn(List.of(RoleEnum.ROLE_ADMINISTRADOR));
 
         userRepository.saveAndFlush(UserEntity.builder()
                 .email("any@any.com")
@@ -208,10 +208,6 @@ class VeiculoIntegrationTest extends AbstractContainer {
                 .statusCode(401);
     }
 
-    // -------------------------------------------------------------------------
-    // PUT /veiculo/{id}
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldUpdateVeiculoSuccessfully() {
         String token = obterToken();
@@ -285,10 +281,6 @@ class VeiculoIntegrationTest extends AbstractContainer {
                 .body("message", Matchers.equalTo("Já existe um veículo cadastrado com a placa informada"));
     }
 
-    // -------------------------------------------------------------------------
-    // DELETE /veiculo/{id}
-    // -------------------------------------------------------------------------
-
     @Test
     void shouldDeleteVeiculoSuccessfully() {
         String token = obterToken();
@@ -324,10 +316,6 @@ class VeiculoIntegrationTest extends AbstractContainer {
                 .statusCode(404)
                 .body("message", Matchers.equalTo("Veículo não encontrado"));
     }
-
-    // -------------------------------------------------------------------------
-    // GET /veiculo
-    // -------------------------------------------------------------------------
 
     @Test
     void shouldReturnEmptyPageWhenNoVeiculosCadastrados() {

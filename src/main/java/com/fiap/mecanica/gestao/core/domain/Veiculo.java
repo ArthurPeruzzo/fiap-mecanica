@@ -29,4 +29,9 @@ public class Veiculo {
         veiculo.id = id;
         return veiculo;
     }
+
+    public boolean pertenceAo(Long clienteId) {
+        return this.clienteId.equals(clienteId);
+    }
+
 }
