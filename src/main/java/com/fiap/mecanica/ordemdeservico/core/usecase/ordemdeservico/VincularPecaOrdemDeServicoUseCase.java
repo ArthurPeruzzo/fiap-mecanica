@@ -22,7 +22,7 @@ public class VincularPecaOrdemDeServicoUseCase {
 		Peca peca = pecaGateway.buscarPorId(pecaId).orElseThrow(PecaNaoEncontradaException::new);
 
 		peca.baixarEstoque(quantidade);
-		ordemDeServico.vincularPeca(pecaId, quantidade);
+		ordemDeServico.vincularPeca(pecaId, quantidade, peca.getPreco());
 
 		pecaGateway.atualizar(peca);
 		ordemDeServicoGateway.vincularOuSomarPeca(ordemServicoId, pecaId, quantidade);

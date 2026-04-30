@@ -3,6 +3,7 @@ package com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico;
 import com.fiap.mecanica.ordemdeservico.core.exception.*;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -103,7 +104,7 @@ public class OrdemDeServico {
         return this.mecanicoId != null && this.mecanicoId.equals(mecanicoId);
     }
 
-    public void vincularPeca(Long pecaId, Integer quantidade) {
+    public void vincularPeca(Long pecaId, Integer quantidade, BigDecimal preco) {
         if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
             throw new VinculoPecaNaoAutorizadaException();
         }
@@ -112,9 +113,9 @@ public class OrdemDeServico {
                 .findFirst();
         if (existente.isPresent()) {
             pecasVinculadas.remove(existente.get());
-            pecasVinculadas.add(new PecaVinculada(pecaId, existente.get().quantidade() + quantidade));
+            pecasVinculadas.add(new PecaVinculada(pecaId, existente.get().quantidade() + quantidade, preco));
         } else {
-            pecasVinculadas.add(new PecaVinculada(pecaId, quantidade));
+            pecasVinculadas.add(new PecaVinculada(pecaId, quantidade, preco));
         }
     }
 
@@ -134,7 +135,7 @@ public class OrdemDeServico {
         pecasVinculadas.remove(existente);
         int novaQuantidade = existente.quantidade() - quantidade;
         if (novaQuantidade > 0) {
-            pecasVinculadas.add(new PecaVinculada(pecaId, novaQuantidade));
+            pecasVinculadas.add(new PecaVinculada(pecaId, novaQuantidade, existente.preco()));
         }
     }
 
@@ -195,5 +196,9 @@ public class OrdemDeServico {
         os.pecasVinculadas = new ArrayList<>(pecasVinculadas);
         os.insumosVinculados = new ArrayList<>(insumosVinculados);
         return os;
+    }
+
+    public void calcularOrcamento() {
+
     }
 }

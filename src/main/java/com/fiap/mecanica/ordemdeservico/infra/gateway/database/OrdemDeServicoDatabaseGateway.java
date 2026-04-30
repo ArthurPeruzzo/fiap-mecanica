@@ -1,5 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.infra.gateway.database;
 
+import com.fiap.mecanica.estoque.infra.gateway.entity.PecaEntity;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.InsumoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.PecaVinculada;
@@ -52,7 +53,7 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
             return ordemDeServicoRepository.findOrdemDeServicoById(id)
                     .map(entity -> {
                         var pecasVinculadas = ordemDeServicoPecaRepository.findByOrdemServicoId(id).stream()
-                                .map(p -> new PecaVinculada(p.getPecaId(), p.getQuantidade()))
+                                .map(p -> new PecaVinculada(p.getPecaId(), p.getQuantidade(), p.getPreco()))
                                 .toList();
                         var insumosVinculados = ordemDeServicoInsumoRepository.findByOrdemServicoId(id).stream()
                                 .map(i -> new InsumoVinculado(i.getInsumoId(), i.getQuantidade()))
@@ -131,13 +132,13 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
     @Override
     public void vincularOuSomarPeca(Long ordemServicoId, Long pecaId, Integer quantidade) {
         try {
-            ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(ordemServicoId, pecaId)
+            ordemDeServicoPecaRepository.findByOrdemServicoIdAndPeca_Id(ordemServicoId, pecaId)
                     .ifPresentOrElse(
                             e -> ordemDeServicoPecaRepository.somarQuantidade(ordemServicoId, pecaId, quantidade),
                             () -> ordemDeServicoPecaRepository.save(
                                     OrdemDeServicoPecaEntity.builder()
                                             .ordemServicoId(ordemServicoId)
-                                            .pecaId(pecaId)
+                                            .peca(PecaEntity.builder().id(pecaId).build())
                                             .quantidade(quantidade)
                                             .build()
                             )
@@ -151,7 +152,7 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
     @Override
     public void desvincularOuSubtrairPeca(Long ordemServicoId, Long pecaId, Integer quantidade) {
         try {
-            ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(ordemServicoId, pecaId)
+            ordemDeServicoPecaRepository.findByOrdemServicoIdAndPeca_Id(ordemServicoId, pecaId)
                     .ifPresent(entity -> {
                         if (entity.getQuantidade() - quantidade <= 0) {
                             ordemDeServicoPecaRepository.delete(entity);

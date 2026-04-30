@@ -1,5 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.infra.gateway.database;
 
+import com.fiap.mecanica.estoque.infra.gateway.entity.PecaEntity;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoInsumoEntity;
@@ -66,9 +67,8 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
     void criar_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
         Mockito.when(ordemDeServicoRepository.save(Mockito.any()))
                 .thenThrow(new RuntimeException("db error"));
-
-        assertThrows(ErroAcessoBaseDeDadosException.class,
-                () -> gateway.criar(new OrdemDeServico(1L, 2L, 3L, DESCRICAO)));
+        OrdemDeServico ordemDeServico = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.criar(ordemDeServico));
     }
 
     @Test
@@ -113,7 +113,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
     @Test
     void buscarPorId_shouldReconstitutePecasEInsumosVinculados() {
         var pecaEntity = OrdemDeServicoPecaEntity.builder()
-                .id(1L).ordemServicoId(10L).pecaId(20L).quantidade(3).build();
+                .id(1L).ordemServicoId(10L).peca(PecaEntity.builder().id(20L).build()).quantidade(3).build();
         var insumoEntity = OrdemDeServicoInsumoEntity.builder()
                 .id(2L).ordemServicoId(10L).insumoId(30L).quantidade(5).build();
         var entity = OrdemDeServicoEntity.builder()
@@ -236,8 +236,8 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
     @Test
     void desvincularOuSubtrairPeca_shouldDiminuirQuantidadeWhenParcial() {
         var existingEntity = OrdemDeServicoPecaEntity.builder()
-                .id(1L).ordemServicoId(1L).pecaId(20L).quantidade(5).build();
-        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(1L, 20L))
+                .id(1L).ordemServicoId(1L).peca(PecaEntity.builder().id(20L).build()).quantidade(5).build();
+        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPeca_Id(1L, 20L))
                 .thenReturn(Optional.of(existingEntity));
 
         gateway.desvincularOuSubtrairPeca(1L, 20L, 2);
@@ -249,8 +249,8 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
     @Test
     void desvincularOuSubtrairPeca_shouldDeleteWhenQuantidadeChegaAZero() {
         var existingEntity = OrdemDeServicoPecaEntity.builder()
-                .id(1L).ordemServicoId(1L).pecaId(20L).quantidade(3).build();
-        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(1L, 20L))
+                .id(1L).ordemServicoId(1L).peca(PecaEntity.builder().id(20L).build()).quantidade(3).build();
+        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPeca_Id(1L, 20L))
                 .thenReturn(Optional.of(existingEntity));
 
         gateway.desvincularOuSubtrairPeca(1L, 20L, 3);
@@ -261,7 +261,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
 
     @Test
     void desvincularOuSubtrairPeca_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
-        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(Mockito.any(), Mockito.any()))
+        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPeca_Id(Mockito.any(), Mockito.any()))
                 .thenThrow(new RuntimeException("db error"));
 
         assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.desvincularOuSubtrairPeca(1L, 20L, 2));
@@ -269,7 +269,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
 
     @Test
     void vincularOuSomarPeca_shouldSaveNewEntityWhenPecaNaoVinculada() {
-        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(1L, 20L))
+        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPeca_Id(1L, 20L))
                 .thenReturn(Optional.empty());
         var captor = ArgumentCaptor.forClass(OrdemDeServicoPecaEntity.class);
 
@@ -286,8 +286,8 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
     @Test
     void vincularOuSomarPeca_shouldSomarQuantidadeWhenPecaJaVinculada() {
         var existingEntity = OrdemDeServicoPecaEntity.builder()
-                .id(1L).ordemServicoId(1L).pecaId(20L).quantidade(3).build();
-        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(1L, 20L))
+                .id(1L).ordemServicoId(1L).peca(PecaEntity.builder().id(20L).build()).quantidade(3).build();
+        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPeca_Id(1L, 20L))
                 .thenReturn(Optional.of(existingEntity));
 
         gateway.vincularOuSomarPeca(1L, 20L, 2);
@@ -298,7 +298,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
 
     @Test
     void vincularOuSomarPeca_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
-        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(Mockito.any(), Mockito.any()))
+        Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPeca_Id(Mockito.any(), Mockito.any()))
                 .thenThrow(new RuntimeException("db error"));
 
         assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.vincularOuSomarPeca(1L, 20L, 2));

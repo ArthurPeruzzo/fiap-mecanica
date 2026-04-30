@@ -46,7 +46,7 @@ class DesvincularPecaOrdemDeServicoUseCaseUnitTest {
     private OrdemDeServico ordemEmDiagnosticoComPeca(Integer quantidadeVinculada) {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(new PecaVinculada(PECA_ID, quantidadeVinculada)), List.of());
+                List.of(), List.of(new PecaVinculada(PECA_ID, quantidadeVinculada, new BigDecimal(10))), List.of());
     }
 
     private Peca pecaComEstoque(Integer estoque) {

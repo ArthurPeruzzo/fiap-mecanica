@@ -20,6 +20,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.VinculoPecaNaoAutorizadaE
 import com.fiap.mecanica.ordemdeservico.core.exception.VinculoServicoNaoAutorizadoException;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -231,39 +232,44 @@ class OrdemDeServicoUnitTest {
     void vincularPeca_shouldAddPecaToListWhenStatusIsEmDiagnostico() {
         var os = ordemEmDiagnostico();
 
-        os.vincularPeca(20L, 3);
+        BigDecimal preco = new BigDecimal(10);
+        os.vincularPeca(20L, 3, preco);
 
         assertEquals(1, os.getPecasVinculadas().size());
         assertEquals(20L, os.getPecasVinculadas().getFirst().pecaId());
         assertEquals(3, os.getPecasVinculadas().getFirst().quantidade());
+        assertEquals(preco, os.getPecasVinculadas().getFirst().preco());
     }
 
     @Test
     void vincularPeca_shouldSomarQuantidadeWhenPecaAlreadyLinked() {
-        var pecaExistente = new PecaVinculada(20L, 2);
+        BigDecimal preco = new BigDecimal(10);
+        var pecaExistente = new PecaVinculada(20L, 2, preco);
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
                 List.of(), List.of(pecaExistente), List.of());
 
-        os.vincularPeca(20L, 3);
+        os.vincularPeca(20L, 3, preco);
 
         assertEquals(1, os.getPecasVinculadas().size());
         assertEquals(20L, os.getPecasVinculadas().getFirst().pecaId());
         assertEquals(5, os.getPecasVinculadas().getFirst().quantidade());
+        assertEquals(preco, os.getPecasVinculadas().getFirst().preco());
     }
 
     @Test
     void vincularPeca_shouldThrowWhenStatusIsNotEmDiagnostico() {
         var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
-
-        assertThrows(VinculoPecaNaoAutorizadaException.class, () -> os.vincularPeca(20L, 3));
+        BigDecimal preco = new BigDecimal(10);
+        assertThrows(VinculoPecaNaoAutorizadaException.class, () -> os.vincularPeca(20L, 3, preco));
     }
 
     // --- desvincularPeca ---
 
     @Test
     void desvincularPeca_shouldRemovePecaWhenQuantidadeIgualAVinculada() {
-        var pecaExistente = new PecaVinculada(20L, 3);
+        BigDecimal preco = new BigDecimal(10);
+        var pecaExistente = new PecaVinculada(20L, 3, preco);
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
                 List.of(), List.of(pecaExistente), List.of());
@@ -275,7 +281,8 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void desvincularPeca_shouldSubtrairQuantidadeWhenParcial() {
-        var pecaExistente = new PecaVinculada(20L, 5);
+        BigDecimal preco = new BigDecimal(10);
+        var pecaExistente = new PecaVinculada(20L, 5, preco);
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
                 List.of(), List.of(pecaExistente), List.of());
@@ -302,7 +309,8 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void desvincularPeca_shouldThrowWhenQuantidadeMaiorQueVinculada() {
-        var pecaExistente = new PecaVinculada(20L, 2);
+        BigDecimal preco = new BigDecimal(10);
+        var pecaExistente = new PecaVinculada(20L, 2, preco);
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
                 List.of(), List.of(pecaExistente), List.of());

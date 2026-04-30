@@ -73,7 +73,8 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
 
     @Test
     void shouldSomarQuantidadeWhenPecaAlreadyLinked() {
-        stubOrdem(ordemEmDiagnostico(List.of(new PecaVinculada(PECA_ID, 3))));
+        BigDecimal preco = new BigDecimal(10);
+        stubOrdem(ordemEmDiagnostico(List.of(new PecaVinculada(PECA_ID, 3, preco))));
         stubPeca(pecaComEstoque(10));
 
         vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE);

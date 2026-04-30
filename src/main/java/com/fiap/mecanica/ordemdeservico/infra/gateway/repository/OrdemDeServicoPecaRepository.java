@@ -16,7 +16,7 @@ public interface OrdemDeServicoPecaRepository extends JpaRepository<OrdemDeServi
 
     List<OrdemDeServicoPecaEntity> findByOrdemServicoId(Long ordemServicoId);
 
-    Optional<OrdemDeServicoPecaEntity> findByOrdemServicoIdAndPecaId(Long ordemServicoId, Long pecaId);
+    Optional<OrdemDeServicoPecaEntity> findByOrdemServicoIdAndPeca_Id(Long ordemServicoId, Long id);
 
     @Modifying
     @Transactional
