@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS `ordem_servico` (
     `data_criacao` datetime     NOT NULL,
     `data_inicio_diagnostico` datetime NULL,
     `data_conclusao_diagnostico` datetime NULL,
+    `data_envio_orcamento` datetime NULL,
     `orcamento_total` decimal(10,2)  NULL,
     PRIMARY KEY (`id`),
     CONSTRAINT `fk_ordem_servico_cliente`  FOREIGN KEY (`cliente_id`)  REFERENCES `cliente`  (`id`),

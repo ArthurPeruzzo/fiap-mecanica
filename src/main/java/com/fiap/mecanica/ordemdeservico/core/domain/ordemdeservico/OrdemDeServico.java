@@ -24,8 +24,12 @@ public class OrdemDeServico {
     private List<PecaVinculada> pecasVinculadas = new ArrayList<>();
     private List<InsumoVinculado> insumosVinculados = new ArrayList<>();
     private Orcamento orcamento;
+    private LocalDateTime dataEnvioOrcamento;
 
     private OrdemDeServicoState state;
+
+    private OrdemDeServico() {
+    }
 
     public OrdemDeServico(Long clienteId, Long veiculoId, Long atendenteId, String descricao) {
         this.clienteId = clienteId;
@@ -35,21 +39,6 @@ public class OrdemDeServico {
         this.status = StatusOrdemDeServico.RECEBIDA;
         this.dataCriacao = LocalDateTime.now();
         this.state = new OrdemDeServicoRecebidaState();
-    }
-
-    private OrdemDeServico() {
-    }
-
-    void setMecanicoId(Long mecanicoId) {
-        this.mecanicoId = mecanicoId;
-    }
-
-    void setDataInicioDiagnostico(LocalDateTime dataInicioDiagnostico) {
-        this.dataInicioDiagnostico = dataInicioDiagnostico;
-    }
-
-    void setDataConclusaoDiagnostico(LocalDateTime dataConclusaoDiagnostico) {
-        this.dataConclusaoDiagnostico = dataConclusaoDiagnostico;
     }
 
     public void iniciarDiagnostico(Long mecanicoId) {
@@ -68,6 +57,10 @@ public class OrdemDeServico {
             throw new OrdemDeServicoSemServicosException();
         }
         state.concluirDiagnostico(this);
+    }
+
+    public void gravarEnvioOrcamento() {
+        state.enviarOrcamento(this);
     }
 
     void transicionarPara(StatusOrdemDeServico novoStatus, OrdemDeServicoState novoState) {
@@ -200,7 +193,8 @@ public class OrdemDeServico {
                                               List<ServicoVinculado> servicosVinculados,
                                               List<PecaVinculada> pecasVinculadas,
                                               List<InsumoVinculado> insumosVinculados,
-                                              Orcamento orcamento) {
+                                              Orcamento orcamento,
+                                              LocalDateTime dataEnvioOrcamento) {
         var os = new OrdemDeServico();
         os.id = id;
         os.clienteId = clienteId;
@@ -217,6 +211,23 @@ public class OrdemDeServico {
         os.pecasVinculadas = new ArrayList<>(pecasVinculadas);
         os.insumosVinculados = new ArrayList<>(insumosVinculados);
         os.orcamento = orcamento;
+        os.dataEnvioOrcamento = dataEnvioOrcamento;
         return os;
+    }
+
+    void setMecanicoId(Long mecanicoId) {
+        this.mecanicoId = mecanicoId;
+    }
+
+    void setDataInicioDiagnostico(LocalDateTime dataInicioDiagnostico) {
+        this.dataInicioDiagnostico = dataInicioDiagnostico;
+    }
+
+    void setDataConclusaoDiagnostico(LocalDateTime dataConclusaoDiagnostico) {
+        this.dataConclusaoDiagnostico = dataConclusaoDiagnostico;
+    }
+
+    void setDataEnvioOrcamento(LocalDateTime dataEnvioOrcamento) {
+        this.dataEnvioOrcamento = dataEnvioOrcamento;
     }
 }

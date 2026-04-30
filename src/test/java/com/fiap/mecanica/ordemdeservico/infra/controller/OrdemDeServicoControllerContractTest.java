@@ -78,6 +78,9 @@ class OrdemDeServicoControllerContractTest {
     @MockitoBean
     private DesvincularInsumoOrdemDeServicoUseCase desvincularInsumoOrdemDeServicoUseCase;
 
+    @MockitoBean
+    private EnviarOrcamentoOrdemDeServicoUseCase enviarOrcamentoOrdemDeServicoUseCase;
+
     private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"}";
 
     @Test

@@ -46,7 +46,7 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
     private OrdemDeServico ordemEmDiagnostico(List<InsumoVinculado> insumosVinculados) {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), insumosVinculados, null);
+                List.of(), List.of(), insumosVinculados, null, null);
     }
 
     private Insumo insumoComEstoque(Integer estoque) {
@@ -122,7 +122,7 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
     @Test
     void shouldThrowWhenOrdemNotEmDiagnostico() {
         var ordemRecebida = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, null,
-                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null, List.of(), List.of(), List.of(), null);
+                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null, List.of(), List.of(), List.of(), null, null);
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemRecebida));
         stubInsumo(insumoComEstoque(10));
 

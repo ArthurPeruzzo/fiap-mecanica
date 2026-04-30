@@ -52,6 +52,9 @@ public class OrdemDeServicoEntity {
     @Column(name = "data_conclusao_diagnostico")
     private LocalDateTime dataConclusaoDiagnostico;
 
+    @Column(name = "data_envio_orcamento")
+    private LocalDateTime dataEnvioOrcamento;
+
     @Column(name = "orcamento_total")
     private BigDecimal orcamentoTotal;
 
