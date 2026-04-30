@@ -75,7 +75,7 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
 
     @Test
     void shouldSomarQuantidadeWhenInsumoAlreadyLinked() {
-        stubOrdem(ordemEmDiagnostico(List.of(new InsumoVinculado(INSUMO_ID, 5))));
+        stubOrdem(ordemEmDiagnostico(List.of(new InsumoVinculado(INSUMO_ID, 5, BigDecimal.TEN))));
         stubInsumo(insumoComEstoque(10));
 
         vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE);

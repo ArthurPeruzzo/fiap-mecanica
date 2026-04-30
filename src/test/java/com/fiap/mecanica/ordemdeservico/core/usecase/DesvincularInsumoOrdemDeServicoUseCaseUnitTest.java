@@ -47,7 +47,7 @@ class DesvincularInsumoOrdemDeServicoUseCaseUnitTest {
     private OrdemDeServico ordemEmDiagnosticoComInsumo(Integer quantidadeVinculada) {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), List.of(new InsumoVinculado(INSUMO_ID, quantidadeVinculada)), null);
+                List.of(), List.of(), List.of(new InsumoVinculado(INSUMO_ID, quantidadeVinculada, BigDecimal.TEN)), null);
     }
 
     private Insumo insumoComEstoque(Integer estoque) {

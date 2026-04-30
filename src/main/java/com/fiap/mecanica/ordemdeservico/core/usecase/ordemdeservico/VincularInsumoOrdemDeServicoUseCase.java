@@ -22,7 +22,7 @@ public class VincularInsumoOrdemDeServicoUseCase {
         Insumo insumo = insumoGateway.buscarPorId(insumoId).orElseThrow(InsumoNaoEncontradoException::new);
 
         insumo.baixarEstoque(quantidade);
-        ordemDeServico.vincularInsumo(insumoId, quantidade);
+        ordemDeServico.vincularInsumo(insumoId, quantidade, insumo.getPreco());
 
         insumoGateway.atualizar(insumo);
         ordemDeServicoGateway.vincularOuSomarInsumo(ordemServicoId, insumoId, quantidade);

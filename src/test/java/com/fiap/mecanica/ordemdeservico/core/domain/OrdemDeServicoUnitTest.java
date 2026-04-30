@@ -339,39 +339,43 @@ class OrdemDeServicoUnitTest {
     void vincularInsumo_shouldAddInsumoToListWhenStatusIsEmDiagnostico() {
         var os = ordemEmDiagnostico();
 
-        os.vincularInsumo(30L, 5);
+        BigDecimal preco = new BigDecimal(10);
+        os.vincularInsumo(30L, 5, preco);
 
         assertEquals(1, os.getInsumosVinculados().size());
         assertEquals(30L, os.getInsumosVinculados().getFirst().insumoId());
         assertEquals(5, os.getInsumosVinculados().getFirst().quantidade());
+        assertEquals(preco, os.getInsumosVinculados().getFirst().preco());
     }
 
     @Test
     void vincularInsumo_shouldSomarQuantidadeWhenInsumoAlreadyLinked() {
-        var insumoExistente = new InsumoVinculado(30L, 4);
+        BigDecimal preco = new BigDecimal(10);
+        var insumoExistente = new InsumoVinculado(30L, 4, preco);
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
                 List.of(), List.of(), List.of(insumoExistente), null);
 
-        os.vincularInsumo(30L, 3);
+        os.vincularInsumo(30L, 3, preco);
 
         assertEquals(1, os.getInsumosVinculados().size());
         assertEquals(30L, os.getInsumosVinculados().getFirst().insumoId());
         assertEquals(7, os.getInsumosVinculados().getFirst().quantidade());
+        assertEquals(preco, os.getInsumosVinculados().getFirst().preco());
     }
 
     @Test
     void vincularInsumo_shouldThrowWhenStatusIsNotEmDiagnostico() {
         var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
 
-        assertThrows(VinculoInsumoNaoAutorizadaException.class, () -> os.vincularInsumo(30L, 5));
+        assertThrows(VinculoInsumoNaoAutorizadaException.class, () -> os.vincularInsumo(30L, 5, BigDecimal.TEN));
     }
 
     // --- desvincularInsumo ---
 
     @Test
     void desvincularInsumo_shouldRemoveInsumoWhenQuantidadeIgualAVinculada() {
-        var insumoExistente = new InsumoVinculado(30L, 4);
+        var insumoExistente = new InsumoVinculado(30L, 4, BigDecimal.TEN);
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
                 List.of(), List.of(), List.of(insumoExistente), null);
@@ -383,7 +387,7 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void desvincularInsumo_shouldSubtrairQuantidadeWhenParcial() {
-        var insumoExistente = new InsumoVinculado(30L, 6);
+        var insumoExistente = new InsumoVinculado(30L, 6, BigDecimal.TEN);
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
                 List.of(), List.of(), List.of(insumoExistente), null);
@@ -410,7 +414,7 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void desvincularInsumo_shouldThrowWhenQuantidadeMaiorQueVinculada() {
-        var insumoExistente = new InsumoVinculado(30L, 2);
+        var insumoExistente = new InsumoVinculado(30L, 2, BigDecimal.TEN);
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
                 List.of(), List.of(), List.of(insumoExistente), null);

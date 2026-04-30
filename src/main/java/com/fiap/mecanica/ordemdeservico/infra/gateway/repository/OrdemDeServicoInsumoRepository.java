@@ -16,7 +16,7 @@ public interface OrdemDeServicoInsumoRepository extends JpaRepository<OrdemDeSer
 
     List<OrdemDeServicoInsumoEntity> findByOrdemServicoId(Long ordemServicoId);
 
-    Optional<OrdemDeServicoInsumoEntity> findByOrdemServicoIdAndInsumoId(Long ordemServicoId, Long insumoId);
+    Optional<OrdemDeServicoInsumoEntity> findByOrdemServicoIdAndInsumo_Id(Long ordemServicoId, Long id);
 
     @Modifying
     @Transactional

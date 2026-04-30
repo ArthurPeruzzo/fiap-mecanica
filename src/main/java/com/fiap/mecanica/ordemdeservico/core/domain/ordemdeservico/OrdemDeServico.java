@@ -141,7 +141,7 @@ public class OrdemDeServico {
         }
     }
 
-    public void vincularInsumo(Long insumoId, Integer quantidade) {
+    public void vincularInsumo(Long insumoId, Integer quantidade, BigDecimal preco) {
         if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
             throw new VinculoInsumoNaoAutorizadaException();
         }
@@ -150,9 +150,9 @@ public class OrdemDeServico {
                 .findFirst();
         if (existente.isPresent()) {
             insumosVinculados.remove(existente.get());
-            insumosVinculados.add(new InsumoVinculado(insumoId, existente.get().quantidade() + quantidade));
+            insumosVinculados.add(new InsumoVinculado(insumoId, existente.get().quantidade() + quantidade, preco));
         } else {
-            insumosVinculados.add(new InsumoVinculado(insumoId, quantidade));
+            insumosVinculados.add(new InsumoVinculado(insumoId, quantidade, preco));
         }
     }
 
@@ -172,7 +172,7 @@ public class OrdemDeServico {
         insumosVinculados.remove(existente);
         int novaQuantidade = existente.quantidade() - quantidade;
         if (novaQuantidade > 0) {
-            insumosVinculados.add(new InsumoVinculado(insumoId, novaQuantidade));
+            insumosVinculados.add(new InsumoVinculado(insumoId, novaQuantidade, existente.preco()));
         }
     }
 
@@ -181,11 +181,16 @@ public class OrdemDeServico {
                 .map(p -> p.preco().multiply(BigDecimal.valueOf(p.quantidade())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        var totalInsumos = insumosVinculados.stream()
+                .map(p -> p.preco().multiply(BigDecimal.valueOf(p.quantidade())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         var totalServicos = servicosVinculados.stream()
                 .map(ServicoVinculado::preco)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        this.orcamento = new Orcamento(totalPecas.add(totalServicos));
+        BigDecimal valorTotal = totalInsumos.add(totalPecas).add(totalServicos);
+        this.orcamento = new Orcamento(valorTotal);
     }
 
     public static OrdemDeServico reconstituir(Long id, Long clienteId, Long veiculoId, Long atendenteId,
