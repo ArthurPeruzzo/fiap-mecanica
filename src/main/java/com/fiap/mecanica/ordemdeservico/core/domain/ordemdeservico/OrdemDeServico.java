@@ -20,9 +20,10 @@ public class OrdemDeServico {
     private LocalDateTime dataCriacao;
     private LocalDateTime dataInicioDiagnostico;
     private LocalDateTime dataConclusaoDiagnostico;
-    private List<Long> servicoIds = new ArrayList<>();
+    private List<ServicoVinculado> servicosVinculados = new ArrayList<>();
     private List<PecaVinculada> pecasVinculadas = new ArrayList<>();
     private List<InsumoVinculado> insumosVinculados = new ArrayList<>();
+    private Orcamento orcamento;
 
     private OrdemDeServicoState state;
 
@@ -63,7 +64,7 @@ public class OrdemDeServico {
             throw new MecanicoNaoResponsavelPelaOrdemDeServicoException();
         }
 
-        if (servicoIds.isEmpty()) {
+        if (servicosVinculados.isEmpty()) {
             throw new OrdemDeServicoSemServicosException();
         }
         state.concluirDiagnostico(this);
@@ -74,15 +75,16 @@ public class OrdemDeServico {
         this.state = novoState;
     }
 
-    public void vincularServico(Long servicoId) {
+    public void vincularServico(Long servicoId, BigDecimal preco) {
         if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
             throw new VinculoServicoNaoAutorizadoException();
         }
 
-        if (servicoIds.contains(servicoId)) {
+        boolean jaVinculado = servicosVinculados.stream().anyMatch(s -> s.servicoId().equals(servicoId));
+        if (jaVinculado) {
             throw new ServicoJaVinculadoException();
         }
-        servicoIds.add(servicoId);
+        servicosVinculados.add(new ServicoVinculado(servicoId, preco));
     }
 
     public void desvincularServico(Long servicoId) {
@@ -90,10 +92,10 @@ public class OrdemDeServico {
             throw new VinculoServicoNaoAutorizadoException();
         }
 
-        if (!servicoIds.contains(servicoId)) {
-            throw new ServicoNaoVinculadoException();
-        }
-        servicoIds.remove(servicoId);
+        var existente = servicosVinculados.stream()
+                .filter(s -> s.servicoId().equals(servicoId))
+                .findFirst().orElseThrow(ServicoNaoVinculadoException::new);
+        servicosVinculados.remove(existente);
     }
 
     public boolean possuiMecanicoResponsavel() {
@@ -174,12 +176,26 @@ public class OrdemDeServico {
         }
     }
 
+    void calcularOrcamento() {
+        var totalPecas = pecasVinculadas.stream()
+                .map(p -> p.preco().multiply(BigDecimal.valueOf(p.quantidade())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        var totalServicos = servicosVinculados.stream()
+                .map(ServicoVinculado::preco)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        this.orcamento = new Orcamento(totalPecas.add(totalServicos));
+    }
+
     public static OrdemDeServico reconstituir(Long id, Long clienteId, Long veiculoId, Long atendenteId,
                                               Long mecanicoId, StatusOrdemDeServico status, String descricao,
                                               LocalDateTime dataCriacao, LocalDateTime dataInicioDiagnostico,
-                                              LocalDateTime dataConclusaoDiagnostico, List<Long> servicoIds,
+                                              LocalDateTime dataConclusaoDiagnostico,
+                                              List<ServicoVinculado> servicosVinculados,
                                               List<PecaVinculada> pecasVinculadas,
-                                              List<InsumoVinculado> insumosVinculados) {
+                                              List<InsumoVinculado> insumosVinculados,
+                                              Orcamento orcamento) {
         var os = new OrdemDeServico();
         os.id = id;
         os.clienteId = clienteId;
@@ -192,13 +208,10 @@ public class OrdemDeServico {
         os.dataInicioDiagnostico = dataInicioDiagnostico;
         os.dataConclusaoDiagnostico = dataConclusaoDiagnostico;
         os.state = OrdemDeServicoStateFactory.from(status);
-        os.servicoIds = new ArrayList<>(servicoIds);
+        os.servicosVinculados = new ArrayList<>(servicosVinculados);
         os.pecasVinculadas = new ArrayList<>(pecasVinculadas);
         os.insumosVinculados = new ArrayList<>(insumosVinculados);
+        os.orcamento = orcamento;
         return os;
-    }
-
-    public void calcularOrcamento() {
-
     }
 }

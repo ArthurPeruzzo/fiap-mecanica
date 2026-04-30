@@ -2,8 +2,10 @@ package com.fiap.mecanica.ordemdeservico.infra.gateway.database;
 
 import com.fiap.mecanica.estoque.infra.gateway.entity.PecaEntity;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.InsumoVinculado;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.Orcamento;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.PecaVinculada;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.ServicoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoInsumoEntity;
@@ -52,12 +54,17 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
         try {
             return ordemDeServicoRepository.findOrdemDeServicoById(id)
                     .map(entity -> {
+                        var servicosVinculados = entity.getServicos().stream()
+                                .map(s -> new ServicoVinculado(s.getId(), s.getPreco()))
+                                .toList();
                         var pecasVinculadas = ordemDeServicoPecaRepository.findByOrdemServicoId(id).stream()
                                 .map(p -> new PecaVinculada(p.getPecaId(), p.getQuantidade(), p.getPreco()))
                                 .toList();
                         var insumosVinculados = ordemDeServicoInsumoRepository.findByOrdemServicoId(id).stream()
                                 .map(i -> new InsumoVinculado(i.getInsumoId(), i.getQuantidade()))
                                 .toList();
+                        var orcamento = entity.getOrcamentoTotal() != null
+                                ? new Orcamento(entity.getOrcamentoTotal()) : null;
                         return OrdemDeServico.reconstituir(
                                 entity.getId(),
                                 entity.getClienteId(),
@@ -69,9 +76,10 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                                 entity.getDataCriacao(),
                                 entity.getDataInicioDiagnostico(),
                                 entity.getDataConclusaoDiagnostico(),
-                                entity.getServicos().stream().map(ServicoEntity::getId).toList(),
+                                servicosVinculados,
                                 pecasVinculadas,
-                                insumosVinculados
+                                insumosVinculados,
+                                orcamento
                         );
                     });
         } catch (Exception e) {
@@ -96,12 +104,15 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
     @Override
     public void atualizar(OrdemDeServico ordemDeServico) {
         try {
+            var orcamentoTotal = ordemDeServico.getOrcamento() != null
+                    ? ordemDeServico.getOrcamento().valorTotal() : null;
             ordemDeServicoRepository.atualizar(
                     ordemDeServico.getId(),
                     ordemDeServico.getMecanicoId(),
                     ordemDeServico.getStatus(),
                     ordemDeServico.getDataInicioDiagnostico(),
-                    ordemDeServico.getDataConclusaoDiagnostico()
+                    ordemDeServico.getDataConclusaoDiagnostico(),
+                    orcamentoTotal
             );
         } catch (Exception e) {
             log.error("Erro ao atualizar ordem de servico id: {}", ordemDeServico.getId(), e);

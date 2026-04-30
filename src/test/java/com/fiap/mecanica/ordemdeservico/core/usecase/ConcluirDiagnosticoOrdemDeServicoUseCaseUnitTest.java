@@ -4,6 +4,7 @@ import com.fiap.mecanica.gestao.core.domain.Mecanico;
 import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.ServicoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.MecanicoNaoResponsavelPelaOrdemDeServicoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
@@ -20,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -55,12 +57,14 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
 
     private OrdemDeServico ordemEmDiagnostico() {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, MECANICO_ID,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(10L), List.of(), List.of());
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                List.of(new ServicoVinculado(10L, BigDecimal.TEN)), List.of(), List.of(), null);
     }
 
     private OrdemDeServico ordemEmDiagnosticoSemServicos() {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, MECANICO_ID,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(), List.of(), List.of());
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                List.of(), List.of(), List.of(), null);
     }
 
     @Test
@@ -75,6 +79,7 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
         var os = captor.getValue();
         assertEquals(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, os.getStatus());
         assertNotNull(os.getDataConclusaoDiagnostico());
+        assertNotNull(os.getOrcamento());
     }
 
     @Test
@@ -103,7 +108,8 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenMecanicoNaoEhResponsavel() {
         stubMecanico();
         var ordemDeOutroMecanico = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 99L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(10L), List.of(), List.of());
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                List.of(new ServicoVinculado(10L, BigDecimal.TEN)), List.of(), List.of(), null);
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemDeOutroMecanico));
 
         assertThrows(MecanicoNaoResponsavelPelaOrdemDeServicoException.class,
@@ -127,7 +133,8 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenTransicaoDeStatusInvalida() {
         stubMecanico();
         var ordemConcluida = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, MECANICO_ID,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(1L), List.of(), List.of());
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                List.of(new ServicoVinculado(1L, BigDecimal.TEN)), List.of(), List.of(), null);
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemConcluida));
 
         assertThrows(TransicaoDeStatusInvalidaException.class,

@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +51,9 @@ public class OrdemDeServicoEntity {
 
     @Column(name = "data_conclusao_diagnostico")
     private LocalDateTime dataConclusaoDiagnostico;
+
+    @Column(name = "orcamento_total")
+    private BigDecimal orcamentoTotal;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

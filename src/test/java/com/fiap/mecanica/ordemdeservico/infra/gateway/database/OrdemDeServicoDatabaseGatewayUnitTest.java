@@ -2,6 +2,7 @@ package com.fiap.mecanica.ordemdeservico.infra.gateway.database;
 
 import com.fiap.mecanica.estoque.infra.gateway.entity.PecaEntity;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.ServicoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoInsumoEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoPecaEntity;
@@ -107,7 +108,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         assertEquals(dataCriacao, os.getDataCriacao());
         assertEquals(dataInicio, os.getDataInicioDiagnostico());
         assertNull(os.getDataConclusaoDiagnostico());
-        assertEquals(List.of(7L), os.getServicoIds());
+        assertEquals(List.of(7L), os.getServicosVinculados().stream().map(ServicoVinculado::servicoId).toList());
     }
 
     @Test
@@ -157,21 +158,23 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         var dataInicio = LocalDateTime.of(2026, 1, 10, 10, 0);
         var dataConclusao = LocalDateTime.of(2026, 1, 10, 11, 0);
         var os = OrdemDeServico.reconstituir(10L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), dataInicio, dataConclusao, List.of(), List.of(), List.of());
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), dataInicio, dataConclusao,
+                List.of(), List.of(), List.of(), null);
 
         gateway.atualizar(os);
 
         Mockito.verify(ordemDeServicoRepository).atualizar(
-                10L, 5L, StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, dataInicio, dataConclusao);
+                10L, 5L, StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, dataInicio, dataConclusao, null);
         Mockito.verify(ordemDeServicoRepository, Mockito.never()).save(Mockito.any());
     }
 
     @Test
     void atualizar_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
         Mockito.doThrow(new RuntimeException("db error"))
-                .when(ordemDeServicoRepository).atualizar(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+                .when(ordemDeServicoRepository).atualizar(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
         var os = OrdemDeServico.reconstituir(10L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(), List.of(), List.of());
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                List.of(), List.of(), List.of(), null);
 
         assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.atualizar(os));
     }

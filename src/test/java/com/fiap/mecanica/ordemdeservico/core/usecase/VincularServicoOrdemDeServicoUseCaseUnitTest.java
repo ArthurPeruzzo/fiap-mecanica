@@ -1,6 +1,7 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.ServicoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
@@ -41,9 +42,10 @@ class VincularServicoOrdemDeServicoUseCaseUnitTest {
 
     private static final String DESCRICAO = "Barulho ao frear";
 
-    private OrdemDeServico ordemEmDiagnostico(List<Long> servicoIds) {
+    private OrdemDeServico ordemEmDiagnostico(List<ServicoVinculado> servicosVinculados) {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, servicoIds, List.of(), List.of());
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                servicosVinculados, List.of(), List.of(), null);
     }
 
     private Servico servicoPadrao() {
@@ -92,7 +94,7 @@ class VincularServicoOrdemDeServicoUseCaseUnitTest {
 
     @Test
     void shouldThrowWhenServicoAlreadyLinked() {
-        stubOrdem(ordemEmDiagnostico(List.of(SERVICO_ID)));
+        stubOrdem(ordemEmDiagnostico(List.of(new ServicoVinculado(SERVICO_ID, BigDecimal.TEN))));
         stubServico();
 
         assertThrows(ServicoJaVinculadoException.class,
@@ -104,7 +106,8 @@ class VincularServicoOrdemDeServicoUseCaseUnitTest {
     @Test
     void shouldThrowWhenOrdemNotEmDiagnostico() {
         var ordemRecebida = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, null,
-                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null, List.of(), List.of(), List.of());
+                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null,
+                List.of(), List.of(), List.of(), null);
         stubOrdem(ordemRecebida);
         stubServico();
 

@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -26,14 +27,16 @@ public interface OrdemDeServicoRepository extends JpaRepository<OrdemDeServicoEn
            "o.mecanicoId = :mecanicoId, " +
            "o.status = :status, " +
            "o.dataInicioDiagnostico = :dataInicioDiagnostico, " +
-           "o.dataConclusaoDiagnostico = :dataConclusaoDiagnostico " +
+           "o.dataConclusaoDiagnostico = :dataConclusaoDiagnostico, " +
+           "o.orcamentoTotal = :orcamentoTotal " +
            "WHERE o.id = :id")
     void atualizar(
             @Param("id") Long id,
             @Param("mecanicoId") Long mecanicoId,
             @Param("status") StatusOrdemDeServico status,
             @Param("dataInicioDiagnostico") LocalDateTime dataInicioDiagnostico,
-            @Param("dataConclusaoDiagnostico") LocalDateTime dataConclusaoDiagnostico
+            @Param("dataConclusaoDiagnostico") LocalDateTime dataConclusaoDiagnostico,
+            @Param("orcamentoTotal") BigDecimal orcamentoTotal
     );
 
     @Modifying

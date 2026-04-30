@@ -1,6 +1,7 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.ServicoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
@@ -41,9 +42,10 @@ class DesvincularServicoOrdemDeServicoUseCaseUnitTest {
 
     private static final String DESCRICAO = "Barulho ao frear";
 
-    private OrdemDeServico ordemEmDiagnostico(List<Long> servicoIds) {
+    private OrdemDeServico ordemEmDiagnostico(List<ServicoVinculado> servicosVinculados) {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, servicoIds, List.of(), List.of());
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                servicosVinculados, List.of(), List.of(), null);
     }
 
     private Servico servicoPadrao() {
@@ -60,7 +62,7 @@ class DesvincularServicoOrdemDeServicoUseCaseUnitTest {
 
     @Test
     void shouldDesvincularServicoSuccessfully() {
-        stubOrdem(ordemEmDiagnostico(List.of(SERVICO_ID)));
+        stubOrdem(ordemEmDiagnostico(List.of(new ServicoVinculado(SERVICO_ID, BigDecimal.TEN))));
         stubServico();
 
         desvincularServicoOrdemDeServicoUseCase.desvincular(ORDEM_ID, SERVICO_ID);
@@ -81,7 +83,7 @@ class DesvincularServicoOrdemDeServicoUseCaseUnitTest {
 
     @Test
     void shouldThrowWhenServicoNotFound() {
-        stubOrdem(ordemEmDiagnostico(List.of(SERVICO_ID)));
+        stubOrdem(ordemEmDiagnostico(List.of(new ServicoVinculado(SERVICO_ID, BigDecimal.TEN))));
         Mockito.when(servicoGateway.buscarPorId(SERVICO_ID)).thenReturn(Optional.empty());
 
         assertThrows(ServicoNaoEncontradoException.class,
@@ -104,7 +106,8 @@ class DesvincularServicoOrdemDeServicoUseCaseUnitTest {
     @Test
     void shouldThrowWhenOrdemNotEmDiagnostico() {
         var ordemDiagnosticoConcluido = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), List.of(SERVICO_ID), List.of(), List.of());
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
+                List.of(new ServicoVinculado(SERVICO_ID, BigDecimal.TEN)), List.of(), List.of(), null);
         stubOrdem(ordemDiagnosticoConcluido);
         stubServico();
 

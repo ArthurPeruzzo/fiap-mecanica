@@ -19,10 +19,10 @@ public class VincularServicoOrdemDeServicoUseCase {
         OrdemDeServico ordemDeServico = ordemDeServicoGateway.buscarPorId(ordemServicoId)
                 .orElseThrow(OrdemDeServicoNaoEncontradaException::new);
 
-        servicoGateway.buscarPorId(servicoId)
+        var servico = servicoGateway.buscarPorId(servicoId)
                 .orElseThrow(ServicoNaoEncontradoException::new);
 
-        ordemDeServico.vincularServico(servicoId);
+        ordemDeServico.vincularServico(servicoId, servico.getPreco());
         ordemDeServicoGateway.vincularServico(ordemServicoId, servicoId);
     }
 }
