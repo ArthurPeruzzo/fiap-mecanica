@@ -159,6 +159,49 @@ class OrdemDeServicoUnitTest {
     }
 
     @Test
+    void calcularOrcamento_shouldSomarServicoPecaEInsumo() {
+        // servico: 50 | peca: 30 × 2 = 60 | insumo: 10 × 3 = 30 | total: 140
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                List.of(new ServicoVinculado(10L, new BigDecimal("50"))),
+                List.of(new PecaVinculada(20L, 2, new BigDecimal("30"))),
+                List.of(new InsumoVinculado(30L, 3, new BigDecimal("10"))),
+                null);
+
+        os.concluirDiagnostico(7L);
+
+        assertEquals(0, new BigDecimal("140").compareTo(os.getOrcamento().valorTotal()));
+    }
+
+    @Test
+    void calcularOrcamento_shouldSomarMultiplosPecasEInsumos() {
+        // servico: 100 | peca20: 20 × 1 = 20, peca21: 15 × 4 = 60 | insumo30: 5 × 2 = 10 | total: 190
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                List.of(new ServicoVinculado(10L, new BigDecimal("100"))),
+                List.of(new PecaVinculada(20L, 1, new BigDecimal("20")),
+                        new PecaVinculada(21L, 4, new BigDecimal("15"))),
+                List.of(new InsumoVinculado(30L, 2, new BigDecimal("5"))),
+                null);
+
+        os.concluirDiagnostico(7L);
+
+        assertEquals(0, new BigDecimal("190").compareTo(os.getOrcamento().valorTotal()));
+    }
+
+    @Test
+    void calcularOrcamento_shouldSerApenasServicosQuandoSemPecasEInsumos() {
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                List.of(new ServicoVinculado(10L, new BigDecimal("75"))),
+                List.of(), List.of(), null);
+
+        os.concluirDiagnostico(7L);
+
+        assertEquals(0, new BigDecimal("75").compareTo(os.getOrcamento().valorTotal()));
+    }
+
+    @Test
     void concluirDiagnostico_shouldThrowWhenMecanicoNaoEhResponsavel() {
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
