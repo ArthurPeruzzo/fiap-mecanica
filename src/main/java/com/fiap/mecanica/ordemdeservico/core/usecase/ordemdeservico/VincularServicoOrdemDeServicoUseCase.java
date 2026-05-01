@@ -1,6 +1,7 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
@@ -23,6 +24,6 @@ public class VincularServicoOrdemDeServicoUseCase {
                 .orElseThrow(ServicoNaoEncontradoException::new);
 
         ordemDeServico.vincularServico(servicoId, servico.getPreco());
-        ordemDeServicoGateway.vincularServico(ordemServicoId, servicoId);
+        ordemDeServicoGateway.vincularServico(ordemServicoId, servicoId, servico.getPreco(), StatusServico.NAO_INICIADO);
     }
 }

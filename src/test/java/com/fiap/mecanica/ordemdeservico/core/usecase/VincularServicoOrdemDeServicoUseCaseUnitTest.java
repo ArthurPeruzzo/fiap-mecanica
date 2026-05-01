@@ -4,6 +4,7 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServic
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.ServicoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
+import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoJaVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
@@ -67,7 +68,7 @@ class VincularServicoOrdemDeServicoUseCaseUnitTest {
 
         vincularServicoOrdemDeServicoUseCase.vincular(ORDEM_ID, SERVICO_ID);
 
-        Mockito.verify(ordemDeServicoGateway).vincularServico(ORDEM_ID, SERVICO_ID);
+        Mockito.verify(ordemDeServicoGateway).vincularServico(ORDEM_ID, SERVICO_ID, BigDecimal.TEN, StatusServico.NAO_INICIADO);
     }
 
     @Test
@@ -78,7 +79,7 @@ class VincularServicoOrdemDeServicoUseCaseUnitTest {
                 () -> vincularServicoOrdemDeServicoUseCase.vincular(ORDEM_ID, SERVICO_ID));
 
         Mockito.verifyNoInteractions(servicoGateway);
-        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularServico(Mockito.any(), Mockito.any());
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularServico(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
@@ -89,7 +90,7 @@ class VincularServicoOrdemDeServicoUseCaseUnitTest {
         assertThrows(ServicoNaoEncontradoException.class,
                 () -> vincularServicoOrdemDeServicoUseCase.vincular(ORDEM_ID, SERVICO_ID));
 
-        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularServico(Mockito.any(), Mockito.any());
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularServico(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
@@ -100,7 +101,7 @@ class VincularServicoOrdemDeServicoUseCaseUnitTest {
         assertThrows(ServicoJaVinculadoException.class,
                 () -> vincularServicoOrdemDeServicoUseCase.vincular(ORDEM_ID, SERVICO_ID));
 
-        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularServico(Mockito.any(), Mockito.any());
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularServico(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
@@ -114,6 +115,6 @@ class VincularServicoOrdemDeServicoUseCaseUnitTest {
         assertThrows(VinculoServicoNaoAutorizadoException.class,
                 () -> vincularServicoOrdemDeServicoUseCase.vincular(ORDEM_ID, SERVICO_ID));
 
-        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularServico(Mockito.any(), Mockito.any());
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularServico(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 }

@@ -12,14 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface OrdemDeServicoRepository extends JpaRepository<OrdemDeServicoEntity, Long> {
     boolean existsByVeiculoIdAndStatusNotIn(Long veiculoId, List<StatusOrdemDeServico> statuses);
-
-    @Query("SELECT o FROM OrdemDeServicoEntity o LEFT JOIN FETCH o.servicos WHERE o.id = :id")
-    Optional<OrdemDeServicoEntity> findOrdemDeServicoById(@Param("id") Long id);
 
     @Modifying
     @Transactional
@@ -44,14 +40,4 @@ public interface OrdemDeServicoRepository extends JpaRepository<OrdemDeServicoEn
             @Param("dataCancelamento") LocalDateTime dataCancelamento,
             @Param("dataAprovacao") LocalDateTime dataAprovacao
     );
-
-    @Modifying
-    @Transactional
-    @Query(value = "INSERT INTO ordem_servico_servico (ordem_servico_id, servico_id) VALUES (:ordemId, :servicoId)", nativeQuery = true)
-    void vincularServico(@Param("ordemId") Long ordemId, @Param("servicoId") Long servicoId);
-
-    @Modifying
-    @Transactional
-    @Query(value = "DELETE FROM ordem_servico_servico WHERE ordem_servico_id = :ordemId AND servico_id = :servicoId", nativeQuery = true)
-    void desvincularServico(@Param("ordemId") Long ordemId, @Param("servicoId") Long servicoId);
 }

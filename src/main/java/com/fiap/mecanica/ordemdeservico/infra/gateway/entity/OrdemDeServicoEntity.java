@@ -64,13 +64,4 @@ public class OrdemDeServicoEntity {
     @Column(name = "data_aprovacao")
     private LocalDateTime dataAprovacao;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "ordem_servico_servico",
-            joinColumns = @JoinColumn(name = "ordem_servico_id"),
-            inverseJoinColumns = @JoinColumn(name = "servico_id")
-    )
-    @Builder.Default
-    private List<ServicoEntity> servicos = new ArrayList<>();
-
 }
