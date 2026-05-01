@@ -41,6 +41,7 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
     private static final Long ORDEM_ID = 1L;
     private static final Long PECA_ID = 20L;
     private static final Integer QUANTIDADE = 2;
+    private static final BigDecimal PRECO = BigDecimal.TEN;
     private static final String DESCRICAO = "Barulho ao frear";
 
     private OrdemDeServico ordemEmDiagnostico(List<PecaVinculada> pecasVinculadas) {
@@ -69,7 +70,7 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
         vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE);
 
         Mockito.verify(pecaGateway).atualizar(Mockito.any());
-        Mockito.verify(ordemDeServicoGateway).vincularOuSomarPeca(ORDEM_ID, PECA_ID, QUANTIDADE);
+        Mockito.verify(ordemDeServicoGateway).vincularOuSomarPeca(ORDEM_ID, PECA_ID, QUANTIDADE, PRECO);
     }
 
     @Test
@@ -81,7 +82,7 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
         vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE);
 
         Mockito.verify(pecaGateway).atualizar(Mockito.any());
-        Mockito.verify(ordemDeServicoGateway).vincularOuSomarPeca(ORDEM_ID, PECA_ID, QUANTIDADE);
+        Mockito.verify(ordemDeServicoGateway).vincularOuSomarPeca(ORDEM_ID, PECA_ID, QUANTIDADE, PRECO);
     }
 
     @Test
@@ -92,7 +93,7 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
                 () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));
 
         Mockito.verifyNoInteractions(pecaGateway);
-        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
@@ -104,7 +105,7 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
                 () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));
 
         Mockito.verify(pecaGateway, Mockito.never()).atualizar(Mockito.any());
-        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
@@ -116,7 +117,7 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
                 () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));
 
         Mockito.verify(pecaGateway, Mockito.never()).atualizar(Mockito.any());
-        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
@@ -131,6 +132,6 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
                 () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));
 
         Mockito.verify(pecaGateway, Mockito.never()).atualizar(Mockito.any());
-        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 }

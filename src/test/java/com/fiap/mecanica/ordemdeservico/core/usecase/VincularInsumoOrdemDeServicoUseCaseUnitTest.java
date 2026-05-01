@@ -41,6 +41,7 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
     private static final Long ORDEM_ID = 1L;
     private static final Long INSUMO_ID = 30L;
     private static final Integer QUANTIDADE = 3;
+    private static final BigDecimal PRECO = BigDecimal.TEN;
     private static final String DESCRICAO = "Barulho ao frear";
 
     private OrdemDeServico ordemEmDiagnostico(List<InsumoVinculado> insumosVinculados) {
@@ -70,7 +71,7 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
         vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE);
 
         Mockito.verify(insumoGateway).atualizar(Mockito.any());
-        Mockito.verify(ordemDeServicoGateway).vincularOuSomarInsumo(ORDEM_ID, INSUMO_ID, QUANTIDADE);
+        Mockito.verify(ordemDeServicoGateway).vincularOuSomarInsumo(ORDEM_ID, INSUMO_ID, QUANTIDADE, PRECO);
     }
 
     @Test
@@ -81,7 +82,7 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
         vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE);
 
         Mockito.verify(insumoGateway).atualizar(Mockito.any());
-        Mockito.verify(ordemDeServicoGateway).vincularOuSomarInsumo(ORDEM_ID, INSUMO_ID, QUANTIDADE);
+        Mockito.verify(ordemDeServicoGateway).vincularOuSomarInsumo(ORDEM_ID, INSUMO_ID, QUANTIDADE, PRECO);
     }
 
     @Test
@@ -92,7 +93,7 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
                 () -> vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
 
         Mockito.verifyNoInteractions(insumoGateway);
-        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
@@ -104,7 +105,7 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
                 () -> vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
 
         Mockito.verify(insumoGateway, Mockito.never()).atualizar(Mockito.any());
-        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
@@ -116,7 +117,7 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
                 () -> vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
 
         Mockito.verify(insumoGateway, Mockito.never()).atualizar(Mockito.any());
-        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
@@ -131,6 +132,6 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
                 () -> vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
 
         Mockito.verify(insumoGateway, Mockito.never()).atualizar(Mockito.any());
-        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 }

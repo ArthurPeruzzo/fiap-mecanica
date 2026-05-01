@@ -25,6 +25,6 @@ public class VincularInsumoOrdemDeServicoUseCase {
         ordemDeServico.vincularInsumo(insumoId, quantidade, insumo.getPreco());
 
         insumoGateway.atualizar(insumo);
-        ordemDeServicoGateway.vincularOuSomarInsumo(ordemServicoId, insumoId, quantidade);
+        ordemDeServicoGateway.vincularOuSomarInsumo(ordemServicoId, insumoId, quantidade, insumo.getPreco());
     }
 }

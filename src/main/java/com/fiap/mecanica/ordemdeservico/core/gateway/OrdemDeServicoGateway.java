@@ -13,8 +13,8 @@ public interface OrdemDeServicoGateway {
 	boolean existeOrdemAbertaParaVeiculo(Long veiculoId);
 	void vincularServico(Long ordemServicoId, Long servicoId, BigDecimal preco, StatusServico status);
 	void desvincularServico(Long ordemServicoId, Long servicoId);
-	void vincularOuSomarPeca(Long ordemServicoId, Long pecaId, Integer quantidade);
+	void vincularOuSomarPeca(Long ordemServicoId, Long pecaId, Integer quantidade, BigDecimal preco);
 	void desvincularOuSubtrairPeca(Long ordemServicoId, Long pecaId, Integer quantidade);
-	void vincularOuSomarInsumo(Long ordemServicoId, Long insumoId, Integer quantidade);
+	void vincularOuSomarInsumo(Long ordemServicoId, Long insumoId, Integer quantidade,  BigDecimal preco);
 	void desvincularOuSubtrairInsumo(Long ordemServicoId, Long insumoId, Integer quantidade);
 }

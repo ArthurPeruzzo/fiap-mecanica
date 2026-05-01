@@ -25,6 +25,6 @@ public class VincularPecaOrdemDeServicoUseCase {
 		ordemDeServico.vincularPeca(pecaId, quantidade, peca.getPreco());
 
 		pecaGateway.atualizar(peca);
-		ordemDeServicoGateway.vincularOuSomarPeca(ordemServicoId, pecaId, quantidade);
+		ordemDeServicoGateway.vincularOuSomarPeca(ordemServicoId, pecaId, quantidade, peca.getPreco());
 	}
 }

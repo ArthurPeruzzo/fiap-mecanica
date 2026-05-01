@@ -1,7 +1,5 @@
 package com.fiap.mecanica.ordemdeservico.infra.gateway.database;
 
-import com.fiap.mecanica.estoque.infra.gateway.entity.InsumoEntity;
-import com.fiap.mecanica.estoque.infra.gateway.entity.PecaEntity;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
@@ -157,16 +155,17 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
     }
 
     @Override
-    public void vincularOuSomarPeca(Long ordemServicoId, Long pecaId, Integer quantidade) {
+    public void vincularOuSomarPeca(Long ordemServicoId, Long pecaId, Integer quantidade, BigDecimal preco) {
         try {
-            ordemDeServicoPecaRepository.findByOrdemServicoIdAndPeca_Id(ordemServicoId, pecaId)
+            ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(ordemServicoId, pecaId)
                     .ifPresentOrElse(
                             e -> ordemDeServicoPecaRepository.somarQuantidade(ordemServicoId, pecaId, quantidade),
                             () -> ordemDeServicoPecaRepository.save(
                                     OrdemDeServicoPecaEntity.builder()
                                             .ordemServicoId(ordemServicoId)
-                                            .peca(PecaEntity.builder().id(pecaId).build())
+                                            .pecaId(pecaId)
                                             .quantidade(quantidade)
+                                            .preco(preco)
                                             .build()
                             )
                     );
@@ -179,7 +178,7 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
     @Override
     public void desvincularOuSubtrairPeca(Long ordemServicoId, Long pecaId, Integer quantidade) {
         try {
-            ordemDeServicoPecaRepository.findByOrdemServicoIdAndPeca_Id(ordemServicoId, pecaId)
+            ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(ordemServicoId, pecaId)
                     .ifPresent(entity -> {
                         if (entity.getQuantidade() - quantidade <= 0) {
                             ordemDeServicoPecaRepository.delete(entity);
@@ -194,16 +193,17 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
     }
 
     @Override
-    public void vincularOuSomarInsumo(Long ordemServicoId, Long insumoId, Integer quantidade) {
+    public void vincularOuSomarInsumo(Long ordemServicoId, Long insumoId, Integer quantidade,  BigDecimal preco) {
         try {
-            ordemDeServicoInsumoRepository.findByOrdemServicoIdAndInsumo_Id(ordemServicoId, insumoId)
+            ordemDeServicoInsumoRepository.findByOrdemServicoIdAndInsumoId(ordemServicoId, insumoId)
                     .ifPresentOrElse(
                             e -> ordemDeServicoInsumoRepository.somarQuantidade(ordemServicoId, insumoId, quantidade),
                             () -> ordemDeServicoInsumoRepository.save(
                                     OrdemDeServicoInsumoEntity.builder()
                                             .ordemServicoId(ordemServicoId)
-                                            .insumo(InsumoEntity.builder().id(insumoId).build())
+                                            .insumoId(insumoId)
                                             .quantidade(quantidade)
+                                            .preco(preco)
                                             .build()
                             )
                     );
@@ -216,7 +216,7 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
     @Override
     public void desvincularOuSubtrairInsumo(Long ordemServicoId, Long insumoId, Integer quantidade) {
         try {
-            ordemDeServicoInsumoRepository.findByOrdemServicoIdAndInsumo_Id(ordemServicoId, insumoId)
+            ordemDeServicoInsumoRepository.findByOrdemServicoIdAndInsumoId(ordemServicoId, insumoId)
                     .ifPresent(entity -> {
                         if (entity.getQuantidade() - quantidade <= 0) {
                             ordemDeServicoInsumoRepository.delete(entity);
