@@ -28,6 +28,7 @@ public class OrdemDeServico {
     private Orcamento orcamento;
     private LocalDateTime dataEnvioOrcamento;
     private LocalDateTime dataCancelamento;
+    private LocalDateTime dataAprovacao;
 
     private OrdemDeServicoState state;
 
@@ -68,6 +69,10 @@ public class OrdemDeServico {
 
     public void cancelar() {
         state.cancelar(this);
+    }
+
+    public void aprovar() {
+        state.aprovar(this);
     }
 
     void transicionarPara(StatusOrdemDeServico novoStatus, OrdemDeServicoState novoState) {
@@ -201,7 +206,9 @@ public class OrdemDeServico {
                                               List<PecaVinculada> pecasVinculadas,
                                               List<InsumoVinculado> insumosVinculados,
                                               Orcamento orcamento,
-                                              LocalDateTime dataEnvioOrcamento) {
+                                              LocalDateTime dataEnvioOrcamento,
+                                              LocalDateTime dataCancelamento,
+                                              LocalDateTime dataAprovacao) {
         var os = new OrdemDeServico();
         os.id = id;
         os.clienteId = clienteId;
@@ -219,6 +226,8 @@ public class OrdemDeServico {
         os.insumosVinculados = new ArrayList<>(insumosVinculados);
         os.orcamento = orcamento;
         os.dataEnvioOrcamento = dataEnvioOrcamento;
+        os.dataCancelamento = dataCancelamento;
+        os.dataAprovacao = dataAprovacao;
         return os;
     }
 
@@ -256,5 +265,9 @@ public class OrdemDeServico {
 
     void setDataCancelamento(LocalDateTime dataCancelamento) {
         this.dataCancelamento = dataCancelamento;
+    }
+
+    void setDataAprovacao(LocalDateTime dataAprovacao) {
+        this.dataAprovacao = dataAprovacao;
     }
 }

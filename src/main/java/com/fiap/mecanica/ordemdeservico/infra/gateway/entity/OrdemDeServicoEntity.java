@@ -61,6 +61,9 @@ public class OrdemDeServicoEntity {
     @Column(name = "data_cancelamento")
     private LocalDateTime dataCancelamento;
 
+    @Column(name = "data_aprovacao")
+    private LocalDateTime dataAprovacao;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "ordem_servico_servico",

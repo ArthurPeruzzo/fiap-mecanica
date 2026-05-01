@@ -45,7 +45,7 @@ class DesvincularServicoOrdemDeServicoUseCaseUnitTest {
     private OrdemDeServico ordemEmDiagnostico(List<ServicoVinculado> servicosVinculados) {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                servicosVinculados, List.of(), List.of(), null, null);
+                servicosVinculados, List.of(), List.of(), null, null, null, null);
     }
 
     private Servico servicoPadrao() {
@@ -107,7 +107,7 @@ class DesvincularServicoOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenOrdemNotEmDiagnostico() {
         var ordemDiagnosticoConcluido = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(SERVICO_ID, BigDecimal.TEN)), List.of(), List.of(), null, null);
+                List.of(new ServicoVinculado(SERVICO_ID, BigDecimal.TEN)), List.of(), List.of(), null, null, null, null);
         stubOrdem(ordemDiagnosticoConcluido);
         stubServico();
 

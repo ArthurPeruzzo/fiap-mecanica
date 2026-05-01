@@ -45,7 +45,7 @@ class VincularServicoOrdemDeServicoUseCaseUnitTest {
     private OrdemDeServico ordemEmDiagnostico(List<ServicoVinculado> servicosVinculados) {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                servicosVinculados, List.of(), List.of(), null, null);
+                servicosVinculados, List.of(), List.of(), null, null, null, null);
     }
 
     private Servico servicoPadrao() {
@@ -107,7 +107,7 @@ class VincularServicoOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenOrdemNotEmDiagnostico() {
         var ordemRecebida = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, null,
                 StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null,
-                List.of(), List.of(), List.of(), null, null);
+                List.of(), List.of(), List.of(), null, null, null, null);
         stubOrdem(ordemRecebida);
         stubServico();
 

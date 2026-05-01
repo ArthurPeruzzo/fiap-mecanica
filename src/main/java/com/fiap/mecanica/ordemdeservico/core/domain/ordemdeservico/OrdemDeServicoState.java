@@ -19,4 +19,8 @@ public interface OrdemDeServicoState {
     default void cancelar(OrdemDeServico ordemDeServico) {
         throw new TransicaoDeStatusInvalidaException();
     }
+
+    default void aprovar(OrdemDeServico ordemDeServico) {
+        throw new TransicaoDeStatusInvalidaException();
+    }
 }

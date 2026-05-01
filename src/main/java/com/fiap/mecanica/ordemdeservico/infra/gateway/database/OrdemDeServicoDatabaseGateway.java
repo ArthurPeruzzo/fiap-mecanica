@@ -81,7 +81,9 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                                 pecasVinculadas,
                                 insumosVinculados,
                                 orcamento,
-                                entity.getDataEnvioOrcamento()
+                                entity.getDataEnvioOrcamento(),
+                                entity.getDataCancelamento(),
+                                entity.getDataAprovacao()
                         );
                     });
         } catch (Exception e) {
@@ -116,7 +118,8 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                     ordemDeServico.getDataConclusaoDiagnostico(),
                     orcamentoTotal,
                     ordemDeServico.getDataEnvioOrcamento(),
-                    ordemDeServico.getDataCancelamento()
+                    ordemDeServico.getDataCancelamento(),
+                    ordemDeServico.getDataAprovacao()
             );
         } catch (Exception e) {
             log.error("Erro ao atualizar ordem de servico id: {}", ordemDeServico.getId(), e);

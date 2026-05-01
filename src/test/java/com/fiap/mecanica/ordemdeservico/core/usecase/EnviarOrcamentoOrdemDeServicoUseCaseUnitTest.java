@@ -47,7 +47,7 @@ class EnviarOrcamentoOrdemDeServicoUseCaseUnitTest {
                 LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
                 List.of(new ServicoVinculado(10L, VALOR_ORCAMENTO)),
                 List.of(), List.of(),
-                new Orcamento(VALOR_ORCAMENTO), null);
+                new Orcamento(VALOR_ORCAMENTO), null, null, null);
     }
 
     @Test
@@ -80,7 +80,7 @@ class EnviarOrcamentoOrdemDeServicoUseCaseUnitTest {
         var ordemEmDiagnostico = OrdemDeServico.reconstituir(ORDEM_ID, CLIENTE_ID, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO,
                 LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), List.of(), null, null);
+                List.of(), List.of(), List.of(), null, null, null, null);
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemEmDiagnostico));
 
         assertThrows(TransicaoDeStatusInvalidaException.class,

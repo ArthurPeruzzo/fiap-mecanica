@@ -46,7 +46,8 @@ class DesvincularPecaOrdemDeServicoUseCaseUnitTest {
     private OrdemDeServico ordemEmDiagnosticoComPeca(Integer quantidadeVinculada) {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(new PecaVinculada(PECA_ID, quantidadeVinculada, new BigDecimal(10))), List.of(), null, null);
+                List.of(), List.of(new PecaVinculada(PECA_ID, quantidadeVinculada, new BigDecimal(10))),
+                List.of(), null, null, null, null);
     }
 
     private Peca pecaComEstoque(Integer estoque) {
@@ -109,7 +110,8 @@ class DesvincularPecaOrdemDeServicoUseCaseUnitTest {
     @Test
     void shouldThrowWhenOrdemNotEmDiagnostico() {
         var ordemRecebida = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, null,
-                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null, List.of(), List.of(), List.of(), null, null);
+                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null,
+                null, List.of(), List.of(), List.of(), null, null, null, null);
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemRecebida));
         stubPeca(pecaComEstoque(3));
 
@@ -124,7 +126,7 @@ class DesvincularPecaOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenPecaNaoVinculada() {
         var ordemSemPeca = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), List.of(), null, null);
+                List.of(), List.of(), List.of(), null, null, null, null);
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemSemPeca));
         stubPeca(pecaComEstoque(3));
 

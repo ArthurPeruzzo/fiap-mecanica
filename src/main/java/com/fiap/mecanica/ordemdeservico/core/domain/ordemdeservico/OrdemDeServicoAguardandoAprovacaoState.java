@@ -9,4 +9,10 @@ class OrdemDeServicoAguardandoAprovacaoState implements OrdemDeServicoState {
 		ordemDeServico.setDataCancelamento(LocalDateTime.now());
 		ordemDeServico.transicionarPara(StatusOrdemDeServico.CANCELADA, new OrdemDeServicoCanceladaState());
 	}
+
+	@Override
+	public void aprovar(OrdemDeServico ordemDeServico) {
+		ordemDeServico.setDataAprovacao(LocalDateTime.now());
+		ordemDeServico.transicionarPara(StatusOrdemDeServico.EM_EXECUCAO, new OrdemDeServicoEmExecucaoState());
+	}
 }

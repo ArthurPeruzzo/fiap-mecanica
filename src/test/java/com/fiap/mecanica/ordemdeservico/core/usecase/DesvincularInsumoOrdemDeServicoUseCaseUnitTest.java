@@ -47,7 +47,7 @@ class DesvincularInsumoOrdemDeServicoUseCaseUnitTest {
     private OrdemDeServico ordemEmDiagnosticoComInsumo(Integer quantidadeVinculada) {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), List.of(new InsumoVinculado(INSUMO_ID, quantidadeVinculada, BigDecimal.TEN)), null, null);
+                List.of(), List.of(), List.of(new InsumoVinculado(INSUMO_ID, quantidadeVinculada, BigDecimal.TEN)), null, null, null, null);
     }
 
     private Insumo insumoComEstoque(Integer estoque) {
@@ -111,7 +111,8 @@ class DesvincularInsumoOrdemDeServicoUseCaseUnitTest {
     @Test
     void shouldThrowWhenOrdemNotEmDiagnostico() {
         var ordemRecebida = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, null,
-                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null, List.of(), List.of(), List.of(), null, null);
+                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null,
+                null, List.of(), List.of(), List.of(), null, null, null, null);
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemRecebida));
         stubInsumo(insumoComEstoque(3));
 
@@ -126,7 +127,7 @@ class DesvincularInsumoOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenInsumoNaoVinculado() {
         var ordemSemInsumo = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), List.of(), null, null);
+                List.of(), List.of(), List.of(), null, null, null, null);
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemSemInsumo));
         stubInsumo(insumoComEstoque(3));
 
