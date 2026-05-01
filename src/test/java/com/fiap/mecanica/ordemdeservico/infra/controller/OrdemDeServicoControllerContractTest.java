@@ -81,6 +81,9 @@ class OrdemDeServicoControllerContractTest {
     @MockitoBean
     private EnviarOrcamentoOrdemDeServicoUseCase enviarOrcamentoOrdemDeServicoUseCase;
 
+    @MockitoBean
+    private OrcamentoRecusadoOrdemDeServicoUseCase orcamentoRecusadoOrdemDeServicoUseCase;
+
     private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"}";
 
     @Test
@@ -732,6 +735,36 @@ class OrdemDeServicoControllerContractTest {
                 .when(enviarOrcamentoOrdemDeServicoUseCase).enviar(1L);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/envio/1"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
+    }
+
+    // --- recusarOrcamento ---
+
+    @Test
+    void shouldReturn204WhenRecusarOrcamentoSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/recusar/1"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(orcamentoRecusadoOrdemDeServicoUseCase).recursar(1L);
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnRecusar() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
+                .when(orcamentoRecusadoOrdemDeServicoUseCase).recursar(99L);
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/recusar/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn422WhenTransicaoInvalidaOnRecusar() throws Exception {
+        Mockito.doThrow(new TransicaoDeStatusInvalidaException())
+                .when(orcamentoRecusadoOrdemDeServicoUseCase).recursar(1L);
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/recusar/1"))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
     }

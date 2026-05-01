@@ -165,14 +165,14 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         gateway.atualizar(os);
 
         Mockito.verify(ordemDeServicoRepository).atualizar(
-                10L, 5L, StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, dataInicio, dataConclusao, null, null);
+                10L, 5L, StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, dataInicio, dataConclusao, null, null, null);
         Mockito.verify(ordemDeServicoRepository, Mockito.never()).save(Mockito.any());
     }
 
     @Test
     void atualizar_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
         Mockito.doThrow(new RuntimeException("db error"))
-                .when(ordemDeServicoRepository).atualizar(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+                .when(ordemDeServicoRepository).atualizar(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
         var os = OrdemDeServico.reconstituir(10L, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
                 List.of(), List.of(), List.of(), null, null);

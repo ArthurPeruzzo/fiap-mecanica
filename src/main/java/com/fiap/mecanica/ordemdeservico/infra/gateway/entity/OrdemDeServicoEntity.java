@@ -58,6 +58,9 @@ public class OrdemDeServicoEntity {
     @Column(name = "orcamento_total")
     private BigDecimal orcamentoTotal;
 
+    @Column(name = "data_cancelamento")
+    private LocalDateTime dataCancelamento;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "ordem_servico_servico",

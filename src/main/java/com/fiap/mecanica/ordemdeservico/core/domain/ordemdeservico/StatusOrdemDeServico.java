@@ -5,6 +5,7 @@ public enum StatusOrdemDeServico {
     EM_DIAGNOSTICO,
     DIAGNOSTICO_CONCLUIDO,
     AGUARDANDO_APROVACAO,
+    CANCELADA,
     FINALIZADA,
     ENTREGUE
 }

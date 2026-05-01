@@ -7,6 +7,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Getter
 public class OrdemDeServico {
@@ -25,6 +27,7 @@ public class OrdemDeServico {
     private List<InsumoVinculado> insumosVinculados = new ArrayList<>();
     private Orcamento orcamento;
     private LocalDateTime dataEnvioOrcamento;
+    private LocalDateTime dataCancelamento;
 
     private OrdemDeServicoState state;
 
@@ -61,6 +64,10 @@ public class OrdemDeServico {
 
     public void gravarEnvioOrcamento() {
         state.enviarOrcamento(this);
+    }
+
+    public void cancelar() {
+        state.cancelar(this);
     }
 
     void transicionarPara(StatusOrdemDeServico novoStatus, OrdemDeServicoState novoState) {
@@ -215,6 +222,22 @@ public class OrdemDeServico {
         return os;
     }
 
+    public Map<Long, Integer> getTotalQuantidadePecasMapeadasPorId() {
+        return pecasVinculadas.stream()
+                .collect(Collectors.toMap(
+                        PecaVinculada::pecaId,
+                        PecaVinculada::quantidade
+                ));
+    }
+
+    public Map<Long, Integer> getTotalQuantidadeInsumosMapeadosPorId() {
+        return insumosVinculados.stream()
+                .collect(Collectors.toMap(
+                        InsumoVinculado::insumoId,
+                        InsumoVinculado::quantidade
+                ));
+    }
+
     void setMecanicoId(Long mecanicoId) {
         this.mecanicoId = mecanicoId;
     }
@@ -229,5 +252,9 @@ public class OrdemDeServico {
 
     void setDataEnvioOrcamento(LocalDateTime dataEnvioOrcamento) {
         this.dataEnvioOrcamento = dataEnvioOrcamento;
+    }
+
+    void setDataCancelamento(LocalDateTime dataCancelamento) {
+        this.dataCancelamento = dataCancelamento;
     }
 }

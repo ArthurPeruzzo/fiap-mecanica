@@ -32,6 +32,7 @@ public class OrdemDeServicoController {
     private final VincularInsumoOrdemDeServicoUseCase vincularInsumoOrdemDeServicoUseCase;
     private final DesvincularInsumoOrdemDeServicoUseCase desvincularInsumoOrdemDeServicoUseCase;
     private final EnviarOrcamentoOrdemDeServicoUseCase enviarOrcamentoOrdemDeServicoUseCase;
+    private final OrcamentoRecusadoOrdemDeServicoUseCase orcamentoRecusadoOrdemDeServicoUseCase;
 
     @Operation(summary = "Criar Ordem de Serviço",
             description = "Cria uma nova Ordem de Serviço com status RECEBIDA. A descrição registra o relato do cliente. O atendente é identificado pelo token JWT.")
@@ -214,6 +215,25 @@ public class OrdemDeServicoController {
     @PostMapping("/orcamento/envio/{ordemServicoId}")
     public ResponseEntity<Void> enviarOrcamento(@PathVariable Long ordemServicoId) {
         enviarOrcamentoOrdemDeServicoUseCase.enviar(ordemServicoId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @Operation(summary = "Recusar orçamento da Ordem de Serviço",
+            description = "Após o cliente recusar o orçamento a ordem de servico deve ser cancelada. Após isso o status passa a ser 'CANCELADA' ")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Orçamento recusado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Parâmetros de entrada inválidos",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil ATENDENTE"),
+            @ApiResponse(responseCode = "404", description = "Ordem de Serviço não encontrada",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "status inválido para a operação",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+    })
+    @PostMapping("/orcamento/recusar/{ordemServicoId}")
+    public ResponseEntity<Void> recusar(@PathVariable Long ordemServicoId) {
+        orcamentoRecusadoOrdemDeServicoUseCase.recursar(ordemServicoId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }
