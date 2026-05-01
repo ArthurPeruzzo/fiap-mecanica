@@ -771,4 +771,34 @@ class OrdemDeServicoControllerContractTest {
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
     }
+
+    // --- aprovarOrcamento ---
+
+    @Test
+    void shouldReturn204WhenAprovarOrcamentoSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/aprovar/1"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(orcamentoAprovadoOrdemDeServicoUseCase).aprovar(1L);
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnAprovar() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
+                .when(orcamentoAprovadoOrdemDeServicoUseCase).aprovar(99L);
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/aprovar/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn422WhenTransicaoInvalidaOnAprovar() throws Exception {
+        Mockito.doThrow(new TransicaoDeStatusInvalidaException())
+                .when(orcamentoAprovadoOrdemDeServicoUseCase).aprovar(1L);
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/aprovar/1"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
+    }
 }

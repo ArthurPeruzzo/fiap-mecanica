@@ -132,6 +132,28 @@ abstract class AbstractOrdemDeServicoIntegrationTest extends AbstractContainer {
         return ordemId;
     }
 
+    protected Long criarOrdemAguardandoAprovacaoERetornarId(String tokenAtendente, String tokenMecanico) {
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(tokenAtendente, tokenMecanico);
+        Long servicoId = criarServicoERetornarId();
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().put("/ordem-servico/" + ordemId + "/servicos/" + servicoId)
+                .then().statusCode(204);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().patch("/ordem-servico/" + ordemId + "/diagnostico/conclusao")
+                .then().statusCode(204);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenAtendente)
+                .when().post("/ordem-servico/orcamento/envio/" + ordemId)
+                .then().statusCode(204);
+
+        return ordemId;
+    }
+
     protected Long criarServicoERetornarId() {
         return servicoRepository.saveAndFlush(ServicoEntity.builder()
                 .nome("Troca de óleo")

@@ -222,7 +222,7 @@ public class OrdemDeServicoController {
     @Operation(summary = "Recusar orçamento da Ordem de Serviço",
             description = "Após o cliente recusar o orçamento a ordem de servico deve ser cancelada. Após isso o status passa a ser 'CANCELADA' ")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Orçamento recusado com sucesso"),
+            @ApiResponse(responseCode = "204", description = "Orçamento recusado com sucesso"),
             @ApiResponse(responseCode = "400", description = "Parâmetros de entrada inválidos",
                     content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
@@ -241,7 +241,7 @@ public class OrdemDeServicoController {
     @Operation(summary = "Aprovar orçamento da Ordem de Serviço",
             description = "Após o cliente aprovar o orçamento a ordem de servico deve ser executada. Após isso o status passa a ser 'EM_EXECUCAO' ")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Orçamento aprovado com sucesso"),
+            @ApiResponse(responseCode = "204", description = "Orçamento aprovado com sucesso"),
             @ApiResponse(responseCode = "400", description = "Parâmetros de entrada inválidos",
                     content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
