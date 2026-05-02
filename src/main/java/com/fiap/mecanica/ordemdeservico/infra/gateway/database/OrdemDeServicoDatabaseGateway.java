@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -54,7 +55,8 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
             return ordemDeServicoRepository.findById(id)
                     .map(entity -> {
                         var servicosVinculados = ordemDeServicoServicoRepository.findByOrdemServicoId(id).stream()
-                                .map(s -> new ServicoVinculado(s.getServicoId(), s.getPreco()))
+                                .map(s -> new ServicoVinculado(
+                                        s.getServicoId(), s.getPreco(), s.getStatus(), s.getDataInicioExecucao(), s.getDataFimExecucao()))
                                 .toList();
 
                         var pecasVinculadas = ordemDeServicoPecaRepository.findByOrdemServicoId(id).stream()
@@ -150,6 +152,16 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
             ordemDeServicoServicoRepository.deleteByOrdemServicoIdAndServicoId(ordemServicoId, servicoId);
         } catch (Exception e) {
             log.error("Erro ao desvincular servico {} da ordem de servico {}", servicoId, ordemServicoId, e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+
+    @Override
+    public void atualizarServico(Long ordemServicoId, Long servicoId, StatusServico status, LocalDateTime dataInicioExecucao, LocalDateTime dataFimExecucao) {
+        try {
+            ordemDeServicoServicoRepository.atualizar(servicoId, ordemServicoId, status, dataInicioExecucao, dataFimExecucao);
+        } catch (Exception e) {
+            log.error("Erro ao atualizar servico {} da ordem de servico {}", servicoId, ordemServicoId, e);
             throw new ErroAcessoBaseDeDadosException();
         }
     }

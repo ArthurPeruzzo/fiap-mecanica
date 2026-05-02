@@ -4,6 +4,7 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.Orcamento;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.ServicoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
@@ -45,7 +46,7 @@ class EnviarOrcamentoOrdemDeServicoUseCaseUnitTest {
         return OrdemDeServico.reconstituir(ORDEM_ID, CLIENTE_ID, 2L, 3L, 5L,
                 StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO,
                 LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(10L, VALOR_ORCAMENTO)),
+                List.of(new ServicoVinculado(10L, VALOR_ORCAMENTO, StatusServico.NAO_INICIADO, null, null)),
                 List.of(), List.of(),
                 new Orcamento(VALOR_ORCAMENTO), null, null, null);
     }

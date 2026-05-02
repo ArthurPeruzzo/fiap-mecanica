@@ -4,6 +4,7 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServic
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.ServicoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
+import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
@@ -62,7 +63,7 @@ class DesvincularServicoOrdemDeServicoUseCaseUnitTest {
 
     @Test
     void shouldDesvincularServicoSuccessfully() {
-        stubOrdem(ordemEmDiagnostico(List.of(new ServicoVinculado(SERVICO_ID, BigDecimal.TEN))));
+        stubOrdem(ordemEmDiagnostico(List.of(new ServicoVinculado(SERVICO_ID, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null))));
         stubServico();
 
         desvincularServicoOrdemDeServicoUseCase.desvincular(ORDEM_ID, SERVICO_ID);
@@ -83,7 +84,7 @@ class DesvincularServicoOrdemDeServicoUseCaseUnitTest {
 
     @Test
     void shouldThrowWhenServicoNotFound() {
-        stubOrdem(ordemEmDiagnostico(List.of(new ServicoVinculado(SERVICO_ID, BigDecimal.TEN))));
+        stubOrdem(ordemEmDiagnostico(List.of(new ServicoVinculado(SERVICO_ID, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null))));
         Mockito.when(servicoGateway.buscarPorId(SERVICO_ID)).thenReturn(Optional.empty());
 
         assertThrows(ServicoNaoEncontradoException.class,
@@ -107,7 +108,8 @@ class DesvincularServicoOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenOrdemNotEmDiagnostico() {
         var ordemDiagnosticoConcluido = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(SERVICO_ID, BigDecimal.TEN)), List.of(), List.of(), null, null, null, null);
+                List.of(new ServicoVinculado(SERVICO_ID, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)),
+                List.of(), List.of(), null, null, null, null);
         stubOrdem(ordemDiagnosticoConcluido);
         stubServico();
 

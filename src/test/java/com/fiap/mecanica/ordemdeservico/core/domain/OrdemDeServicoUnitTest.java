@@ -6,6 +6,7 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDe
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.InsumoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.PecaVinculada;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.ServicoVinculado;
+import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularInsumoNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularPecaNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.InsumoNaoVinculadoException;
@@ -70,7 +71,8 @@ class OrdemDeServicoUnitTest {
         var dataCriacao = LocalDateTime.of(2026, 1, 10, 9, 0);
         var dataInicio = LocalDateTime.of(2026, 1, 10, 10, 0);
         var dataConclusao = LocalDateTime.of(2026, 1, 10, 11, 0);
-        var servicosVinculados = List.of(new ServicoVinculado(7L, BigDecimal.TEN), new ServicoVinculado(8L, BigDecimal.TEN));
+        var servicosVinculados = List.of(new ServicoVinculado(7L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null),
+                new ServicoVinculado(8L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null));
 
         var os = OrdemDeServico.reconstituir(10L, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, dataCriacao, dataInicio, dataConclusao,
@@ -147,7 +149,8 @@ class OrdemDeServicoUnitTest {
         var before = LocalDateTime.now().minusSeconds(1);
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN)), List.of(), List.of(), null, null, null, null);
+                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)),
+                List.of(), List.of(), null, null, null, null);
 
         os.concluirDiagnostico(7L);
 
@@ -164,7 +167,7 @@ class OrdemDeServicoUnitTest {
         // servico: 50 | peca: 30 × 2 = 60 | insumo: 10 × 3 = 30 | total: 140
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, new BigDecimal("50"))),
+                List.of(new ServicoVinculado(10L, new BigDecimal("50"), StatusServico.NAO_INICIADO, null, null)),
                 List.of(new PecaVinculada(20L, 2, new BigDecimal("30"))),
                 List.of(new InsumoVinculado(30L, 3, new BigDecimal("10"))),
                 null, null, null, null);
@@ -179,7 +182,7 @@ class OrdemDeServicoUnitTest {
         // servico: 100 | peca20: 20 × 1 = 20, peca21: 15 × 4 = 60 | insumo30: 5 × 2 = 10 | total: 190
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, new BigDecimal("100"))),
+                List.of(new ServicoVinculado(10L, new BigDecimal("100"), StatusServico.NAO_INICIADO, null, null)),
                 List.of(new PecaVinculada(20L, 1, new BigDecimal("20")),
                         new PecaVinculada(21L, 4, new BigDecimal("15"))),
                 List.of(new InsumoVinculado(30L, 2, new BigDecimal("5"))),
@@ -194,7 +197,7 @@ class OrdemDeServicoUnitTest {
     void calcularOrcamento_shouldSerApenasServicosQuandoSemPecasEInsumos() {
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, new BigDecimal("75"))),
+                List.of(new ServicoVinculado(10L, new BigDecimal("75"), StatusServico.NAO_INICIADO, null, null)),
                 List.of(), List.of(), null, null, null, null);
 
         os.concluirDiagnostico(7L);
@@ -206,7 +209,7 @@ class OrdemDeServicoUnitTest {
     void concluirDiagnostico_shouldThrowWhenMecanicoNaoEhResponsavel() {
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN)), List.of(), List.of(),
+                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)), List.of(), List.of(),
                 null, null, null, null);
 
         assertThrows(MecanicoNaoResponsavelPelaOrdemDeServicoException.class, () -> os.concluirDiagnostico(99L));
@@ -225,7 +228,7 @@ class OrdemDeServicoUnitTest {
     void concluirDiagnostico_shouldThrowWhenStatusIsNotEmDiagnostico() {
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
                 StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN)), List.of(), List.of(),
+                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)), List.of(), List.of(),
                 null, null, null, null);
 
         assertThrows(TransicaoDeStatusInvalidaException.class, () -> os.concluirDiagnostico(7L));
@@ -253,7 +256,7 @@ class OrdemDeServicoUnitTest {
     void vincularServico_shouldThrowWhenServicoAlreadyLinked() {
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN)), List.of(), List.of(),
+                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)), List.of(), List.of(),
                 null, null, null, null);
 
         assertThrows(ServicoJaVinculadoException.class, () -> os.vincularServico(10L, BigDecimal.TEN));
@@ -265,7 +268,7 @@ class OrdemDeServicoUnitTest {
     void desvincularServico_shouldRemoveServicoFromListWhenStatusIsEmDiagnostico() {
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN)), List.of(), List.of(),
+                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)), List.of(), List.of(),
                 null, null, null, null);
 
         os.desvincularServico(10L);
@@ -277,7 +280,7 @@ class OrdemDeServicoUnitTest {
     void desvincularServico_shouldThrowWhenStatusIsNotEmDiagnostico() {
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, null,
                 StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null,
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN)), List.of(), List.of(),
+                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)), List.of(), List.of(),
                 null, null, null, null);
 
         assertThrows(VinculoServicoNaoAutorizadoException.class, () -> os.desvincularServico(10L));
@@ -478,7 +481,7 @@ class OrdemDeServicoUnitTest {
         var before = LocalDateTime.now().minusSeconds(1);
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
                 StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN)), List.of(), List.of(),
+                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)), List.of(), List.of(),
                 new Orcamento(new BigDecimal("100")), null, null, null);
 
         os.gravarEnvioOrcamento();

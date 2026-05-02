@@ -6,6 +6,7 @@ import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
 import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
 import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
+import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
@@ -51,7 +52,7 @@ class OrcamentoRecusadoOrdemDeServicoUseCaseUnitTest {
         return OrdemDeServico.reconstituir(ORDEM_ID, CLIENTE_ID, 2L, 3L, 5L,
                 StatusOrdemDeServico.AGUARDANDO_APROVACAO, "Barulho ao frear",
                 LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(10L, new BigDecimal("150.00"))),
+                List.of(new ServicoVinculado(10L, new BigDecimal("150.00"), StatusServico.NAO_INICIADO, null, null)),
                 List.of(
                         new PecaVinculada(PECA_ID_1, 3, new BigDecimal("45.00")),
                         new PecaVinculada(PECA_ID_2, 2, new BigDecimal("30.00"))

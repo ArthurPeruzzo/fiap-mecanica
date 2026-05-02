@@ -87,6 +87,9 @@ class OrdemDeServicoControllerContractTest {
     @MockitoBean
     private OrcamentoAprovadoOrdemDeServicoUseCase orcamentoAprovadoOrdemDeServicoUseCase;
 
+    @MockitoBean
+    private IniciarServicoOrdemDeServicoUseCase iniciarServicoOrdemDeServicoUseCase;
+
     private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"}";
 
     @Test

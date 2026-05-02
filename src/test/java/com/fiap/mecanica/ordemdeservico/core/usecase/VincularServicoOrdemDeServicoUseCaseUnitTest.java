@@ -95,7 +95,7 @@ class VincularServicoOrdemDeServicoUseCaseUnitTest {
 
     @Test
     void shouldThrowWhenServicoAlreadyLinked() {
-        stubOrdem(ordemEmDiagnostico(List.of(new ServicoVinculado(SERVICO_ID, BigDecimal.TEN))));
+        stubOrdem(ordemEmDiagnostico(List.of(new ServicoVinculado(SERVICO_ID, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null))));
         stubServico();
 
         assertThrows(ServicoJaVinculadoException.class,

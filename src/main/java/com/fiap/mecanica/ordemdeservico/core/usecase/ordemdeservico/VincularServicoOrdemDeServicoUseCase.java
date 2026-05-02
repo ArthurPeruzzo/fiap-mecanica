@@ -1,9 +1,9 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
-import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +24,12 @@ public class VincularServicoOrdemDeServicoUseCase {
                 .orElseThrow(ServicoNaoEncontradoException::new);
 
         ordemDeServico.vincularServico(servicoId, servico.getPreco());
-        ordemDeServicoGateway.vincularServico(ordemServicoId, servicoId, servico.getPreco(), StatusServico.NAO_INICIADO);
+
+        var servicoVinculado = ordemDeServico.getServicosVinculados().stream()
+                .filter(s -> s.servicoId().equals(servicoId))
+                .findFirst()
+                .orElseThrow(ServicoNaoVinculadoException::new);
+
+        ordemDeServicoGateway.vincularServico(ordemServicoId, servicoId, servicoVinculado.preco(), servicoVinculado.status());
     }
 }

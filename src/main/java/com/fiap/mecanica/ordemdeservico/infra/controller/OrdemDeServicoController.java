@@ -34,6 +34,7 @@ public class OrdemDeServicoController {
     private final EnviarOrcamentoOrdemDeServicoUseCase enviarOrcamentoOrdemDeServicoUseCase;
     private final OrcamentoRecusadoOrdemDeServicoUseCase orcamentoRecusadoOrdemDeServicoUseCase;
     private final OrcamentoAprovadoOrdemDeServicoUseCase orcamentoAprovadoOrdemDeServicoUseCase;
+    private final IniciarServicoOrdemDeServicoUseCase iniciarServicoOrdemDeServicoUseCase;
 
     @Operation(summary = "Criar Ordem de Serviço",
             description = "Cria uma nova Ordem de Serviço com status RECEBIDA. A descrição registra o relato do cliente. O atendente é identificado pelo token JWT.")
@@ -255,5 +256,22 @@ public class OrdemDeServicoController {
     public ResponseEntity<Void> aprovar(@PathVariable Long ordemServicoId) {
         orcamentoAprovadoOrdemDeServicoUseCase.aprovar(ordemServicoId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @Operation(summary = "Iniciar Servico",
+            description = "Inicia o serviço da Ordem de Serviço.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Serviço iniciado com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço, serviço ou mecânico não encontrado",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está em execução, serviço não está vinculado ou já foi iniciado/finalizado",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+    })
+    @PatchMapping("/{ordemServicoId}/servicos/{servicoId}/iniciar")
+    public ResponseEntity<Void> iniciarServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
+        iniciarServicoOrdemDeServicoUseCase.iniciar(ordemServicoId, servicoId);
+        return ResponseEntity.noContent().build();
     }
 }

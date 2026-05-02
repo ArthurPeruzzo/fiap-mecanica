@@ -1,5 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico;
 
+import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.*;
 import lombok.Getter;
 
@@ -80,6 +81,23 @@ public class OrdemDeServico {
         this.state = novoState;
     }
 
+    public void iniciarServico(Long servicoId) {
+        if (!StatusOrdemDeServico.EM_EXECUCAO.equals(status)) {
+            throw new IniciarServicoNaoAutorizadoException();
+        }
+
+        var servicoVinculado = servicosVinculados.stream()
+                .filter(s -> s.servicoId().equals(servicoId))
+                .findFirst().orElseThrow(ServicoNaoVinculadoException::new);
+
+        if (!StatusServico.NAO_INICIADO.equals(servicoVinculado.status())) {
+            throw new ServicoJaIniciadoException();
+        }
+
+        servicosVinculados.remove(servicoVinculado);
+        servicosVinculados.add(new ServicoVinculado(servicoId, servicoVinculado.preco(), StatusServico.EM_EXECUCAO, LocalDateTime.now(), null));
+    }
+
     public void vincularServico(Long servicoId, BigDecimal preco) {
         if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
             throw new VinculoServicoNaoAutorizadoException();
@@ -89,7 +107,7 @@ public class OrdemDeServico {
         if (jaVinculado) {
             throw new ServicoJaVinculadoException();
         }
-        servicosVinculados.add(new ServicoVinculado(servicoId, preco));
+        servicosVinculados.add(new ServicoVinculado(servicoId, preco, StatusServico.NAO_INICIADO, null, null));
     }
 
     public void desvincularServico(Long servicoId) {
