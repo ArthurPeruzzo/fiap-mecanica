@@ -3,12 +3,12 @@ package com.fiap.mecanica.ordemdeservico.core.exception;
 import com.fiap.mecanica.shared.exception.BaseException;
 import org.springframework.http.HttpStatus;
 
-public class ServicoJaIniciadoException extends BaseException {
+public class ServicoNaoIniciadoOuFinalizadoException extends BaseException {
 
     private static final HttpStatus STATUS = HttpStatus.UNPROCESSABLE_CONTENT;
-    private static final String MESSAGE = "Este serviço já foi iniciado ou finalizado";
+    private static final String MESSAGE = "Este serviço ainda não foi iniciado ou já foi finalizado";
 
-    public ServicoJaIniciadoException() {
+    public ServicoNaoIniciadoOuFinalizadoException() {
         super(STATUS, MESSAGE);
     }
 }

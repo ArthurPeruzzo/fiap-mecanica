@@ -35,6 +35,7 @@ public class OrdemDeServicoController {
     private final OrcamentoRecusadoOrdemDeServicoUseCase orcamentoRecusadoOrdemDeServicoUseCase;
     private final OrcamentoAprovadoOrdemDeServicoUseCase orcamentoAprovadoOrdemDeServicoUseCase;
     private final IniciarServicoOrdemDeServicoUseCase iniciarServicoOrdemDeServicoUseCase;
+    private final FinalizarServicoOrdemDeServicoUseCase finalizarServicoOrdemDeServicoUseCase;
 
     @Operation(summary = "Criar Ordem de Serviço",
             description = "Cria uma nova Ordem de Serviço com status RECEBIDA. A descrição registra o relato do cliente. O atendente é identificado pelo token JWT.")
@@ -272,6 +273,23 @@ public class OrdemDeServicoController {
     @PatchMapping("/{ordemServicoId}/servicos/{servicoId}/iniciar")
     public ResponseEntity<Void> iniciarServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
         iniciarServicoOrdemDeServicoUseCase.iniciar(ordemServicoId, servicoId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Finalizar Servico",
+            description = "Finaliza o serviço da Ordem de Serviço.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Serviço finalizado com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço, serviço ou mecânico não encontrado",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está em execução, serviço não está vinculado ou já foi finalizado",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+    })
+    @PatchMapping("/{ordemServicoId}/servicos/{servicoId}/finalizar")
+    public ResponseEntity<Void> finalizarServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
+        finalizarServicoOrdemDeServicoUseCase.finalizar(ordemServicoId, servicoId);
         return ResponseEntity.noContent().build();
     }
 }

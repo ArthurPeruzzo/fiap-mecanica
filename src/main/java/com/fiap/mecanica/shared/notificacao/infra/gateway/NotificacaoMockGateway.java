@@ -13,4 +13,9 @@ public class NotificacaoMockGateway implements NotificacaoGateway {
     public void enviarOrcamento(Long clienteId, BigDecimal valorTotal) {
         log.info("Orçamento de R$ {} enviado ao cliente id {}", valorTotal, clienteId);
     }
+
+    @Override
+    public void notificarServicoFinalizado(Long clienteId) {
+        log.info("Ordem de servico finalizada. Enviado ao cliente id {}", clienteId);
+    }
 }

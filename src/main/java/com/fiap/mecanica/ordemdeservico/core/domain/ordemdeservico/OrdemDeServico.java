@@ -91,11 +91,38 @@ public class OrdemDeServico {
                 .findFirst().orElseThrow(ServicoNaoVinculadoException::new);
 
         if (!StatusServico.NAO_INICIADO.equals(servicoVinculado.status())) {
-            throw new ServicoJaIniciadoException();
+            throw new ServicoEmExecucaoOuFinalizadoException();
         }
 
         servicosVinculados.remove(servicoVinculado);
         servicosVinculados.add(new ServicoVinculado(servicoId, servicoVinculado.preco(), StatusServico.EM_EXECUCAO, LocalDateTime.now(), null));
+    }
+
+    public void finalizarServico(Long servicoId) {
+        if (!StatusOrdemDeServico.EM_EXECUCAO.equals(status)) {
+            throw new FinalizarServicoNaoAutorizadoException();
+        }
+
+        var servicoVinculado = servicosVinculados.stream()
+                .filter(s -> s.servicoId().equals(servicoId))
+                .findFirst().orElseThrow(ServicoNaoVinculadoException::new);
+
+        if (!StatusServico.EM_EXECUCAO.equals(servicoVinculado.status())) {
+            throw new ServicoNaoIniciadoOuFinalizadoException();
+        }
+
+        servicosVinculados.remove(servicoVinculado);
+        servicosVinculados.add(new ServicoVinculado(servicoId, servicoVinculado.preco(), StatusServico.FINALIZADO,
+                servicoVinculado.dataInicioExecucao(), LocalDateTime.now()));
+
+        if (todosOsServicosFinalizados()) {
+            state.finalizar(this);
+        }
+    }
+
+    private boolean todosOsServicosFinalizados() {
+        return servicosVinculados.stream()
+                .allMatch(s -> StatusServico.FINALIZADO.equals(s.status()));
     }
 
     public void vincularServico(Long servicoId, BigDecimal preco) {
