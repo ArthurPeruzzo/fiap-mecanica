@@ -97,6 +97,9 @@ class OrdemDeServicoControllerContractTest {
     @MockitoBean
     private FinalizarServicoOrdemDeServicoUseCase finalizarServicoOrdemDeServicoUseCase;
 
+    @MockitoBean
+    private EntregarOrdemDeServicoUseCase entregarOrdemDeServicoUseCase;
+
     private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"}";
 
     @Test
@@ -930,5 +933,15 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/aprovar/1"))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
+    }
+
+    // --- entregar ---
+
+    @Test
+    void shouldReturn204WhenEntregarSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/entregar"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(entregarOrdemDeServicoUseCase).entregar(1L);
     }
 }

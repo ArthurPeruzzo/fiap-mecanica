@@ -36,6 +36,7 @@ public class OrdemDeServicoController {
     private final OrcamentoAprovadoOrdemDeServicoUseCase orcamentoAprovadoOrdemDeServicoUseCase;
     private final IniciarServicoOrdemDeServicoUseCase iniciarServicoOrdemDeServicoUseCase;
     private final FinalizarServicoOrdemDeServicoUseCase finalizarServicoOrdemDeServicoUseCase;
+    private final EntregarOrdemDeServicoUseCase entregarOrdemDeServicoUseCase;
 
     @Operation(summary = "Criar Ordem de Serviço",
             description = "Cria uma nova Ordem de Serviço com status RECEBIDA. A descrição registra o relato do cliente. O atendente é identificado pelo token JWT.")
@@ -290,6 +291,23 @@ public class OrdemDeServicoController {
     @PatchMapping("/{ordemServicoId}/servicos/{servicoId}/finalizar")
     public ResponseEntity<Void> finalizarServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
         finalizarServicoOrdemDeServicoUseCase.finalizar(ordemServicoId, servicoId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Entregar Ordem de Serviço",
+            description = "Entrega a Ordem de Serviço.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Ordem de serviço entregue com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil Atendente"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço não encontrada",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "status inválido para a operação",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+    })
+    @PatchMapping("/{ordemServicoId}/entregar")
+    public ResponseEntity<Void> entregar(@PathVariable Long ordemServicoId) {
+        entregarOrdemDeServicoUseCase.entregar(ordemServicoId);
         return ResponseEntity.noContent().build();
     }
 }

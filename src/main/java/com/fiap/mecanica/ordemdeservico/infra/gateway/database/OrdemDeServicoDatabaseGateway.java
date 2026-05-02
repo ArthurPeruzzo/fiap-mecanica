@@ -125,7 +125,8 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                     ordemDeServico.getDataEnvioOrcamento(),
                     ordemDeServico.getDataCancelamento(),
                     ordemDeServico.getDataAprovacao(),
-                    ordemDeServico.getDataFinalizacao()
+                    ordemDeServico.getDataFinalizacao(),
+                    ordemDeServico.getDataEntrega()
             );
         } catch (Exception e) {
             log.error("Erro ao atualizar ordem de servico id: {}", ordemDeServico.getId(), e);

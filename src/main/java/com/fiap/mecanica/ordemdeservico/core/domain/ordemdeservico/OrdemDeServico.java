@@ -78,6 +78,10 @@ public class OrdemDeServico {
         state.aprovar(this);
     }
 
+    public void entregar() {
+        state.entregar(this);
+    }
+
     void transicionarPara(StatusOrdemDeServico novoStatus, OrdemDeServicoState novoState) {
         this.status = novoStatus;
         this.state = novoState;
@@ -324,5 +328,9 @@ public class OrdemDeServico {
 
     void setDataFinalizacao(LocalDateTime dataFinalizacao) {
         this.dataFinalizacao = dataFinalizacao;
+    }
+
+    void setDataEntrega(LocalDateTime dataEntrega) {
+        this.dataEntrega = dataEntrega;
     }
 }
