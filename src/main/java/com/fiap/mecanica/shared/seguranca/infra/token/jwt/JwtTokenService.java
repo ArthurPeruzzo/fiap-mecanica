@@ -59,7 +59,7 @@ public class JwtTokenService implements TokenGateway {
         try {
             return decodeToken(getAuthorization()).getClaim(EMAIL).asString();
         } catch (JWTVerificationException ex) {
-            log.warn("Falha ao verificar JWT: {}", ex.getMessage());
+            falhaAoVerificarJwtLog(ex.getMessage());
             throw new JWTVerificationException("Token inválido ou expirado.", ex);
         }
     }
@@ -69,7 +69,7 @@ public class JwtTokenService implements TokenGateway {
         try {
             return Long.parseLong(decodeToken(getAuthorization()).getSubject());
         } catch (JWTVerificationException ex) {
-            log.warn("Falha ao verificar JWT: {}", ex.getMessage());
+            falhaAoVerificarJwtLog(ex.getMessage());
             throw new JWTVerificationException("Token inválido ou expirado.", ex);
         }
     }
@@ -79,7 +79,7 @@ public class JwtTokenService implements TokenGateway {
         try {
             return decodeToken(getAuthorization()).getClaim(ROLES).asList(RoleEnum.class);
         } catch (JWTVerificationException ex) {
-            log.warn("Falha ao verificar JWT: {}", ex.getMessage());
+            falhaAoVerificarJwtLog(ex.getMessage());
             throw new JWTVerificationException("Token inválido ou expirado.", ex);
         }
     }
@@ -91,7 +91,7 @@ public class JwtTokenService implements TokenGateway {
                     .build()
                     .verify(token);
         } catch (JWTVerificationException ex) {
-            log.warn("Falha ao verificar JWT: {}", ex.getMessage());
+            falhaAoVerificarJwtLog(ex.getMessage());
             throw new JWTVerificationException("Token inválido ou expirado.", ex);
         }
     }
@@ -104,6 +104,10 @@ public class JwtTokenService implements TokenGateway {
         return ZonedDateTime.now(ZoneId.of("America/Sao_Paulo"))
                 .plusHours(4)
                 .toInstant();
+    }
+
+    private void falhaAoVerificarJwtLog(String message) {
+        log.warn("Falha ao verificar JWT: {}", message);
     }
 
 }

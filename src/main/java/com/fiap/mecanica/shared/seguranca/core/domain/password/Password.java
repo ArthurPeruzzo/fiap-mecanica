@@ -3,7 +3,7 @@ package com.fiap.mecanica.shared.seguranca.core.domain.password;
 import java.util.regex.Pattern;
 
 public final class Password extends PasswordBase {
-    private static final String REGEX_VALIDATE = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,20}$";
+    private static final String REGEX_VALIDATE = "^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,20}$";
 
     private static final String PASSWORD_REQUIREMENTS = """
             O formato da senha não é válido. A senha deve seguir as seguintes especificações:

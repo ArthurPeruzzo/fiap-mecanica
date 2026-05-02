@@ -6,7 +6,6 @@ import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
 import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.PecaVinculada;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.ServicoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VinculoPecaNaoAutorizadaException;

@@ -252,8 +252,9 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
                 .when(ordemDeServicoServicoRepository).atualizar(
                         Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
+        LocalDateTime agora = LocalDateTime.now();
         assertThrows(ErroAcessoBaseDeDadosException.class,
-                () -> gateway.atualizarServico(1L, 10L, StatusServico.EM_EXECUCAO, LocalDateTime.now(), null));
+                () -> gateway.atualizarServico(1L, 10L, StatusServico.EM_EXECUCAO, agora, null));
     }
 
     @Test
