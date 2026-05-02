@@ -9,6 +9,7 @@ import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularInsumoNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularPecaNaoAutorizadaException;
+import com.fiap.mecanica.ordemdeservico.core.exception.IniciarServicoNaoAutorizadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.InsumoNaoVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.MecanicoNaoResponsavelPelaOrdemDeServicoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaVeiculoException;
@@ -17,6 +18,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoMecanicoRes
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.PecaNaoVinculadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.QuantidadeDesvincularInvalidaException;
+import com.fiap.mecanica.ordemdeservico.core.exception.ServicoJaIniciadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoJaVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
@@ -773,6 +775,66 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/recusar/1"))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
+    }
+
+    // --- iniciarServico ---
+
+    @Test
+    void shouldReturn204WhenIniciarServicoSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/iniciar"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(iniciarServicoOrdemDeServicoUseCase).iniciar(1L, 10L);
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnIniciarServico() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
+                .when(iniciarServicoOrdemDeServicoUseCase).iniciar(99L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/99/servicos/10/iniciar"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn404WhenServicoNotFoundOnIniciarServico() throws Exception {
+        Mockito.doThrow(new ServicoNaoEncontradoException())
+                .when(iniciarServicoOrdemDeServicoUseCase).iniciar(1L, 99L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/99/iniciar"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Serviço não encontrado"));
+    }
+
+    @Test
+    void shouldReturn422WhenServicoNaoVinculadoOnIniciarServico() throws Exception {
+        Mockito.doThrow(new ServicoNaoVinculadoException())
+                .when(iniciarServicoOrdemDeServicoUseCase).iniciar(1L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/iniciar"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.message").value("Este serviço não está vinculado à ordem de serviço"));
+    }
+
+    @Test
+    void shouldReturn422WhenOrdemNaoEmExecucaoOnIniciarServico() throws Exception {
+        Mockito.doThrow(new IniciarServicoNaoAutorizadoException())
+                .when(iniciarServicoOrdemDeServicoUseCase).iniciar(1L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/iniciar"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.message").value("Não é possível iniciar um serviço se a ordem de serviço não está em execução"));
+    }
+
+    @Test
+    void shouldReturn422WhenServicoJaIniciadoOnIniciarServico() throws Exception {
+        Mockito.doThrow(new ServicoJaIniciadoException())
+                .when(iniciarServicoOrdemDeServicoUseCase).iniciar(1L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/iniciar"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.message").value("Este serviço já foi iniciado ou finalizado"));
     }
 
     // --- aprovarOrcamento ---

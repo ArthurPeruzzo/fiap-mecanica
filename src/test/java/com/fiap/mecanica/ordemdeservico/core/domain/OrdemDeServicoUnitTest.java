@@ -9,12 +9,14 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.ServicoVincul
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularInsumoNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularPecaNaoAutorizadaException;
+import com.fiap.mecanica.ordemdeservico.core.exception.IniciarServicoNaoAutorizadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.InsumoNaoVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.MecanicoNaoResponsavelPelaOrdemDeServicoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoMecanicoResponsavelException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoSemServicosException;
 import com.fiap.mecanica.ordemdeservico.core.exception.PecaNaoVinculadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.QuantidadeDesvincularInvalidaException;
+import com.fiap.mecanica.ordemdeservico.core.exception.ServicoJaIniciadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoJaVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
@@ -472,6 +474,80 @@ class OrdemDeServicoUnitTest {
                 List.of(), List.of(), List.of(insumoExistente), null, null, null, null);
 
         assertThrows(QuantidadeDesvincularInvalidaException.class, () -> os.desvincularInsumo(30L, 5));
+    }
+
+    // --- iniciarServico ---
+
+    private OrdemDeServico ordemEmExecucaoComServico(Long servicoId, StatusServico statusServico) {
+        return OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
+                List.of(new ServicoVinculado(servicoId, BigDecimal.TEN, statusServico, null, null)),
+                List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now());
+    }
+
+    @Test
+    void iniciarServico_shouldSetStatusEmExecucaoEDataInicioExecucao() {
+        var before = LocalDateTime.now().minusSeconds(1);
+        var os = ordemEmExecucaoComServico(10L, StatusServico.NAO_INICIADO);
+
+        os.iniciarServico(10L);
+
+        var after = LocalDateTime.now().plusSeconds(1);
+        var servicoAtualizado = os.getServicosVinculados().stream()
+                .filter(s -> s.servicoId().equals(10L)).findFirst().orElseThrow();
+        assertEquals(StatusServico.EM_EXECUCAO, servicoAtualizado.status());
+        assertNotNull(servicoAtualizado.dataInicioExecucao());
+        assertTrue(servicoAtualizado.dataInicioExecucao().isAfter(before));
+        assertTrue(servicoAtualizado.dataInicioExecucao().isBefore(after));
+        assertNull(servicoAtualizado.dataFimExecucao());
+    }
+
+    @Test
+    void iniciarServico_shouldPreservePrecoOnUpdate() {
+        var preco = new BigDecimal("150.00");
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
+                List.of(new ServicoVinculado(10L, preco, StatusServico.NAO_INICIADO, null, null)),
+                List.of(), List.of(), new Orcamento(preco), LocalDateTime.now(), null, LocalDateTime.now());
+
+        os.iniciarServico(10L);
+
+        var servicoAtualizado = os.getServicosVinculados().stream()
+                .filter(s -> s.servicoId().equals(10L)).findFirst().orElseThrow();
+        assertEquals(0, preco.compareTo(servicoAtualizado.preco()));
+    }
+
+    @Test
+    void iniciarServico_shouldThrowWhenOrdemNaoEmExecucao() {
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)),
+                List.of(), List.of(), null, null, null, null);
+
+        assertThrows(IniciarServicoNaoAutorizadoException.class, () -> os.iniciarServico(10L));
+    }
+
+    @Test
+    void iniciarServico_shouldThrowWhenServicoNaoVinculado() {
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
+                List.of(), List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now());
+
+        assertThrows(ServicoNaoVinculadoException.class, () -> os.iniciarServico(99L));
+    }
+
+    @Test
+    void iniciarServico_shouldThrowWhenServicoJaIniciado() {
+        var os = ordemEmExecucaoComServico(10L, StatusServico.EM_EXECUCAO);
+
+        assertThrows(ServicoJaIniciadoException.class, () -> os.iniciarServico(10L));
+    }
+
+    @Test
+    void iniciarServico_shouldThrowWhenServicoFinalizado() {
+        var os = ordemEmExecucaoComServico(10L, StatusServico.FINALIZADO);
+
+        assertThrows(ServicoJaIniciadoException.class, () -> os.iniciarServico(10L));
     }
 
     // --- gravarEnvioOrcamento ---

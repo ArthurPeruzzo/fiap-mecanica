@@ -238,6 +238,25 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
 
 
     @Test
+    void atualizarServico_shouldCallRepositoryWithCorrectArgs() {
+        var dataInicio = LocalDateTime.of(2026, 1, 15, 10, 30);
+
+        gateway.atualizarServico(1L, 10L, StatusServico.EM_EXECUCAO, dataInicio, null);
+
+        Mockito.verify(ordemDeServicoServicoRepository).atualizar(10L, 1L, StatusServico.EM_EXECUCAO, dataInicio, null);
+    }
+
+    @Test
+    void atualizarServico_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.doThrow(new RuntimeException("db error"))
+                .when(ordemDeServicoServicoRepository).atualizar(
+                        Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+
+        assertThrows(ErroAcessoBaseDeDadosException.class,
+                () -> gateway.atualizarServico(1L, 10L, StatusServico.EM_EXECUCAO, LocalDateTime.now(), null));
+    }
+
+    @Test
     void desvincularOuSubtrairPeca_shouldDiminuirQuantidadeWhenParcial() {
         var existingEntity = OrdemDeServicoPecaEntity.builder()
                 .id(1L).ordemServicoId(1L).pecaId(20L).quantidade(5).build();
