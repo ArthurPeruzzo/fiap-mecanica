@@ -27,7 +27,8 @@ public interface OrdemDeServicoRepository extends JpaRepository<OrdemDeServicoEn
            "o.orcamentoTotal = :orcamentoTotal, " +
            "o.dataEnvioOrcamento = :dataEnvioOrcamento, " +
             "o.dataCancelamento = :dataCancelamento, " +
-            "o.dataAprovacao = :dataAprovacao " +
+            "o.dataAprovacao = :dataAprovacao, " +
+            "o.dataFinalizacao = :dataFinalizacao " +
            "WHERE o.id = :id")
     void atualizar(
             @Param("id") Long id,
@@ -38,6 +39,7 @@ public interface OrdemDeServicoRepository extends JpaRepository<OrdemDeServicoEn
             @Param("orcamentoTotal") BigDecimal orcamentoTotal,
             @Param("dataEnvioOrcamento") LocalDateTime dataEnvioOrcamento,
             @Param("dataCancelamento") LocalDateTime dataCancelamento,
-            @Param("dataAprovacao") LocalDateTime dataAprovacao
+            @Param("dataAprovacao") LocalDateTime dataAprovacao,
+            @Param("dataFinalizacao") LocalDateTime dataFinalizacao
     );
 }

@@ -68,5 +68,10 @@ class FinalizarServicoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServi
                 "SELECT status FROM ordem_servico WHERE id = ?",
                 ordemComServico.ordemId());
         Assertions.assertEquals("FINALIZADA", ordemRow.get("status"));
+
+        var dataFinalizacaoRow = jdbcTemplate.queryForMap(
+                "SELECT data_finalizacao FROM ordem_servico WHERE id = ?",
+                ordemComServico.ordemId());
+        Assertions.assertNotNull(dataFinalizacaoRow.get("data_finalizacao"));
     }
 }

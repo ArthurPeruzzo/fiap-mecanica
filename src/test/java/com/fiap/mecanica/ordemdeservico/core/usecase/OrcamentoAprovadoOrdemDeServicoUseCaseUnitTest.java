@@ -40,7 +40,7 @@ class OrcamentoAprovadoOrdemDeServicoUseCaseUnitTest {
                 List.of(new ServicoVinculado(10L, new BigDecimal("150.00"), StatusServico.NAO_INICIADO, null, null)),
                 List.of(), List.of(),
                 new Orcamento(new BigDecimal("150.00")),
-                LocalDateTime.now(), null, null);
+                LocalDateTime.now(), null, null, null, null);
     }
 
     @Test
@@ -71,7 +71,7 @@ class OrcamentoAprovadoOrdemDeServicoUseCaseUnitTest {
         var ordemEmDiagnostico = OrdemDeServico.reconstituir(ORDEM_ID, CLIENTE_ID, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, "Barulho ao frear",
                 LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), List.of(), null, null, null, null);
+                List.of(), List.of(), List.of(), null, null, null, null, null, null);
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemEmDiagnostico));
 
         assertThrows(TransicaoDeStatusInvalidaException.class,

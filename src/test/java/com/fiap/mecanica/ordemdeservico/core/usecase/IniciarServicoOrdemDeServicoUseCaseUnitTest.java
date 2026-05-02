@@ -49,7 +49,7 @@ class IniciarServicoOrdemDeServicoUseCaseUnitTest {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
                 List.of(new ServicoVinculado(SERVICO_ID, BigDecimal.TEN, statusServico, null, null)),
-                List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now());
+                List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now(), null, null);
     }
 
     private void stubOrdem(OrdemDeServico os) {
@@ -108,7 +108,7 @@ class IniciarServicoOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenOrdemNaoEmExecucao() {
         var ordemRecebida = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, null,
                 StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null,
-                List.of(), List.of(), List.of(), null, null, null, null);
+                List.of(), List.of(), List.of(), null, null, null, null, null, null);
         stubOrdem(ordemRecebida);
         stubServico();
 
@@ -123,7 +123,7 @@ class IniciarServicoOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenServicoNaoVinculado() {
         var ordemSemServico = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(), List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now());
+                List.of(), List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now(), null, null);
         stubOrdem(ordemSemServico);
         stubServico();
 

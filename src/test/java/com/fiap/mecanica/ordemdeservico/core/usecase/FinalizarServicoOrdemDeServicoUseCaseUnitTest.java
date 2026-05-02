@@ -54,7 +54,7 @@ class FinalizarServicoOrdemDeServicoUseCaseUnitTest {
         return OrdemDeServico.reconstituir(ORDEM_ID, CLIENTE_ID, 3L, 4L, 5L,
                 StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
                 List.of(new ServicoVinculado(servicoId, BigDecimal.TEN, statusServico, LocalDateTime.now().minusHours(1), null)),
-                List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now());
+                List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now(), null, null);
     }
 
     private OrdemDeServico ordemEmExecucaoComDoisServicos(StatusServico statusServico1, StatusServico statusServico2) {
@@ -64,7 +64,7 @@ class FinalizarServicoOrdemDeServicoUseCaseUnitTest {
                         new ServicoVinculado(SERVICO_ID, BigDecimal.TEN, statusServico1, LocalDateTime.now().minusHours(1), null),
                         new ServicoVinculado(20L, BigDecimal.TEN, statusServico2, LocalDateTime.now().minusHours(1), null)
                 ),
-                List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now());
+                List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now(), null, null);
     }
 
     private void stubOrdem(OrdemDeServico os) {
@@ -144,7 +144,7 @@ class FinalizarServicoOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenOrdemNaoEmExecucao() {
         var ordemRecebida = OrdemDeServico.reconstituir(ORDEM_ID, CLIENTE_ID, 3L, 4L, null,
                 StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null,
-                List.of(), List.of(), List.of(), null, null, null, null);
+                List.of(), List.of(), List.of(), null, null, null, null, null, null);
         stubOrdem(ordemRecebida);
         stubServico();
 
@@ -159,7 +159,7 @@ class FinalizarServicoOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenServicoNaoVinculado() {
         var ordemSemServico = OrdemDeServico.reconstituir(ORDEM_ID, CLIENTE_ID, 3L, 4L, 5L,
                 StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(), List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now());
+                List.of(), List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now(), null, null);
         stubOrdem(ordemSemServico);
         stubServico();
 

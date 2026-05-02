@@ -64,4 +64,10 @@ public class OrdemDeServicoEntity {
     @Column(name = "data_aprovacao")
     private LocalDateTime dataAprovacao;
 
+    @Column(name = "data_finalizacao")
+    private LocalDateTime dataFinalizacao;
+
+    @Column(name = "data_entrega")
+    private LocalDateTime dataEntrega;
+
 }

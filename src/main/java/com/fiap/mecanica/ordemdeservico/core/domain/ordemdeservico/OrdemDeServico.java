@@ -30,6 +30,8 @@ public class OrdemDeServico {
     private LocalDateTime dataEnvioOrcamento;
     private LocalDateTime dataCancelamento;
     private LocalDateTime dataAprovacao;
+    private LocalDateTime dataFinalizacao;
+    private LocalDateTime dataEntrega;
 
     private OrdemDeServicoState state;
 
@@ -253,7 +255,9 @@ public class OrdemDeServico {
                                               Orcamento orcamento,
                                               LocalDateTime dataEnvioOrcamento,
                                               LocalDateTime dataCancelamento,
-                                              LocalDateTime dataAprovacao) {
+                                              LocalDateTime dataAprovacao,
+                                              LocalDateTime dataFinalizacao,
+                                              LocalDateTime dataEntrega) {
         var os = new OrdemDeServico();
         os.id = id;
         os.clienteId = clienteId;
@@ -273,6 +277,8 @@ public class OrdemDeServico {
         os.dataEnvioOrcamento = dataEnvioOrcamento;
         os.dataCancelamento = dataCancelamento;
         os.dataAprovacao = dataAprovacao;
+        os.dataFinalizacao = dataFinalizacao;
+        os.dataEntrega = dataEntrega;
         return os;
     }
 
@@ -314,5 +320,9 @@ public class OrdemDeServico {
 
     void setDataAprovacao(LocalDateTime dataAprovacao) {
         this.dataAprovacao = dataAprovacao;
+    }
+
+    void setDataFinalizacao(LocalDateTime dataFinalizacao) {
+        this.dataFinalizacao = dataFinalizacao;
     }
 }
