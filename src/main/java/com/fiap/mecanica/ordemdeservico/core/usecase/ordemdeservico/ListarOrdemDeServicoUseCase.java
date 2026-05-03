@@ -29,10 +29,10 @@ public class ListarOrdemDeServicoUseCase {
 	private final MecanicoGateway mecanicoGateway;
 
 	public Pagina<OrdemDeServicoListagemDto> listar(int page, int size) {
-		return ordemDeServicoGateway.listar(page, size).map(this::enriquecer);
+		return ordemDeServicoGateway.listar(page, size).map(this::mapear);
 	}
 
-	private OrdemDeServicoListagemDto enriquecer(OrdemDeServico os) {
+	private OrdemDeServicoListagemDto mapear(OrdemDeServico os) {
 		var cliente = clienteGateway.buscarPorId(os.getClienteId()).orElseThrow(ClienteNaoEncontradoException::new);
 		var veiculo = veiculoGateway.buscarPorId(os.getVeiculoId()).orElseThrow(VeiculoNaoEncontradoException::new);
 		var atendente = atendenteGateway.findById(os.getAtendenteId()).orElseThrow(AtendenteNaoEncontradoException::new);
