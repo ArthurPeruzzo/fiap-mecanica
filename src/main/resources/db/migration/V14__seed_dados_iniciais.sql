@@ -9,47 +9,47 @@
 -- ==============================================================
 
 INSERT INTO `cliente` (`nome`, `sobrenome`, `cpf`, `cnpj`)
-VALUES ('Carlos Eduardo', 'Ferreira', '52998224725', NULL);
+VALUES ('Carlos Eduardo', 'Ferreira', '65997627004', NULL);
 
 INSERT INTO `cliente` (`nome`, `sobrenome`, `cpf`, `cnpj`)
-VALUES ('Ana Paula', 'Costa', '11144477735', NULL);
+VALUES ('Ana Paula', 'Costa', '30014140063', NULL);
 
 INSERT INTO `cliente` (`nome`, `sobrenome`, `cpf`, `cnpj`)
-VALUES ('Roberto Alves', 'Moreira', '87748248800', NULL);
+VALUES ('Roberto Alves', 'Moreira', '90196973074', NULL);
 
 INSERT INTO `cliente` (`nome`, `sobrenome`, `cpf`, `cnpj`)
 VALUES ('Transportes Veloz', 'Ltda', NULL, 'G9NTLNHH000135');
 
 INSERT INTO `cliente` (`nome`, `sobrenome`, `cpf`, `cnpj`)
-VALUES ('Maria Lucia', 'Santos', '07132567891', NULL);
+VALUES ('Maria Lucia', 'Santos', '09962456002', NULL);
 
 -- ==============================================================
 -- VEÍCULOS
 -- ==============================================================
 
 INSERT INTO `veiculo` (`cliente_id`, `placa`, `modelo`, `ano`)
-VALUES ((SELECT id FROM `cliente` WHERE cpf = '52998224725'), 'ABC1234', 'Honda Civic', 2019);
+VALUES ((SELECT id FROM `cliente` WHERE cpf = '65997627004'), 'MIC1294', 'Honda Civic', 2019);
 
 INSERT INTO `veiculo` (`cliente_id`, `placa`, `modelo`, `ano`)
-VALUES ((SELECT id FROM `cliente` WHERE cpf = '52998224725'), 'DEF5678', 'Toyota Corolla', 2021);
+VALUES ((SELECT id FROM `cliente` WHERE cpf = '65997627004'), 'MJO7112', 'Toyota Corolla', 2021);
 
 INSERT INTO `veiculo` (`cliente_id`, `placa`, `modelo`, `ano`)
-VALUES ((SELECT id FROM `cliente` WHERE cpf = '11144477735'), 'GHI9012', 'Ford Ka', 2018);
+VALUES ((SELECT id FROM `cliente` WHERE cpf = '30014140063'), 'MJL7414', 'Ford Ka', 2018);
 
 INSERT INTO `veiculo` (`cliente_id`, `placa`, `modelo`, `ano`)
-VALUES ((SELECT id FROM `cliente` WHERE cpf = '11144477735'), 'JKL3456', 'Chevrolet Onix', 2022);
+VALUES ((SELECT id FROM `cliente` WHERE cpf = '30014140063'), 'MKH7458', 'Chevrolet Onix', 2022);
 
 INSERT INTO `veiculo` (`cliente_id`, `placa`, `modelo`, `ano`)
-VALUES ((SELECT id FROM `cliente` WHERE cnpj = '11222333000181'), 'MNO7890', 'Fiat Ducato', 2020);
+VALUES ((SELECT id FROM `cliente` WHERE cnpj = 'G9NTLNHH000135'), 'LZG8676', 'Fiat Ducato', 2020);
 
 INSERT INTO `veiculo` (`cliente_id`, `placa`, `modelo`, `ano`)
-VALUES ((SELECT id FROM `cliente` WHERE cnpj = '11222333000181'), 'PQR1234', 'Mercedes Sprinter', 2021);
+VALUES ((SELECT id FROM `cliente` WHERE cnpj = 'G9NTLNHH000135'), 'LYL9639', 'Mercedes Sprinter', 2021);
 
 INSERT INTO `veiculo` (`cliente_id`, `placa`, `modelo`, `ano`)
-VALUES ((SELECT id FROM `cliente` WHERE cpf = '87748248800'), 'STU5678', 'Volkswagen Gol', 2017);
+VALUES ((SELECT id FROM `cliente` WHERE cpf = '90196973074'), 'MLU2870', 'Volkswagen Gol', 2017);
 
 INSERT INTO `veiculo` (`cliente_id`, `placa`, `modelo`, `ano`)
-VALUES ((SELECT id FROM `cliente` WHERE cpf = '87748248800'), 'VWX9012', 'Renault Sandero', 2020);
+VALUES ((SELECT id FROM `cliente` WHERE cpf = '90196973074'), 'MLH8526', 'Renault Sandero', 2020);
 
 -- ==============================================================
 -- PEÇAS
@@ -109,19 +109,19 @@ SET @mecanico_id  = (SELECT m.id FROM `mecanico` m
                      INNER JOIN `users` u ON m.user_id = u.id
                      WHERE u.email = 'mecanico@mecanica.com');
 
-SET @cliente_carlos  = (SELECT id FROM `cliente` WHERE cpf  = '52998224725');
-SET @cliente_ana     = (SELECT id FROM `cliente` WHERE cpf  = '11144477735');
-SET @cliente_roberto = (SELECT id FROM `cliente` WHERE cpf  = '87748248800');
-SET @cliente_transp  = (SELECT id FROM `cliente` WHERE cnpj = '11222333000181');
+SET @cliente_carlos  = (SELECT id FROM `cliente` WHERE cpf  = '65997627004');
+SET @cliente_ana     = (SELECT id FROM `cliente` WHERE cpf  = '30014140063');
+SET @cliente_roberto = (SELECT id FROM `cliente` WHERE cpf  = '90196973074');
+SET @cliente_transp  = (SELECT id FROM `cliente` WHERE cnpj = 'G9NTLNHH000135');
 
-SET @v_civic    = (SELECT id FROM `veiculo` WHERE placa = 'ABC1234');
-SET @v_corolla  = (SELECT id FROM `veiculo` WHERE placa = 'DEF5678');
-SET @v_ka       = (SELECT id FROM `veiculo` WHERE placa = 'GHI9012');
-SET @v_onix     = (SELECT id FROM `veiculo` WHERE placa = 'JKL3456');
-SET @v_ducato   = (SELECT id FROM `veiculo` WHERE placa = 'MNO7890');
-SET @v_sprinter = (SELECT id FROM `veiculo` WHERE placa = 'PQR1234');
-SET @v_gol      = (SELECT id FROM `veiculo` WHERE placa = 'STU5678');
-SET @v_sandero  = (SELECT id FROM `veiculo` WHERE placa = 'VWX9012');
+SET @v_civic    = (SELECT id FROM `veiculo` WHERE placa = 'MIC1294');
+SET @v_corolla  = (SELECT id FROM `veiculo` WHERE placa = 'MJO7112');
+SET @v_ka       = (SELECT id FROM `veiculo` WHERE placa = 'MJL7414');
+SET @v_onix     = (SELECT id FROM `veiculo` WHERE placa = 'MKH7458');
+SET @v_ducato   = (SELECT id FROM `veiculo` WHERE placa = 'LZG8676');
+SET @v_sprinter = (SELECT id FROM `veiculo` WHERE placa = 'LYL9639');
+SET @v_gol      = (SELECT id FROM `veiculo` WHERE placa = 'MLU2870');
+SET @v_sandero  = (SELECT id FROM `veiculo` WHERE placa = 'MLH8526');
 
 SET @s_alinhamento      = (SELECT id FROM `servico` WHERE nome = 'Alinhamento e Balanceamento');
 SET @s_troca_oleo       = (SELECT id FROM `servico` WHERE nome = 'Troca de Óleo e Filtros');
