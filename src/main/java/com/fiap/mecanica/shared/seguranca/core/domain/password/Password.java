@@ -16,14 +16,13 @@ public final class Password extends PasswordBase {
             """;
 
     public Password(String value) {
-        boolean isValid = Pattern.compile(REGEX_VALIDATE)
-                .matcher(value)
-                .matches();
+        super(validar(value));
+    }
 
-        if (!isValid) {
+    private static String validar(String value) {
+        if (!Pattern.compile(REGEX_VALIDATE).matcher(value).matches()) {
             throw new IllegalArgumentException(PASSWORD_REQUIREMENTS);
         }
-
-        super(value);
+        return value;
     }
 }
