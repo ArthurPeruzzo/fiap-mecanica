@@ -139,3 +139,63 @@ http://localhost:8080/swagger-ui.html
 
 ## Testes
 Os testes de integração usam Testcontainers e requerem Docker em execução.
+
+---
+
+## Linguagem Ubíqua
+
+Dicionário de termos do domínio utilizados no sistema.
+
+### Atores
+
+| Termo | Definição |
+|---|---|
+| **Cliente** | Pessoa física (CPF) ou jurídica (CNPJ) proprietária de veículos cadastrados no sistema. |
+| **Atendente** | Funcionário responsável por abrir ordens de serviço, enviar orçamentos ao cliente, registrar a aprovação ou recusa e realizar a entrega do veículo. |
+| **Mecânico** | Funcionário responsável por executar o diagnóstico e os serviços vinculados a uma ordem. O mecânico que inicia o diagnóstico torna-se o **mecânico responsável** por aquela ordem. |
+| **Administrador** | Perfil com acesso irrestrito ao cadastro de clientes, veículos, peças, insumos e serviços. Não opera ordens de serviço diretamente. |
+
+### Estoque
+
+| Termo | Definição |
+|---|---|
+| **Peça** | Item físico de estoque. Ex: pastilha de freio, correia dentada. |
+| **Insumo** | Item consumível de estoque com unidade de medida variável (litros, ml, unidades). Ex: óleo de motor, fluido de freio. |
+| **Baixa de Estoque** | Redução da quantidade disponível de uma peça ou insumo ao vinculá-la a uma ordem em diagnóstico. |
+| **Devolução de Estoque** | Restituição da quantidade ao estoque ao desvincular uma peça ou insumo de uma ordem. |
+| **Estoque Insuficiente** | Condição que impede o vínculo quando a quantidade solicitada supera o disponível. |
+
+### Ordem de Serviço
+
+| Termo | Definição |
+|---|---|
+| **Ordem de Serviço** | Registro central do ciclo de atendimento de um veículo, desde a recepção até a entrega. Agrega serviços, peças e insumos vinculados. |
+| **Ordem de Serviço Recebida** | OS recém-criada pelo atendente, aguardando que um mecânico inicie o diagnóstico. Um veículo não pode ter mais de uma ordem nesse estado ou em qualquer etapa ativa simultaneamente. |
+| **Diagnóstico** | Fase em que o mecânico responsável inspeciona o veículo e determina quais serviços, peças e insumos serão necessários. |
+| **Orçamento** | Valor total calculado automaticamente ao concluir o diagnóstico, somando os preços de todos os serviços, peças e insumos vinculados. |
+| **Vínculo** | Associação de um serviço, peça ou insumo a uma OS. Permitido apenas durante a fase de diagnóstico. |
+| **Mecânico Responsável** | O mecânico que iniciou o diagnóstico de uma OS. Somente ele pode continuar as operações daquela ordem. |
+
+### Ciclo de vida da OS
+
+| Status | Significado |
+|---|---|
+| **Recebida** | OS criada pelo atendente. Aguardando início do diagnóstico. |
+| **Em Diagnóstico** | Diagnóstico iniciado pelo mecânico responsável. Permite vincular serviços, peças e insumos. |
+| **Diagnóstico Concluído** | Diagnóstico encerrado e orçamento calculado. Aguarda envio ao cliente. |
+| **Aguardando Aprovação** | Orçamento enviado ao cliente. Aguarda aprovação ou recusa. |
+| **Em Execução** | Orçamento aprovado. Serviços podem ser iniciados e finalizados individualmente. |
+| **Finalizada** | Todos os serviços foram concluídos. Aguarda entrega do veículo. |
+| **Entregue** | Veículo devolvido ao cliente. |
+| **Cancelada** | Orçamento recusado pelo cliente. Estoque devolvido automaticamente. |
+
+### Execução de serviços
+
+| Termo | Definição |
+|---|---|
+| **Serviço** | Atividade catalogada que pode ser executada pela oficina, com preço e descrição definidos. Ex: alinhamento, troca de óleo. |
+| **Serviço Vinculado** | Instância de um serviço associada a uma OS específica, com preço e status de execução próprios. |
+| **Não Iniciado** | Serviço vinculado à OS mas ainda não iniciado pelo mecânico. |
+| **Em Execução** | Serviço em andamento pelo mecânico responsável. |
+| **Finalizado** | Serviço concluído. Quando todos os serviços de uma OS atingem este status, a OS é automaticamente finalizada. |
+| **Tempo Médio de Execução** | Média das durações de todos os serviços finalizados de uma OS. Ausente quando nenhum serviço foi finalizado. |
