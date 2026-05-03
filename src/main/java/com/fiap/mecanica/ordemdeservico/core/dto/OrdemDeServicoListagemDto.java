@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -25,6 +26,7 @@ public class OrdemDeServicoListagemDto {
 	private List<PecaVinculadaDto> pecas;
 	private List<InsumoVinculadoDto> insumos;
 	private BigDecimal valorTotal;
+	private Duration tempoMedioExecucao;
 	private LocalDateTime dataEnvioOrcamento;
 	private LocalDateTime dataCancelamento;
 	private LocalDateTime dataAprovacao;

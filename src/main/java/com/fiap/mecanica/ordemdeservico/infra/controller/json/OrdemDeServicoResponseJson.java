@@ -61,6 +61,9 @@ public class OrdemDeServicoResponseJson {
     @Schema(description = "Valor total do orçamento (soma de serviços, peças e insumos)", example = "394.00")
     private BigDecimal valorTotal;
 
+    @Schema(description = "Tempo médio de execução dos serviços finalizados. Null quando nenhum serviço foi finalizado.")
+    private TempoMedioExecucaoResponseJson tempoMedioExecucao;
+
     @Schema(description = "Data e hora de envio do orçamento ao cliente")
     private LocalDateTime dataEnvioOrcamento;
 
@@ -93,6 +96,7 @@ public class OrdemDeServicoResponseJson {
                 .pecas(os.getPecas().stream().map(PecaVinculadaResponseJson::from).toList())
                 .insumos(os.getInsumos().stream().map(InsumoVinculadoResponseJson::from).toList())
                 .valorTotal(os.getValorTotal())
+                .tempoMedioExecucao(TempoMedioExecucaoResponseJson.from(os.getTempoMedioExecucao()))
                 .dataEnvioOrcamento(os.getDataEnvioOrcamento())
                 .dataCancelamento(os.getDataCancelamento())
                 .dataAprovacao(os.getDataAprovacao())

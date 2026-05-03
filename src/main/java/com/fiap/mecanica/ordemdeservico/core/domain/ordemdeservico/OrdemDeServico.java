@@ -5,6 +5,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.*;
 import lombok.Getter;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -337,5 +338,17 @@ public class OrdemDeServico {
 
     public BigDecimal getValorTotalOrcamento() {
         return Optional.ofNullable(orcamento).map(Orcamento::valorTotal).orElse(null);
+    }
+
+    public Duration calcularTempoMedioExecucaoServicos() {
+        var finalizados = servicosVinculados.stream()
+                .filter(sv -> sv.dataInicioExecucao() != null && sv.dataFimExecucao() != null)
+                .toList();
+        if (finalizados.isEmpty()) return null;
+        long mediaSegundos = (long) finalizados.stream()
+                .mapToLong(sv -> Duration.between(sv.dataInicioExecucao(), sv.dataFimExecucao()).getSeconds())
+                .average()
+                .orElse(0);
+        return Duration.ofSeconds(mediaSegundos);
     }
 }

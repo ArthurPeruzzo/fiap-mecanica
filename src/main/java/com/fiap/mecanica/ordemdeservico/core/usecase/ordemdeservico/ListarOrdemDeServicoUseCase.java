@@ -70,6 +70,7 @@ public class ListarOrdemDeServicoUseCase {
 				.pecas(pecas)
 				.insumos(insumos)
 				.valorTotal(os.getValorTotalOrcamento())
+				.tempoMedioExecucao(os.calcularTempoMedioExecucaoServicos())
 				.dataEnvioOrcamento(os.getDataEnvioOrcamento())
 				.dataCancelamento(os.getDataCancelamento())
 				.dataAprovacao(os.getDataAprovacao())

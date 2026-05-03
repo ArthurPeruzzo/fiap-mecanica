@@ -28,6 +28,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.VinculoServicoNaoAutoriza
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -677,5 +678,94 @@ class OrdemDeServicoUnitTest {
                 List.of(), List.of(), List.of(), null, null, null, null, null, null);
 
         assertThrows(TransicaoDeStatusInvalidaException.class, os::gravarEnvioOrcamento);
+    }
+
+    // --- calcularTempoMedioExecucaoServicos ---
+
+    @Test
+    void calcularTempoMedioExecucaoServicos_shouldReturnNullWhenNoServicosVinculados() {
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.FINALIZADA, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
+                List.of(), List.of(), List.of(), null, null, null, null, LocalDateTime.now(), null);
+
+        assertNull(os.calcularTempoMedioExecucaoServicos());
+    }
+
+    @Test
+    void calcularTempoMedioExecucaoServicos_shouldReturnNullWhenNoServicosFinalizados() {
+        var inicio = LocalDateTime.of(2024, 1, 15, 10, 0);
+        var servico = new ServicoVinculado(1L, new BigDecimal("100.00"), StatusServico.EM_EXECUCAO, inicio, null);
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
+                List.of(servico), List.of(), List.of(), null, null, null, null, null, null);
+
+        assertNull(os.calcularTempoMedioExecucaoServicos());
+    }
+
+    @Test
+    void calcularTempoMedioExecucaoServicos_shouldReturnCorrectDurationForSingleServico() {
+        var inicio = LocalDateTime.of(2024, 1, 15, 10, 0);
+        var fim = LocalDateTime.of(2024, 1, 15, 12, 30);
+        var servico = new ServicoVinculado(1L, new BigDecimal("100.00"), StatusServico.FINALIZADO, inicio, fim);
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.FINALIZADA, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
+                List.of(servico), List.of(), List.of(), null, null, null, null, LocalDateTime.now(), null);
+
+        var resultado = os.calcularTempoMedioExecucaoServicos();
+
+        assertNotNull(resultado);
+        assertEquals(0, resultado.toDaysPart());
+        assertEquals(2, resultado.toHoursPart());
+        assertEquals(30, resultado.toMinutesPart());
+    }
+
+    @Test
+    void calcularTempoMedioExecucaoServicos_shouldReturnAverageAcrossMultipleServicos() {
+        var base = LocalDateTime.of(2024, 1, 15, 8, 0);
+        // serviço 1: 1h = 3600s
+        var s1 = new ServicoVinculado(1L, new BigDecimal("100.00"), StatusServico.FINALIZADO, base, base.plusHours(1));
+        // serviço 2: 3h = 10800s
+        var s2 = new ServicoVinculado(2L, new BigDecimal("200.00"), StatusServico.FINALIZADO, base, base.plusHours(3));
+        // média: 7200s = 2h
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.FINALIZADA, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
+                List.of(s1, s2), List.of(), List.of(), null, null, null, null, LocalDateTime.now(), null);
+
+        var resultado = os.calcularTempoMedioExecucaoServicos();
+
+        assertNotNull(resultado);
+        assertEquals(Duration.ofHours(2), resultado);
+    }
+
+    @Test
+    void calcularTempoMedioExecucaoServicos_shouldIgnoreServicosNaoFinalizados() {
+        var base = LocalDateTime.of(2024, 1, 15, 8, 0);
+        var finalizado = new ServicoVinculado(1L, new BigDecimal("100.00"), StatusServico.FINALIZADO, base, base.plusHours(2));
+        var emExecucao = new ServicoVinculado(2L, new BigDecimal("200.00"), StatusServico.EM_EXECUCAO, base, null);
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
+                List.of(finalizado, emExecucao), List.of(), List.of(), null, null, null, null, null, null);
+
+        var resultado = os.calcularTempoMedioExecucaoServicos();
+
+        assertNotNull(resultado);
+        assertEquals(Duration.ofHours(2), resultado);
+    }
+
+    @Test
+    void calcularTempoMedioExecucaoServicos_shouldHandleDurationSpanningDays() {
+        var inicio = LocalDateTime.of(2024, 1, 15, 9, 0);
+        var fim = LocalDateTime.of(2024, 1, 16, 13, 30);
+        var servico = new ServicoVinculado(1L, new BigDecimal("500.00"), StatusServico.FINALIZADO, inicio, fim);
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.FINALIZADA, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
+                List.of(servico), List.of(), List.of(), null, null, null, null, LocalDateTime.now(), null);
+
+        var resultado = os.calcularTempoMedioExecucaoServicos();
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.toDaysPart());
+        assertEquals(4, resultado.toHoursPart());
+        assertEquals(30, resultado.toMinutesPart());
     }
 }
