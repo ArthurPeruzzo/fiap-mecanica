@@ -19,6 +19,8 @@ API REST para gestão de uma oficina mecânica, desenvolvida como projeto acadê
 
 ---
 
+> **Aviso:** credenciais de banco de dados e o JWT secret estão expostos neste repositório intencionalmente para facilitar a execução em ambiente de testes e avaliação acadêmica.
+
 ## Rodando localmente
 
 ### Pré-requisitos
