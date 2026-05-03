@@ -146,11 +146,12 @@ Os testes de integração usam Testcontainers e requerem Docker em execução.
 
 Dicionário de termos do domínio utilizados no sistema.
 
-### Atores
+### Atores e entidades
 
 | Termo | Definição |
 |---|---|
 | **Cliente** | Pessoa física (CPF) ou jurídica (CNPJ) proprietária de veículos cadastrados no sistema. |
+| **Veículo** | Automóvel pertencente a um cliente, identificado pela placa. Um veículo não pode ter mais de uma ordem de serviço ativa simultaneamente. |
 | **Atendente** | Funcionário responsável por abrir ordens de serviço, enviar orçamentos ao cliente, registrar a aprovação ou recusa e realizar a entrega do veículo. |
 | **Mecânico** | Funcionário responsável por executar o diagnóstico e os serviços vinculados a uma ordem. O mecânico que inicia o diagnóstico torna-se o **mecânico responsável** por aquela ordem. |
 | **Administrador** | Perfil com acesso irrestrito ao cadastro de clientes, veículos, peças, insumos e serviços. Não opera ordens de serviço diretamente. |
@@ -169,10 +170,9 @@ Dicionário de termos do domínio utilizados no sistema.
 
 | Termo | Definição |
 |---|---|
-| **Ordem de Serviço** | Registro central do ciclo de atendimento de um veículo, desde a recepção até a entrega. Agrega serviços, peças e insumos vinculados. |
-| **Ordem de Serviço Recebida** | OS recém-criada pelo atendente, aguardando que um mecânico inicie o diagnóstico. Um veículo não pode ter mais de uma ordem nesse estado ou em qualquer etapa ativa simultaneamente. |
+| **Ordem de Serviço (OS)** | Registro central do ciclo de atendimento de um veículo, desde a recepção até a entrega. Agrega serviços, peças e insumos vinculados. |
 | **Diagnóstico** | Fase em que o mecânico responsável inspeciona o veículo e determina quais serviços, peças e insumos serão necessários. |
-| **Orçamento** | Valor total calculado automaticamente ao concluir o diagnóstico, somando os preços de todos os serviços, peças e insumos vinculados. |
+| **Orçamento** | Valor total calculado ao concluir o diagnóstico, somando os preços de todos os serviços, peças e insumos vinculados naquele momento. |
 | **Vínculo** | Associação de um serviço, peça ou insumo a uma OS. Permitido apenas durante a fase de diagnóstico. |
 | **Mecânico Responsável** | O mecânico que iniciou o diagnóstico de uma OS. Somente ele pode continuar as operações daquela ordem. |
 
@@ -180,22 +180,24 @@ Dicionário de termos do domínio utilizados no sistema.
 
 | Status | Significado |
 |---|---|
-| **Recebida** | OS criada pelo atendente. Aguardando início do diagnóstico. |
+| **Recebida** | OS criada pelo atendente. Aguardando que um mecânico inicie o diagnóstico. |
 | **Em Diagnóstico** | Diagnóstico iniciado pelo mecânico responsável. Permite vincular serviços, peças e insumos. |
 | **Diagnóstico Concluído** | Diagnóstico encerrado e orçamento calculado. Aguarda envio ao cliente. |
 | **Aguardando Aprovação** | Orçamento enviado ao cliente. Aguarda aprovação ou recusa. |
-| **Em Execução** | Orçamento aprovado. Serviços podem ser iniciados e finalizados individualmente. |
-| **Finalizada** | Todos os serviços foram concluídos. Aguarda entrega do veículo. |
-| **Entregue** | Veículo devolvido ao cliente. |
-| **Cancelada** | Orçamento recusado pelo cliente. Estoque devolvido automaticamente. |
+| **Em Execução** (OS) | Orçamento aprovado. Os serviços vinculados podem ser iniciados e finalizados individualmente pelo mecânico. |
+| **Finalizada** | Todos os serviços vinculados foram concluídos. Aguarda entrega do veículo. |
+| **Entregue** | Veículo devolvido ao cliente. Estado terminal positivo. |
+| **Cancelada** | Orçamento recusado pelo cliente. Estado terminal negativo. Estoque devolvido automaticamente. |
 
 ### Execução de serviços
+
+> Os status de serviço são independentes do status da OS. Uma OS pode estar **Em Execução** enquanto cada serviço vinculado evolui individualmente entre os estados abaixo.
 
 | Termo | Definição |
 |---|---|
 | **Serviço** | Atividade catalogada que pode ser executada pela oficina, com preço e descrição definidos. Ex: alinhamento, troca de óleo. |
 | **Serviço Vinculado** | Instância de um serviço associada a uma OS específica, com preço e status de execução próprios. |
-| **Não Iniciado** | Serviço vinculado à OS mas ainda não iniciado pelo mecânico. |
-| **Em Execução** | Serviço em andamento pelo mecânico responsável. |
-| **Finalizado** | Serviço concluído. Quando todos os serviços de uma OS atingem este status, a OS é automaticamente finalizada. |
-| **Tempo Médio de Execução** | Média das durações de todos os serviços finalizados de uma OS. Ausente quando nenhum serviço foi finalizado. |
+| **Não Iniciado** (serviço) | Serviço vinculado à OS mas ainda não iniciado pelo mecânico. |
+| **Em Execução** (serviço) | Serviço em andamento pelo mecânico responsável. |
+| **Finalizado** (serviço) | Serviço concluído. Quando todos os serviços vinculados atingem este status, a OS transita automaticamente para **Finalizada**. |
+| **Tempo Médio de Execução** | Média das durações de todos os serviços finalizados de uma OS. Ausente quando nenhum serviço foi concluído. |
