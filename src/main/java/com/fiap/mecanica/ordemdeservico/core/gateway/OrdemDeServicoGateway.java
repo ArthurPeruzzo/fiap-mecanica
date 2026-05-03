@@ -2,6 +2,7 @@ package com.fiap.mecanica.ordemdeservico.core.gateway;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
+import com.fiap.mecanica.shared.page.Pagina;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -19,4 +20,5 @@ public interface OrdemDeServicoGateway {
 	void desvincularOuSubtrairPeca(Long ordemServicoId, Long pecaId, Integer quantidade);
 	void vincularOuSomarInsumo(Long ordemServicoId, Long insumoId, Integer quantidade,  BigDecimal preco);
 	void desvincularOuSubtrairInsumo(Long ordemServicoId, Long insumoId, Integer quantidade);
+	Pagina<OrdemDeServico> listar(int page, int size);
 }

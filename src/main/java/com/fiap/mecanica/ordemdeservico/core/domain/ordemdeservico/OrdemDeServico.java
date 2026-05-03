@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Getter
@@ -234,11 +235,11 @@ public class OrdemDeServico {
 
     void calcularOrcamento() {
         var totalPecas = pecasVinculadas.stream()
-                .map(p -> p.preco().multiply(BigDecimal.valueOf(p.quantidade())))
+                .map(PecaVinculada::calculaValorTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         var totalInsumos = insumosVinculados.stream()
-                .map(p -> p.preco().multiply(BigDecimal.valueOf(p.quantidade())))
+                .map(InsumoVinculado::calculaValorTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         var totalServicos = servicosVinculados.stream()
@@ -332,5 +333,9 @@ public class OrdemDeServico {
 
     void setDataEntrega(LocalDateTime dataEntrega) {
         this.dataEntrega = dataEntrega;
+    }
+
+    public BigDecimal getValorTotalOrcamento() {
+        return Optional.ofNullable(orcamento).map(Orcamento::valorTotal).orElse(null);
     }
 }

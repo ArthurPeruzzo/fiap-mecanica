@@ -183,16 +183,16 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
     @Test
     void existeOrdemAbertaParaVeiculo_shouldReturnTrueWhenExists() {
         Mockito.when(ordemDeServicoRepository.existsByVeiculoIdAndStatusNotIn(
-                        2L, List.of(StatusOrdemDeServico.FINALIZADA, StatusOrdemDeServico.ENTREGUE)))
+                        2L, List.of(StatusOrdemDeServico.FINALIZADA, StatusOrdemDeServico.ENTREGUE, StatusOrdemDeServico.CANCELADA)))
                 .thenReturn(true);
 
-        assertTrue(gateway.existeOrdemAbertaParaVeiculo(2L));
+;        assertTrue(gateway.existeOrdemAbertaParaVeiculo(2L));
     }
 
     @Test
     void existeOrdemAbertaParaVeiculo_shouldReturnFalseWhenNotExists() {
         Mockito.when(ordemDeServicoRepository.existsByVeiculoIdAndStatusNotIn(
-                        2L, List.of(StatusOrdemDeServico.FINALIZADA, StatusOrdemDeServico.ENTREGUE)))
+                        2L, List.of(StatusOrdemDeServico.FINALIZADA, StatusOrdemDeServico.ENTREGUE, StatusOrdemDeServico.CANCELADA)))
                 .thenReturn(false);
 
         assertFalse(gateway.existeOrdemAbertaParaVeiculo(2L));

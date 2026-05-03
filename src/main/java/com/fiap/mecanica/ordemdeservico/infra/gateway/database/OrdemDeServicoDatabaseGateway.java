@@ -12,8 +12,10 @@ import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoP
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoRepository;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoServicoRepository;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
+import com.fiap.mecanica.shared.page.Pagina;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,49 +54,51 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
     @Override
     public Optional<OrdemDeServico> buscarPorId(Long id) {
         try {
-            return ordemDeServicoRepository.findById(id)
-                    .map(entity -> {
-                        var servicosVinculados = ordemDeServicoServicoRepository.findByOrdemServicoId(id).stream()
-                                .map(s -> new ServicoVinculado(
-                                        s.getServicoId(), s.getPreco(), s.getStatus(), s.getDataInicioExecucao(), s.getDataFimExecucao()))
-                                .toList();
-
-                        var pecasVinculadas = ordemDeServicoPecaRepository.findByOrdemServicoId(id).stream()
-                                .map(p -> new PecaVinculada(p.getPecaId(), p.getQuantidade(), p.getPreco()))
-                                .toList();
-
-                        var insumosVinculados = ordemDeServicoInsumoRepository.findByOrdemServicoId(id).stream()
-                                .map(i -> new InsumoVinculado(i.getInsumoId(), i.getQuantidade(), i.getPreco()))
-                                .toList();
-
-                        var orcamento = entity.getOrcamentoTotal() != null ? new Orcamento(entity.getOrcamentoTotal()) : null;
-
-                        return OrdemDeServico.reconstituir(
-                                entity.getId(),
-                                entity.getClienteId(),
-                                entity.getVeiculoId(),
-                                entity.getAtendenteId(),
-                                entity.getMecanicoId(),
-                                entity.getStatus(),
-                                entity.getDescricao(),
-                                entity.getDataCriacao(),
-                                entity.getDataInicioDiagnostico(),
-                                entity.getDataConclusaoDiagnostico(),
-                                servicosVinculados,
-                                pecasVinculadas,
-                                insumosVinculados,
-                                orcamento,
-                                entity.getDataEnvioOrcamento(),
-                                entity.getDataCancelamento(),
-                                entity.getDataAprovacao(),
-                                entity.getDataFinalizacao(),
-                                entity.getDataEntrega()
-                        );
-                    });
+            return ordemDeServicoRepository.findById(id).map(this::mapear);
         } catch (Exception e) {
             log.error("Erro ao buscar ordem de servico por id: {}", id, e);
             throw new ErroAcessoBaseDeDadosException();
         }
+    }
+
+    private OrdemDeServico mapear(OrdemDeServicoEntity entity) {
+        Long id = entity.getId();
+
+        var servicosVinculados = ordemDeServicoServicoRepository.findByOrdemServicoId(id).stream()
+                .map(s -> new ServicoVinculado(s.getServicoId(), s.getPreco(), s.getStatus(), s.getDataInicioExecucao(), s.getDataFimExecucao()))
+                .toList();
+
+        var pecasVinculadas = ordemDeServicoPecaRepository.findByOrdemServicoId(id).stream()
+                .map(p -> new PecaVinculada(p.getPecaId(), p.getQuantidade(), p.getPreco()))
+                .toList();
+
+        var insumosVinculados = ordemDeServicoInsumoRepository.findByOrdemServicoId(id).stream()
+                .map(i -> new InsumoVinculado(i.getInsumoId(), i.getQuantidade(), i.getPreco()))
+                .toList();
+
+        var orcamento = entity.getOrcamentoTotal() != null ? new Orcamento(entity.getOrcamentoTotal()) : null;
+
+        return OrdemDeServico.reconstituir(
+                entity.getId(),
+                entity.getClienteId(),
+                entity.getVeiculoId(),
+                entity.getAtendenteId(),
+                entity.getMecanicoId(),
+                entity.getStatus(),
+                entity.getDescricao(),
+                entity.getDataCriacao(),
+                entity.getDataInicioDiagnostico(),
+                entity.getDataConclusaoDiagnostico(),
+                servicosVinculados,
+                pecasVinculadas,
+                insumosVinculados,
+                orcamento,
+                entity.getDataEnvioOrcamento(),
+                entity.getDataCancelamento(),
+                entity.getDataAprovacao(),
+                entity.getDataFinalizacao(),
+                entity.getDataEntrega()
+        );
     }
 
     @Override
@@ -102,7 +106,7 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
         try {
             return ordemDeServicoRepository.existsByVeiculoIdAndStatusNotIn(
                     veiculoId,
-                    List.of(StatusOrdemDeServico.FINALIZADA, StatusOrdemDeServico.ENTREGUE)
+                    List.of(StatusOrdemDeServico.FINALIZADA, StatusOrdemDeServico.ENTREGUE, StatusOrdemDeServico.CANCELADA)
             );
         } catch (Exception e) {
             log.error("Erro ao verificar ordem aberta para veiculo id: {}", veiculoId, e);
@@ -242,6 +246,18 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                     });
         } catch (Exception e) {
             log.error("Erro ao desvincular insumo {} na ordem de servico {}", insumoId, ordemServicoId, e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+
+    @Override
+    public Pagina<OrdemDeServico> listar(int page, int size) {
+        try {
+            var resultado = ordemDeServicoRepository.findAll(PageRequest.of(page, size));
+            var ordens = resultado.getContent().stream().map(this::mapear).toList();
+            return new Pagina<>(ordens, resultado.getNumber(), resultado.getSize(), resultado.getTotalElements(), resultado.getTotalPages());
+        } catch (Exception e) {
+            log.error("Erro ao listar ordens de servico", e);
             throw new ErroAcessoBaseDeDadosException();
         }
     }

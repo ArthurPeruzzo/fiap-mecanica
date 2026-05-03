@@ -29,8 +29,10 @@ import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClien
 import com.fiap.mecanica.ordemdeservico.core.exception.VinculoInsumoNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VinculoPecaNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VinculoServicoNaoAutorizadoException;
+import com.fiap.mecanica.ordemdeservico.core.dto.OrdemDeServicoListagemDto;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
+import com.fiap.mecanica.shared.page.Pagina;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -43,6 +45,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -99,6 +104,9 @@ class OrdemDeServicoControllerContractTest {
 
     @MockitoBean
     private EntregarOrdemDeServicoUseCase entregarOrdemDeServicoUseCase;
+
+    @MockitoBean
+    private ListarOrdemDeServicoUseCase listarOrdemDeServicoUseCase;
 
     private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"}";
 
@@ -943,5 +951,41 @@ class OrdemDeServicoControllerContractTest {
                 .andExpect(status().isNoContent());
 
         Mockito.verify(entregarOrdemDeServicoUseCase).entregar(1L);
+    }
+
+    // --- detalhamento ---
+
+    @Test
+    void shouldReturn200WithPagedDetalhamentoWhenSuccess() throws Exception {
+        var dto = OrdemDeServicoListagemDto.builder()
+                .id(1L)
+                .nomeCliente("Maria Santos")
+                .documentoCliente("123.456.789-09")
+                .veiculo("Civic 2020 ABC-1234")
+                .nomeAtendente("João Silva")
+                .nomeMecanico(null)
+                .status("RECEBIDA")
+                .descricao("Barulho ao frear")
+                .dataCriacao(LocalDateTime.of(2024, 1, 15, 10, 0))
+                .servicos(List.of())
+                .pecas(List.of())
+                .insumos(List.of())
+                .build();
+        Mockito.when(listarOrdemDeServicoUseCase.listar(0, 10))
+                .thenReturn(new Pagina<>(List.of(dto), 0, 10, 1L, 1));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/ordem-servico/detalhamento")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(1))
+                .andExpect(jsonPath("$.content[0].nomeCliente").value("Maria Santos"))
+                .andExpect(jsonPath("$.content[0].veiculo").value("Civic 2020 ABC-1234"))
+                .andExpect(jsonPath("$.content[0].nomeAtendente").value("João Silva"))
+                .andExpect(jsonPath("$.content[0].status").value("RECEBIDA"))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1));
+
+        Mockito.verify(listarOrdemDeServicoUseCase).listar(0, 10);
     }
 }

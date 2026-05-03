@@ -41,7 +41,8 @@ public class SecurityConfiguration {
             "/veiculo/**",
             "/peca/**",
             "/insumo/**",
-            "/servico/**"
+            "/servico/**",
+            "/ordem-servico/detalhamento"
     };
 
     @Bean

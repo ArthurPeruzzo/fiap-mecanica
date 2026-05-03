@@ -12,6 +12,7 @@ public class Cpf implements Documento {
 		return valor;
 	}
 
+	@Override
 	public String getValorFormatado() {
 		return valor.replaceAll("(\\d{3})(\\d{3})(\\d{3})(\\d{2})", "$1.$2.$3-$4");
 	}
