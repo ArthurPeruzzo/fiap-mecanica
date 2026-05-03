@@ -34,4 +34,8 @@ public class Veiculo {
         return this.clienteId.equals(clienteId);
     }
 
+    public String getInformacoesConcatenadas() {
+        return modelo + " " + ano + " " + placa.getValorFormatado();
+    }
+
 }

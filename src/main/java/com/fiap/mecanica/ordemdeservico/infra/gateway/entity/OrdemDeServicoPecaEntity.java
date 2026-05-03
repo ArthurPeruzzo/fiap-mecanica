@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "ordem_servico_peca")
 @Builder
@@ -26,4 +28,8 @@ public class OrdemDeServicoPecaEntity {
 
     @Column(name = "quantidade", nullable = false)
     private Integer quantidade;
+
+    @Column(name = "preco", nullable = false)
+    private BigDecimal preco;
+
 }

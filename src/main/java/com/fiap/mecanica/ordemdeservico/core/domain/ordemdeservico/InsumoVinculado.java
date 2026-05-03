@@ -1,4 +1,9 @@
 package com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico;
 
-public record InsumoVinculado(Long insumoId, Integer quantidade) {
+import java.math.BigDecimal;
+
+public record InsumoVinculado(Long insumoId, Integer quantidade, BigDecimal preco) {
+	public BigDecimal calculaValorTotal() {
+		return preco.multiply(BigDecimal.valueOf(quantidade));
+	}
 }

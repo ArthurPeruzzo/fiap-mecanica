@@ -40,12 +40,13 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
     private static final Long ORDEM_ID = 1L;
     private static final Long PECA_ID = 20L;
     private static final Integer QUANTIDADE = 2;
+    private static final BigDecimal PRECO = BigDecimal.TEN;
     private static final String DESCRICAO = "Barulho ao frear";
 
     private OrdemDeServico ordemEmDiagnostico(List<PecaVinculada> pecasVinculadas) {
         return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
                 StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), pecasVinculadas, List.of());
+                List.of(), pecasVinculadas, List.of(), null, null, null, null, null, null);
     }
 
     private Peca pecaComEstoque(Integer estoque) {
@@ -68,18 +69,19 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
         vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE);
 
         Mockito.verify(pecaGateway).atualizar(Mockito.any());
-        Mockito.verify(ordemDeServicoGateway).vincularOuSomarPeca(ORDEM_ID, PECA_ID, QUANTIDADE);
+        Mockito.verify(ordemDeServicoGateway).vincularOuSomarPeca(ORDEM_ID, PECA_ID, QUANTIDADE, PRECO);
     }
 
     @Test
     void shouldSomarQuantidadeWhenPecaAlreadyLinked() {
-        stubOrdem(ordemEmDiagnostico(List.of(new PecaVinculada(PECA_ID, 3))));
+        BigDecimal preco = new BigDecimal(10);
+        stubOrdem(ordemEmDiagnostico(List.of(new PecaVinculada(PECA_ID, 3, preco))));
         stubPeca(pecaComEstoque(10));
 
         vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE);
 
         Mockito.verify(pecaGateway).atualizar(Mockito.any());
-        Mockito.verify(ordemDeServicoGateway).vincularOuSomarPeca(ORDEM_ID, PECA_ID, QUANTIDADE);
+        Mockito.verify(ordemDeServicoGateway).vincularOuSomarPeca(ORDEM_ID, PECA_ID, QUANTIDADE, PRECO);
     }
 
     @Test
@@ -90,7 +92,7 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
                 () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));
 
         Mockito.verifyNoInteractions(pecaGateway);
-        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
@@ -102,7 +104,7 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
                 () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));
 
         Mockito.verify(pecaGateway, Mockito.never()).atualizar(Mockito.any());
-        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
@@ -114,13 +116,14 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
                 () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));
 
         Mockito.verify(pecaGateway, Mockito.never()).atualizar(Mockito.any());
-        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
     void shouldThrowWhenOrdemNotEmDiagnostico() {
         var ordemRecebida = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, null,
-                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null, List.of(), List.of(), List.of());
+                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null,
+                null, List.of(), List.of(), List.of(), null, null, null, null, null, null);
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemRecebida));
         stubPeca(pecaComEstoque(10));
 
@@ -128,6 +131,6 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
                 () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));
 
         Mockito.verify(pecaGateway, Mockito.never()).atualizar(Mockito.any());
-        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 }

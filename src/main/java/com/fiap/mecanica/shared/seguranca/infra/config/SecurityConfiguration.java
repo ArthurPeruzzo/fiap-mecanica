@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -27,8 +28,7 @@ public class SecurityConfiguration {
     protected static final String ATENDENTE = "ATENDENTE";
     protected static final String MECANICO = "MECANICO";
 
-
-    protected static final String [] ENDPOINTS_SEM_AUTENTICACAO = {
+    static final String[] ENDPOINTS_SEM_AUTENTICACAO = {
             "/authenticate/login",
             "/v3/api-docs/**",
             "/swagger-ui.html",
@@ -36,37 +36,41 @@ public class SecurityConfiguration {
             "/favicon.ico"
     };
 
-    protected static final String [] ENDPOINTS_ADMINISTRADOR = {
+    private static final String[] ENDPOINTS_ADMINISTRADOR = {
             "/cliente/**",
             "/veiculo/**",
             "/peca/**",
             "/insumo/**",
-            "/servico/**"
+            "/servico/**",
+            "/ordem-servico/detalhamento"
     };
-
-    protected static final String [] ENDPOINTS_ATENDENTE = {
-            "/ordem-servico/**"
-    };
-
-    protected static final String[] ENDPOINTS_MECANICO = {
-            "/ordem-servico/*/diagnostico/**",
-            "/ordem-servico/*/servicos/**",
-            "/ordem-servico/*/pecas/**",
-            "/ordem-servico/*/insumos/**"
-    };
-
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) {
-        return httpSecurity.csrf(AbstractHttpConfigurer::disable)
+    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
+        return httpSecurity
+                .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth ->
-                        auth.requestMatchers(ENDPOINTS_SEM_AUTENTICACAO).permitAll()
-                                .requestMatchers(ENDPOINTS_ADMINISTRADOR).hasRole(ADMINISTRADOR)
-                                .requestMatchers(ENDPOINTS_MECANICO).hasRole(MECANICO)
-                                .requestMatchers(ENDPOINTS_ATENDENTE).hasRole(ATENDENTE)
-                                .anyRequest().denyAll()
-                ).exceptionHandling(exception ->
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(ENDPOINTS_SEM_AUTENTICACAO).permitAll()
+                        .requestMatchers(ENDPOINTS_ADMINISTRADOR).hasRole(ADMINISTRADOR)
+                        // ATENDENTE
+                        .requestMatchers(HttpMethod.POST,  "/ordem-servico").hasRole(ATENDENTE)
+                        .requestMatchers(HttpMethod.POST,  "/ordem-servico/orcamento/**").hasRole(ATENDENTE)
+                        .requestMatchers(HttpMethod.PATCH, "/ordem-servico/*/entregar").hasRole(ATENDENTE)
+                        // MECANICO
+                        .requestMatchers(HttpMethod.PATCH,  "/ordem-servico/*/diagnostico").hasRole(MECANICO)
+                        .requestMatchers(HttpMethod.PATCH,  "/ordem-servico/*/diagnostico/conclusao").hasRole(MECANICO)
+                        .requestMatchers(HttpMethod.PUT,    "/ordem-servico/*/servicos/*").hasRole(MECANICO)
+                        .requestMatchers(HttpMethod.DELETE, "/ordem-servico/*/servicos/*").hasRole(MECANICO)
+                        .requestMatchers(HttpMethod.PATCH,  "/ordem-servico/*/servicos/*/iniciar").hasRole(MECANICO)
+                        .requestMatchers(HttpMethod.PATCH,  "/ordem-servico/*/servicos/*/finalizar").hasRole(MECANICO)
+                        .requestMatchers(HttpMethod.PUT,    "/ordem-servico/*/pecas/*").hasRole(MECANICO)
+                        .requestMatchers(HttpMethod.DELETE, "/ordem-servico/*/pecas/*").hasRole(MECANICO)
+                        .requestMatchers(HttpMethod.PUT,    "/ordem-servico/*/insumos/*").hasRole(MECANICO)
+                        .requestMatchers(HttpMethod.DELETE, "/ordem-servico/*/insumos/*").hasRole(MECANICO)
+                        .anyRequest().denyAll()
+                )
+                .exceptionHandling(exception ->
                         exception.authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType("application/json");
@@ -76,14 +80,14 @@ public class SecurityConfiguration {
                             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                             response.setContentType("application/json");
                             response.getWriter().write("{\"error\":\"Acesso negado\"}");
-                                })
+                        })
                 )
                 .addFilterBefore(userAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
@@ -91,7 +95,4 @@ public class SecurityConfiguration {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
-
 }
-

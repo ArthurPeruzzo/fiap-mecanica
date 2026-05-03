@@ -95,7 +95,7 @@ public class ClienteController {
 
 	@Operation(
 			summary = "Deletar um cliente",
-			description = "Remove um cliente pelo ID"
+			description = "Remove um cliente pelo ID. Ao deletar o cliente os veículos relacionados também são deletados"
 	)
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "204", description = "Cliente removido com sucesso"),

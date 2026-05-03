@@ -11,4 +11,24 @@ public interface OrdemDeServicoState {
     default void concluirDiagnostico(OrdemDeServico ordemDeServico) {
         throw new TransicaoDeStatusInvalidaException();
     }
+
+    default void enviarOrcamento(OrdemDeServico ordemDeServico) {
+        throw new TransicaoDeStatusInvalidaException();
+    }
+
+    default void cancelar(OrdemDeServico ordemDeServico) {
+        throw new TransicaoDeStatusInvalidaException();
+    }
+
+    default void aprovar(OrdemDeServico ordemDeServico) {
+        throw new TransicaoDeStatusInvalidaException();
+    }
+
+    default void finalizar(OrdemDeServico ordemDeServico) {
+        throw new TransicaoDeStatusInvalidaException();
+    }
+
+    default void entregar(OrdemDeServico ordemDeServico) {
+        throw new TransicaoDeStatusInvalidaException();
+    }
 }

@@ -7,9 +7,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "ordem_servico")
@@ -51,13 +50,22 @@ public class OrdemDeServicoEntity {
     @Column(name = "data_conclusao_diagnostico")
     private LocalDateTime dataConclusaoDiagnostico;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "ordem_servico_servico",
-            joinColumns = @JoinColumn(name = "ordem_servico_id"),
-            inverseJoinColumns = @JoinColumn(name = "servico_id")
-    )
-    @Builder.Default
-    private List<ServicoEntity> servicos = new ArrayList<>();
+    @Column(name = "data_envio_orcamento")
+    private LocalDateTime dataEnvioOrcamento;
+
+    @Column(name = "orcamento_total")
+    private BigDecimal orcamentoTotal;
+
+    @Column(name = "data_cancelamento")
+    private LocalDateTime dataCancelamento;
+
+    @Column(name = "data_aprovacao")
+    private LocalDateTime dataAprovacao;
+
+    @Column(name = "data_finalizacao")
+    private LocalDateTime dataFinalizacao;
+
+    @Column(name = "data_entrega")
+    private LocalDateTime dataEntrega;
 
 }

@@ -1,11 +1,17 @@
 package com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico;
 
+import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.*;
 import lombok.Getter;
 
+import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Getter
 public class OrdemDeServico {
@@ -19,11 +25,20 @@ public class OrdemDeServico {
     private LocalDateTime dataCriacao;
     private LocalDateTime dataInicioDiagnostico;
     private LocalDateTime dataConclusaoDiagnostico;
-    private List<Long> servicoIds = new ArrayList<>();
+    private List<ServicoVinculado> servicosVinculados = new ArrayList<>();
     private List<PecaVinculada> pecasVinculadas = new ArrayList<>();
     private List<InsumoVinculado> insumosVinculados = new ArrayList<>();
+    private Orcamento orcamento;
+    private LocalDateTime dataEnvioOrcamento;
+    private LocalDateTime dataCancelamento;
+    private LocalDateTime dataAprovacao;
+    private LocalDateTime dataFinalizacao;
+    private LocalDateTime dataEntrega;
 
     private OrdemDeServicoState state;
+
+    private OrdemDeServico() {
+    }
 
     public OrdemDeServico(Long clienteId, Long veiculoId, Long atendenteId, String descricao) {
         this.clienteId = clienteId;
@@ -33,21 +48,6 @@ public class OrdemDeServico {
         this.status = StatusOrdemDeServico.RECEBIDA;
         this.dataCriacao = LocalDateTime.now();
         this.state = new OrdemDeServicoRecebidaState();
-    }
-
-    private OrdemDeServico() {
-    }
-
-    void setMecanicoId(Long mecanicoId) {
-        this.mecanicoId = mecanicoId;
-    }
-
-    void setDataInicioDiagnostico(LocalDateTime dataInicioDiagnostico) {
-        this.dataInicioDiagnostico = dataInicioDiagnostico;
-    }
-
-    void setDataConclusaoDiagnostico(LocalDateTime dataConclusaoDiagnostico) {
-        this.dataConclusaoDiagnostico = dataConclusaoDiagnostico;
     }
 
     public void iniciarDiagnostico(Long mecanicoId) {
@@ -62,10 +62,26 @@ public class OrdemDeServico {
             throw new MecanicoNaoResponsavelPelaOrdemDeServicoException();
         }
 
-        if (servicoIds.isEmpty()) {
+        if (servicosVinculados.isEmpty()) {
             throw new OrdemDeServicoSemServicosException();
         }
         state.concluirDiagnostico(this);
+    }
+
+    public void gravarEnvioOrcamento() {
+        state.enviarOrcamento(this);
+    }
+
+    public void cancelar() {
+        state.cancelar(this);
+    }
+
+    public void aprovar() {
+        state.aprovar(this);
+    }
+
+    public void entregar() {
+        state.entregar(this);
     }
 
     void transicionarPara(StatusOrdemDeServico novoStatus, OrdemDeServicoState novoState) {
@@ -73,15 +89,60 @@ public class OrdemDeServico {
         this.state = novoState;
     }
 
-    public void vincularServico(Long servicoId) {
+    public void iniciarServico(Long servicoId) {
+        if (!StatusOrdemDeServico.EM_EXECUCAO.equals(status)) {
+            throw new IniciarServicoNaoAutorizadoException();
+        }
+
+        var servicoVinculado = servicosVinculados.stream()
+                .filter(s -> s.servicoId().equals(servicoId))
+                .findFirst().orElseThrow(ServicoNaoVinculadoException::new);
+
+        if (!StatusServico.NAO_INICIADO.equals(servicoVinculado.status())) {
+            throw new ServicoEmExecucaoOuFinalizadoException();
+        }
+
+        servicosVinculados.remove(servicoVinculado);
+        servicosVinculados.add(new ServicoVinculado(servicoId, servicoVinculado.preco(), StatusServico.EM_EXECUCAO, LocalDateTime.now(), null));
+    }
+
+    public void finalizarServico(Long servicoId) {
+        if (!StatusOrdemDeServico.EM_EXECUCAO.equals(status)) {
+            throw new FinalizarServicoNaoAutorizadoException();
+        }
+
+        var servicoVinculado = servicosVinculados.stream()
+                .filter(s -> s.servicoId().equals(servicoId))
+                .findFirst().orElseThrow(ServicoNaoVinculadoException::new);
+
+        if (!StatusServico.EM_EXECUCAO.equals(servicoVinculado.status())) {
+            throw new ServicoNaoIniciadoOuFinalizadoException();
+        }
+
+        servicosVinculados.remove(servicoVinculado);
+        servicosVinculados.add(new ServicoVinculado(servicoId, servicoVinculado.preco(), StatusServico.FINALIZADO,
+                servicoVinculado.dataInicioExecucao(), LocalDateTime.now()));
+
+        if (todosOsServicosFinalizados()) {
+            state.finalizar(this);
+        }
+    }
+
+    private boolean todosOsServicosFinalizados() {
+        return servicosVinculados.stream()
+                .allMatch(s -> StatusServico.FINALIZADO.equals(s.status()));
+    }
+
+    public void vincularServico(Long servicoId, BigDecimal preco) {
         if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
             throw new VinculoServicoNaoAutorizadoException();
         }
 
-        if (servicoIds.contains(servicoId)) {
+        boolean jaVinculado = servicosVinculados.stream().anyMatch(s -> s.servicoId().equals(servicoId));
+        if (jaVinculado) {
             throw new ServicoJaVinculadoException();
         }
-        servicoIds.add(servicoId);
+        servicosVinculados.add(new ServicoVinculado(servicoId, preco, StatusServico.NAO_INICIADO, null, null));
     }
 
     public void desvincularServico(Long servicoId) {
@@ -89,10 +150,10 @@ public class OrdemDeServico {
             throw new VinculoServicoNaoAutorizadoException();
         }
 
-        if (!servicoIds.contains(servicoId)) {
-            throw new ServicoNaoVinculadoException();
-        }
-        servicoIds.remove(servicoId);
+        var existente = servicosVinculados.stream()
+                .filter(s -> s.servicoId().equals(servicoId))
+                .findFirst().orElseThrow(ServicoNaoVinculadoException::new);
+        servicosVinculados.remove(existente);
     }
 
     public boolean possuiMecanicoResponsavel() {
@@ -103,7 +164,7 @@ public class OrdemDeServico {
         return this.mecanicoId != null && this.mecanicoId.equals(mecanicoId);
     }
 
-    public void vincularPeca(Long pecaId, Integer quantidade) {
+    public void vincularPeca(Long pecaId, Integer quantidade, BigDecimal preco) {
         if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
             throw new VinculoPecaNaoAutorizadaException();
         }
@@ -112,9 +173,9 @@ public class OrdemDeServico {
                 .findFirst();
         if (existente.isPresent()) {
             pecasVinculadas.remove(existente.get());
-            pecasVinculadas.add(new PecaVinculada(pecaId, existente.get().quantidade() + quantidade));
+            pecasVinculadas.add(new PecaVinculada(pecaId, existente.get().quantidade() + quantidade, preco));
         } else {
-            pecasVinculadas.add(new PecaVinculada(pecaId, quantidade));
+            pecasVinculadas.add(new PecaVinculada(pecaId, quantidade, preco));
         }
     }
 
@@ -134,11 +195,11 @@ public class OrdemDeServico {
         pecasVinculadas.remove(existente);
         int novaQuantidade = existente.quantidade() - quantidade;
         if (novaQuantidade > 0) {
-            pecasVinculadas.add(new PecaVinculada(pecaId, novaQuantidade));
+            pecasVinculadas.add(new PecaVinculada(pecaId, novaQuantidade, existente.preco()));
         }
     }
 
-    public void vincularInsumo(Long insumoId, Integer quantidade) {
+    public void vincularInsumo(Long insumoId, Integer quantidade, BigDecimal preco) {
         if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
             throw new VinculoInsumoNaoAutorizadaException();
         }
@@ -147,9 +208,9 @@ public class OrdemDeServico {
                 .findFirst();
         if (existente.isPresent()) {
             insumosVinculados.remove(existente.get());
-            insumosVinculados.add(new InsumoVinculado(insumoId, existente.get().quantidade() + quantidade));
+            insumosVinculados.add(new InsumoVinculado(insumoId, existente.get().quantidade() + quantidade, preco));
         } else {
-            insumosVinculados.add(new InsumoVinculado(insumoId, quantidade));
+            insumosVinculados.add(new InsumoVinculado(insumoId, quantidade, preco));
         }
     }
 
@@ -169,16 +230,40 @@ public class OrdemDeServico {
         insumosVinculados.remove(existente);
         int novaQuantidade = existente.quantidade() - quantidade;
         if (novaQuantidade > 0) {
-            insumosVinculados.add(new InsumoVinculado(insumoId, novaQuantidade));
+            insumosVinculados.add(new InsumoVinculado(insumoId, novaQuantidade, existente.preco()));
         }
+    }
+
+    void calcularOrcamento() {
+        var totalPecas = pecasVinculadas.stream()
+                .map(PecaVinculada::calculaValorTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        var totalInsumos = insumosVinculados.stream()
+                .map(InsumoVinculado::calculaValorTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        var totalServicos = servicosVinculados.stream()
+                .map(ServicoVinculado::preco)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal valorTotal = totalInsumos.add(totalPecas).add(totalServicos);
+        this.orcamento = new Orcamento(valorTotal);
     }
 
     public static OrdemDeServico reconstituir(Long id, Long clienteId, Long veiculoId, Long atendenteId,
                                               Long mecanicoId, StatusOrdemDeServico status, String descricao,
                                               LocalDateTime dataCriacao, LocalDateTime dataInicioDiagnostico,
-                                              LocalDateTime dataConclusaoDiagnostico, List<Long> servicoIds,
+                                              LocalDateTime dataConclusaoDiagnostico,
+                                              List<ServicoVinculado> servicosVinculados,
                                               List<PecaVinculada> pecasVinculadas,
-                                              List<InsumoVinculado> insumosVinculados) {
+                                              List<InsumoVinculado> insumosVinculados,
+                                              Orcamento orcamento,
+                                              LocalDateTime dataEnvioOrcamento,
+                                              LocalDateTime dataCancelamento,
+                                              LocalDateTime dataAprovacao,
+                                              LocalDateTime dataFinalizacao,
+                                              LocalDateTime dataEntrega) {
         var os = new OrdemDeServico();
         os.id = id;
         os.clienteId = clienteId;
@@ -191,9 +276,79 @@ public class OrdemDeServico {
         os.dataInicioDiagnostico = dataInicioDiagnostico;
         os.dataConclusaoDiagnostico = dataConclusaoDiagnostico;
         os.state = OrdemDeServicoStateFactory.from(status);
-        os.servicoIds = new ArrayList<>(servicoIds);
+        os.servicosVinculados = new ArrayList<>(servicosVinculados);
         os.pecasVinculadas = new ArrayList<>(pecasVinculadas);
         os.insumosVinculados = new ArrayList<>(insumosVinculados);
+        os.orcamento = orcamento;
+        os.dataEnvioOrcamento = dataEnvioOrcamento;
+        os.dataCancelamento = dataCancelamento;
+        os.dataAprovacao = dataAprovacao;
+        os.dataFinalizacao = dataFinalizacao;
+        os.dataEntrega = dataEntrega;
         return os;
+    }
+
+    public Map<Long, Integer> getTotalQuantidadePecasMapeadasPorId() {
+        return pecasVinculadas.stream()
+                .collect(Collectors.toMap(
+                        PecaVinculada::pecaId,
+                        PecaVinculada::quantidade
+                ));
+    }
+
+    public Map<Long, Integer> getTotalQuantidadeInsumosMapeadosPorId() {
+        return insumosVinculados.stream()
+                .collect(Collectors.toMap(
+                        InsumoVinculado::insumoId,
+                        InsumoVinculado::quantidade
+                ));
+    }
+
+    void setMecanicoId(Long mecanicoId) {
+        this.mecanicoId = mecanicoId;
+    }
+
+    void setDataInicioDiagnostico(LocalDateTime dataInicioDiagnostico) {
+        this.dataInicioDiagnostico = dataInicioDiagnostico;
+    }
+
+    void setDataConclusaoDiagnostico(LocalDateTime dataConclusaoDiagnostico) {
+        this.dataConclusaoDiagnostico = dataConclusaoDiagnostico;
+    }
+
+    void setDataEnvioOrcamento(LocalDateTime dataEnvioOrcamento) {
+        this.dataEnvioOrcamento = dataEnvioOrcamento;
+    }
+
+    void setDataCancelamento(LocalDateTime dataCancelamento) {
+        this.dataCancelamento = dataCancelamento;
+    }
+
+    void setDataAprovacao(LocalDateTime dataAprovacao) {
+        this.dataAprovacao = dataAprovacao;
+    }
+
+    void setDataFinalizacao(LocalDateTime dataFinalizacao) {
+        this.dataFinalizacao = dataFinalizacao;
+    }
+
+    void setDataEntrega(LocalDateTime dataEntrega) {
+        this.dataEntrega = dataEntrega;
+    }
+
+    public BigDecimal getValorTotalOrcamento() {
+        return Optional.ofNullable(orcamento).map(Orcamento::valorTotal).orElse(null);
+    }
+
+    public Duration calcularTempoMedioExecucaoServicos() {
+        var finalizados = servicosVinculados.stream()
+                .filter(sv -> sv.dataInicioExecucao() != null && sv.dataFimExecucao() != null)
+                .toList();
+        if (finalizados.isEmpty()) return null;
+        long mediaSegundos = (long) finalizados.stream()
+                .mapToLong(sv -> Duration.between(sv.dataInicioExecucao(), sv.dataFimExecucao()).getSeconds())
+                .average()
+                .orElse(0);
+        return Duration.ofSeconds(mediaSegundos);
     }
 }

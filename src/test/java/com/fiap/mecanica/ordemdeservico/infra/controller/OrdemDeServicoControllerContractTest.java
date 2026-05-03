@@ -9,6 +9,8 @@ import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularInsumoNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularPecaNaoAutorizadaException;
+import com.fiap.mecanica.ordemdeservico.core.exception.FinalizarServicoNaoAutorizadoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.IniciarServicoNaoAutorizadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.InsumoNaoVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.MecanicoNaoResponsavelPelaOrdemDeServicoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaVeiculoException;
@@ -17,6 +19,8 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoMecanicoRes
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.PecaNaoVinculadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.QuantidadeDesvincularInvalidaException;
+import com.fiap.mecanica.ordemdeservico.core.exception.ServicoEmExecucaoOuFinalizadoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoIniciadoOuFinalizadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoJaVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
@@ -25,8 +29,10 @@ import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClien
 import com.fiap.mecanica.ordemdeservico.core.exception.VinculoInsumoNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VinculoPecaNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VinculoServicoNaoAutorizadoException;
+import com.fiap.mecanica.ordemdeservico.core.dto.OrdemDeServicoListagemDto;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
+import com.fiap.mecanica.shared.page.Pagina;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -39,6 +45,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -77,6 +86,27 @@ class OrdemDeServicoControllerContractTest {
 
     @MockitoBean
     private DesvincularInsumoOrdemDeServicoUseCase desvincularInsumoOrdemDeServicoUseCase;
+
+    @MockitoBean
+    private EnviarOrcamentoOrdemDeServicoUseCase enviarOrcamentoOrdemDeServicoUseCase;
+
+    @MockitoBean
+    private OrcamentoRecusadoOrdemDeServicoUseCase orcamentoRecusadoOrdemDeServicoUseCase;
+
+    @MockitoBean
+    private OrcamentoAprovadoOrdemDeServicoUseCase orcamentoAprovadoOrdemDeServicoUseCase;
+
+    @MockitoBean
+    private IniciarServicoOrdemDeServicoUseCase iniciarServicoOrdemDeServicoUseCase;
+
+    @MockitoBean
+    private FinalizarServicoOrdemDeServicoUseCase finalizarServicoOrdemDeServicoUseCase;
+
+    @MockitoBean
+    private EntregarOrdemDeServicoUseCase entregarOrdemDeServicoUseCase;
+
+    @MockitoBean
+    private ListarOrdemDeServicoUseCase listarOrdemDeServicoUseCase;
 
     private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"}";
 
@@ -146,7 +176,7 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_BODY))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Veículo não pertence ao cliente informado"));
     }
 
@@ -157,7 +187,7 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_BODY))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Já existe uma ordem de serviço aberta para este veículo"));
     }
 
@@ -192,22 +222,12 @@ class OrdemDeServicoControllerContractTest {
     }
 
     @Test
-    void shouldReturn422WhenOrdemJaEmDiagnostico() throws Exception {
-        Mockito.doThrow(new TransicaoDeStatusInvalidaException())
-                .when(iniciarDiagnosticoOrdemDeServicoUseCase).iniciarDiagnostico(1L);
-
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
-    }
-
-    @Test
     void shouldReturn422WhenOutroMecanicoJaVinculado() throws Exception {
         Mockito.doThrow(new OrdemDeServicoMecanicoResponsavelException())
                 .when(iniciarDiagnosticoOrdemDeServicoUseCase).iniciarDiagnostico(1L);
 
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Já existe um mecanico responsavel pela ordem de serviço"));
     }
 
@@ -217,7 +237,7 @@ class OrdemDeServicoControllerContractTest {
                 .when(iniciarDiagnosticoOrdemDeServicoUseCase).iniciarDiagnostico(1L);
 
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
     }
 
@@ -257,7 +277,7 @@ class OrdemDeServicoControllerContractTest {
                 .when(concluirDiagnosticoOrdemDeServicoUseCase).concluirDiagnostico(1L);
 
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico/conclusao"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Somente o mecânico responsável pelo diagnóstico pode concluí-lo"));
     }
 
@@ -267,7 +287,7 @@ class OrdemDeServicoControllerContractTest {
                 .when(concluirDiagnosticoOrdemDeServicoUseCase).concluirDiagnostico(1L);
 
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico/conclusao"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Não é possível concluir o diagnóstico sem ao menos um serviço vinculado"));
     }
 
@@ -277,7 +297,7 @@ class OrdemDeServicoControllerContractTest {
                 .when(concluirDiagnosticoOrdemDeServicoUseCase).concluirDiagnostico(1L);
 
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico/conclusao"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
     }
 
@@ -317,7 +337,7 @@ class OrdemDeServicoControllerContractTest {
                 .when(vincularServicoOrdemDeServicoUseCase).vincular(1L, 10L);
 
         mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/servicos/10"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Este serviço já está vinculado à ordem de serviço"));
     }
 
@@ -327,7 +347,7 @@ class OrdemDeServicoControllerContractTest {
                 .when(vincularServicoOrdemDeServicoUseCase).vincular(1L, 10L);
 
         mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/servicos/10"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Não é possível adicionar ou remover serviços se a ordem de serviço não está em diagnóstico"));
     }
 
@@ -367,7 +387,7 @@ class OrdemDeServicoControllerContractTest {
                 .when(desvincularServicoOrdemDeServicoUseCase).desvincular(1L, 10L);
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/servicos/10"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Este serviço não está vinculado à ordem de serviço"));
     }
 
@@ -377,7 +397,7 @@ class OrdemDeServicoControllerContractTest {
                 .when(desvincularServicoOrdemDeServicoUseCase).desvincular(1L, 10L);
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/servicos/10"))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Não é possível adicionar ou remover serviços se a ordem de serviço não está em diagnóstico"));
     }
 
@@ -443,7 +463,7 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/pecas/5")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_PECA_BODY))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Estoque insuficiente para realizar a operação"));
     }
 
@@ -455,7 +475,7 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/pecas/5")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_PECA_BODY))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Não é possível vincular peças se a ordem de serviço não está em diagnóstico"));
     }
 
@@ -519,7 +539,7 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_PECA_BODY))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Não é possível desvincular peças se a ordem de serviço não está em diagnóstico"));
     }
 
@@ -531,7 +551,7 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_PECA_BODY))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Peça não está vinculada à ordem de serviço"));
     }
 
@@ -543,7 +563,7 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_PECA_BODY))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Quantidade a desvincular é maior que a quantidade vinculada"));
     }
 
@@ -609,7 +629,7 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/insumos/30")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_INSUMO_BODY))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Estoque insuficiente para realizar a operação"));
     }
 
@@ -621,7 +641,7 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/insumos/30")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_INSUMO_BODY))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Não é possível vincular insumos se a ordem de serviço não está em diagnóstico"));
     }
 
@@ -685,7 +705,7 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_INSUMO_BODY))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Não é possível desvincular insumos se a ordem de serviço não está em diagnóstico"));
     }
 
@@ -697,7 +717,7 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_INSUMO_BODY))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Insumo não está vinculado à ordem de serviço"));
     }
 
@@ -709,7 +729,263 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_INSUMO_BODY))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Quantidade a desvincular é maior que a quantidade vinculada"));
+    }
+
+    // --- enviarOrcamento ---
+
+    @Test
+    void shouldReturn204WhenEnviarOrcamentoSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/envio/1"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(enviarOrcamentoOrdemDeServicoUseCase).enviar(1L);
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnEnviarOrcamento() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
+                .when(enviarOrcamentoOrdemDeServicoUseCase).enviar(99L);
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/envio/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn422WhenTransicaoInvalidaOnEnviarOrcamento() throws Exception {
+        Mockito.doThrow(new TransicaoDeStatusInvalidaException())
+                .when(enviarOrcamentoOrdemDeServicoUseCase).enviar(1L);
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/envio/1"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
+    }
+
+    // --- recusarOrcamento ---
+
+    @Test
+    void shouldReturn204WhenRecusarOrcamentoSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/recusar/1"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(orcamentoRecusadoOrdemDeServicoUseCase).recursar(1L);
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnRecusar() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
+                .when(orcamentoRecusadoOrdemDeServicoUseCase).recursar(99L);
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/recusar/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn422WhenTransicaoInvalidaOnRecusar() throws Exception {
+        Mockito.doThrow(new TransicaoDeStatusInvalidaException())
+                .when(orcamentoRecusadoOrdemDeServicoUseCase).recursar(1L);
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/recusar/1"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
+    }
+
+    // --- iniciarServico ---
+
+    @Test
+    void shouldReturn204WhenIniciarServicoSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/iniciar"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(iniciarServicoOrdemDeServicoUseCase).iniciar(1L, 10L);
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnIniciarServico() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
+                .when(iniciarServicoOrdemDeServicoUseCase).iniciar(99L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/99/servicos/10/iniciar"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn404WhenServicoNotFoundOnIniciarServico() throws Exception {
+        Mockito.doThrow(new ServicoNaoEncontradoException())
+                .when(iniciarServicoOrdemDeServicoUseCase).iniciar(1L, 99L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/99/iniciar"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Serviço não encontrado"));
+    }
+
+    @Test
+    void shouldReturn422WhenServicoNaoVinculadoOnIniciarServico() throws Exception {
+        Mockito.doThrow(new ServicoNaoVinculadoException())
+                .when(iniciarServicoOrdemDeServicoUseCase).iniciar(1L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/iniciar"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.message").value("Este serviço não está vinculado à ordem de serviço"));
+    }
+
+    @Test
+    void shouldReturn422WhenOrdemNaoEmExecucaoOnIniciarServico() throws Exception {
+        Mockito.doThrow(new IniciarServicoNaoAutorizadoException())
+                .when(iniciarServicoOrdemDeServicoUseCase).iniciar(1L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/iniciar"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.message").value("Não é possível iniciar um serviço se a ordem de serviço não está em execução"));
+    }
+
+    @Test
+    void shouldReturn422WhenServicoJaIniciadoOnIniciarServico() throws Exception {
+        Mockito.doThrow(new ServicoEmExecucaoOuFinalizadoException())
+                .when(iniciarServicoOrdemDeServicoUseCase).iniciar(1L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/iniciar"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.message").value("Este serviço já foi iniciado ou finalizado"));
+    }
+
+    // --- finalizarServico ---
+
+    @Test
+    void shouldReturn204WhenFinalizarServicoSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/finalizar"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(finalizarServicoOrdemDeServicoUseCase).finalizar(1L, 10L);
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnFinalizar() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
+                .when(finalizarServicoOrdemDeServicoUseCase).finalizar(99L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/99/servicos/10/finalizar"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn404WhenServicoNotFoundOnFinalizar() throws Exception {
+        Mockito.doThrow(new ServicoNaoEncontradoException())
+                .when(finalizarServicoOrdemDeServicoUseCase).finalizar(1L, 99L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/99/finalizar"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Serviço não encontrado"));
+    }
+
+    @Test
+    void shouldReturn422WhenServicoNaoVinculadoOnFinalizar() throws Exception {
+        Mockito.doThrow(new ServicoNaoVinculadoException())
+                .when(finalizarServicoOrdemDeServicoUseCase).finalizar(1L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/finalizar"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.message").value("Este serviço não está vinculado à ordem de serviço"));
+    }
+
+    @Test
+    void shouldReturn422WhenOrdemNaoEmExecucaoOnFinalizar() throws Exception {
+        Mockito.doThrow(new FinalizarServicoNaoAutorizadoException())
+                .when(finalizarServicoOrdemDeServicoUseCase).finalizar(1L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/finalizar"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.message").value("Não é possível finalizar um serviço se a ordem de serviço não está em execução"));
+    }
+
+    @Test
+    void shouldReturn422WhenServicoNaoIniciadoOuFinalizadoOnFinalizar() throws Exception {
+        Mockito.doThrow(new ServicoNaoIniciadoOuFinalizadoException())
+                .when(finalizarServicoOrdemDeServicoUseCase).finalizar(1L, 10L);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/finalizar"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.message").value("Este serviço ainda não foi iniciado ou já foi finalizado"));
+    }
+
+    // --- aprovarOrcamento ---
+
+    @Test
+    void shouldReturn204WhenAprovarOrcamentoSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/aprovar/1"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(orcamentoAprovadoOrdemDeServicoUseCase).aprovar(1L);
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnAprovar() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
+                .when(orcamentoAprovadoOrdemDeServicoUseCase).aprovar(99L);
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/aprovar/99"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn422WhenTransicaoInvalidaOnAprovar() throws Exception {
+        Mockito.doThrow(new TransicaoDeStatusInvalidaException())
+                .when(orcamentoAprovadoOrdemDeServicoUseCase).aprovar(1L);
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/aprovar/1"))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
+    }
+
+    // --- entregar ---
+
+    @Test
+    void shouldReturn204WhenEntregarSuccess() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/entregar"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(entregarOrdemDeServicoUseCase).entregar(1L);
+    }
+
+    // --- detalhamento ---
+
+    @Test
+    void shouldReturn200WithPagedDetalhamentoWhenSuccess() throws Exception {
+        var dto = OrdemDeServicoListagemDto.builder()
+                .id(1L)
+                .nomeCliente("Maria Santos")
+                .documentoCliente("123.456.789-09")
+                .veiculo("Civic 2020 ABC-1234")
+                .nomeAtendente("João Silva")
+                .nomeMecanico(null)
+                .status("RECEBIDA")
+                .descricao("Barulho ao frear")
+                .dataCriacao(LocalDateTime.of(2024, 1, 15, 10, 0))
+                .servicos(List.of())
+                .pecas(List.of())
+                .insumos(List.of())
+                .build();
+        Mockito.when(listarOrdemDeServicoUseCase.listar(0, 10))
+                .thenReturn(new Pagina<>(List.of(dto), 0, 10, 1L, 1));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/ordem-servico/detalhamento")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(1))
+                .andExpect(jsonPath("$.content[0].nomeCliente").value("Maria Santos"))
+                .andExpect(jsonPath("$.content[0].veiculo").value("Civic 2020 ABC-1234"))
+                .andExpect(jsonPath("$.content[0].nomeAtendente").value("João Silva"))
+                .andExpect(jsonPath("$.content[0].status").value("RECEBIDA"))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1));
+
+        Mockito.verify(listarOrdemDeServicoUseCase).listar(0, 10);
     }
 }

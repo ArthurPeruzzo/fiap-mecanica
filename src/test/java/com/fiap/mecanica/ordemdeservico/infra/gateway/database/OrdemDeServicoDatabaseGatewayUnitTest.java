@@ -2,13 +2,15 @@ package com.fiap.mecanica.ordemdeservico.infra.gateway.database;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoInsumoEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoPecaEntity;
-import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
-import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.ServicoEntity;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoServicoEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoInsumoRepository;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoPecaRepository;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoRepository;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoServicoRepository;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +42,9 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
     @Mock
     private OrdemDeServicoInsumoRepository ordemDeServicoInsumoRepository;
 
+    @Mock
+    private OrdemDeServicoServicoRepository ordemDeServicoServicoRepository;
+
     private static final String DESCRICAO = "Barulho ao frear";
 
     @Test
@@ -66,16 +71,14 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
     void criar_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
         Mockito.when(ordemDeServicoRepository.save(Mockito.any()))
                 .thenThrow(new RuntimeException("db error"));
-
-        assertThrows(ErroAcessoBaseDeDadosException.class,
-                () -> gateway.criar(new OrdemDeServico(1L, 2L, 3L, DESCRICAO)));
+        OrdemDeServico ordemDeServico = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.criar(ordemDeServico));
     }
 
     @Test
     void buscarPorId_shouldReconstituteDomainFromEntityWithServicos() {
         var dataCriacao = LocalDateTime.of(2026, 1, 10, 9, 0);
         var dataInicio = LocalDateTime.of(2026, 1, 10, 10, 0);
-        var servicoEntity = ServicoEntity.builder().id(7L).nome("Alinhamento").descricao("desc").preco(BigDecimal.TEN).build();
         var entity = OrdemDeServicoEntity.builder()
                 .id(10L)
                 .clienteId(1L)
@@ -87,11 +90,11 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
                 .dataCriacao(dataCriacao)
                 .dataInicioDiagnostico(dataInicio)
                 .dataConclusaoDiagnostico(null)
-                .servicos(List.of(servicoEntity))
                 .build();
-        Mockito.when(ordemDeServicoRepository.findOrdemDeServicoById(10L)).thenReturn(Optional.of(entity));
+        Mockito.when(ordemDeServicoRepository.findById(10L)).thenReturn(Optional.of(entity));
         Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoId(10L)).thenReturn(List.of());
         Mockito.when(ordemDeServicoInsumoRepository.findByOrdemServicoId(10L)).thenReturn(List.of());
+        Mockito.when(ordemDeServicoServicoRepository.findByOrdemServicoId(10L)).thenReturn(List.of());
 
         var result = gateway.buscarPorId(10L);
 
@@ -107,7 +110,6 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         assertEquals(dataCriacao, os.getDataCriacao());
         assertEquals(dataInicio, os.getDataInicioDiagnostico());
         assertNull(os.getDataConclusaoDiagnostico());
-        assertEquals(List.of(7L), os.getServicoIds());
     }
 
     @Test
@@ -120,8 +122,8 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
                 .id(10L).clienteId(1L).veiculoId(2L).atendenteId(3L).mecanicoId(5L)
                 .status(StatusOrdemDeServico.EM_DIAGNOSTICO).descricao(DESCRICAO)
                 .dataCriacao(LocalDateTime.now()).dataInicioDiagnostico(LocalDateTime.now())
-                .dataConclusaoDiagnostico(null).servicos(List.of()).build();
-        Mockito.when(ordemDeServicoRepository.findOrdemDeServicoById(10L)).thenReturn(Optional.of(entity));
+                .dataConclusaoDiagnostico(null).build();
+        Mockito.when(ordemDeServicoRepository.findById(10L)).thenReturn(Optional.of(entity));
         Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoId(10L)).thenReturn(List.of(pecaEntity));
         Mockito.when(ordemDeServicoInsumoRepository.findByOrdemServicoId(10L)).thenReturn(List.of(insumoEntity));
 
@@ -139,14 +141,14 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
 
     @Test
     void buscarPorId_shouldReturnEmptyWhenNotFound() {
-        Mockito.when(ordemDeServicoRepository.findOrdemDeServicoById(99L)).thenReturn(Optional.empty());
+        Mockito.when(ordemDeServicoRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertTrue(gateway.buscarPorId(99L).isEmpty());
     }
 
     @Test
     void buscarPorId_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
-        Mockito.when(ordemDeServicoRepository.findOrdemDeServicoById(Mockito.any()))
+        Mockito.when(ordemDeServicoRepository.findById(Mockito.any()))
                 .thenThrow(new RuntimeException("db error"));
 
         assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.buscarPorId(1L));
@@ -157,21 +159,23 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         var dataInicio = LocalDateTime.of(2026, 1, 10, 10, 0);
         var dataConclusao = LocalDateTime.of(2026, 1, 10, 11, 0);
         var os = OrdemDeServico.reconstituir(10L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), dataInicio, dataConclusao, List.of(), List.of(), List.of());
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), dataInicio, dataConclusao,
+                List.of(), List.of(), List.of(), null, null, null, null, null, null);
 
         gateway.atualizar(os);
 
         Mockito.verify(ordemDeServicoRepository).atualizar(
-                10L, 5L, StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, dataInicio, dataConclusao);
+                10L, 5L, StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, dataInicio, dataConclusao, null, null, null, null, null, null);
         Mockito.verify(ordemDeServicoRepository, Mockito.never()).save(Mockito.any());
     }
 
     @Test
     void atualizar_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
         Mockito.doThrow(new RuntimeException("db error"))
-                .when(ordemDeServicoRepository).atualizar(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+                .when(ordemDeServicoRepository).atualizar(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
         var os = OrdemDeServico.reconstituir(10L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null, List.of(), List.of(), List.of());
+                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
+                List.of(), List.of(), List.of(), null, null, null, null, null, null);
 
         assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.atualizar(os));
     }
@@ -179,16 +183,16 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
     @Test
     void existeOrdemAbertaParaVeiculo_shouldReturnTrueWhenExists() {
         Mockito.when(ordemDeServicoRepository.existsByVeiculoIdAndStatusNotIn(
-                        2L, List.of(StatusOrdemDeServico.FINALIZADA, StatusOrdemDeServico.ENTREGUE)))
+                        2L, List.of(StatusOrdemDeServico.FINALIZADA, StatusOrdemDeServico.ENTREGUE, StatusOrdemDeServico.CANCELADA)))
                 .thenReturn(true);
 
-        assertTrue(gateway.existeOrdemAbertaParaVeiculo(2L));
+;        assertTrue(gateway.existeOrdemAbertaParaVeiculo(2L));
     }
 
     @Test
     void existeOrdemAbertaParaVeiculo_shouldReturnFalseWhenNotExists() {
         Mockito.when(ordemDeServicoRepository.existsByVeiculoIdAndStatusNotIn(
-                        2L, List.of(StatusOrdemDeServico.FINALIZADA, StatusOrdemDeServico.ENTREGUE)))
+                        2L, List.of(StatusOrdemDeServico.FINALIZADA, StatusOrdemDeServico.ENTREGUE, StatusOrdemDeServico.CANCELADA)))
                 .thenReturn(false);
 
         assertFalse(gateway.existeOrdemAbertaParaVeiculo(2L));
@@ -204,34 +208,54 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
 
     @Test
     void vincularServico_shouldCallRepository() {
-        gateway.vincularServico(1L, 10L);
+        gateway.vincularServico(1L, 10L, BigDecimal.TEN, StatusServico.NAO_INICIADO);
 
-        Mockito.verify(ordemDeServicoRepository).vincularServico(1L, 10L);
+        Mockito.verify(ordemDeServicoServicoRepository).save(Mockito.any(OrdemDeServicoServicoEntity.class));
     }
 
     @Test
     void vincularServico_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
         Mockito.doThrow(new RuntimeException("db error"))
-                .when(ordemDeServicoRepository).vincularServico(Mockito.any(), Mockito.any());
+                .when(ordemDeServicoServicoRepository).save(Mockito.any(OrdemDeServicoServicoEntity.class));
 
-        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.vincularServico(1L, 10L));
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.vincularServico(1L, 10L, BigDecimal.TEN, StatusServico.NAO_INICIADO));
     }
 
     @Test
     void desvincularServico_shouldCallRepository() {
         gateway.desvincularServico(1L, 10L);
 
-        Mockito.verify(ordemDeServicoRepository).desvincularServico(1L, 10L);
+        Mockito.verify(ordemDeServicoServicoRepository).deleteByOrdemServicoIdAndServicoId(1L, 10L);
     }
 
     @Test
     void desvincularServico_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
         Mockito.doThrow(new RuntimeException("db error"))
-                .when(ordemDeServicoRepository).desvincularServico(Mockito.any(), Mockito.any());
+                .when(ordemDeServicoServicoRepository).deleteByOrdemServicoIdAndServicoId(1L, 10L);
 
         assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.desvincularServico(1L, 10L));
     }
 
+
+    @Test
+    void atualizarServico_shouldCallRepositoryWithCorrectArgs() {
+        var dataInicio = LocalDateTime.of(2026, 1, 15, 10, 30);
+
+        gateway.atualizarServico(1L, 10L, StatusServico.EM_EXECUCAO, dataInicio, null);
+
+        Mockito.verify(ordemDeServicoServicoRepository).atualizar(10L, 1L, StatusServico.EM_EXECUCAO, dataInicio, null);
+    }
+
+    @Test
+    void atualizarServico_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.doThrow(new RuntimeException("db error"))
+                .when(ordemDeServicoServicoRepository).atualizar(
+                        Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+
+        LocalDateTime agora = LocalDateTime.now();
+        assertThrows(ErroAcessoBaseDeDadosException.class,
+                () -> gateway.atualizarServico(1L, 10L, StatusServico.EM_EXECUCAO, agora, null));
+    }
 
     @Test
     void desvincularOuSubtrairPeca_shouldDiminuirQuantidadeWhenParcial() {
@@ -273,13 +297,14 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
                 .thenReturn(Optional.empty());
         var captor = ArgumentCaptor.forClass(OrdemDeServicoPecaEntity.class);
 
-        gateway.vincularOuSomarPeca(1L, 20L, 3);
+        gateway.vincularOuSomarPeca(1L, 20L, 3, BigDecimal.TEN);
 
         Mockito.verify(ordemDeServicoPecaRepository).save(captor.capture());
         var entity = captor.getValue();
         assertEquals(1L, entity.getOrdemServicoId());
         assertEquals(20L, entity.getPecaId());
         assertEquals(3, entity.getQuantidade());
+        assertEquals(BigDecimal.TEN, entity.getPreco());
         Mockito.verify(ordemDeServicoPecaRepository, Mockito.never()).somarQuantidade(Mockito.any(), Mockito.any(), Mockito.any());
     }
 
@@ -290,7 +315,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(1L, 20L))
                 .thenReturn(Optional.of(existingEntity));
 
-        gateway.vincularOuSomarPeca(1L, 20L, 2);
+        gateway.vincularOuSomarPeca(1L, 20L, 2, BigDecimal.TEN);
 
         Mockito.verify(ordemDeServicoPecaRepository).somarQuantidade(1L, 20L, 2);
         Mockito.verify(ordemDeServicoPecaRepository, Mockito.never()).save(Mockito.any());
@@ -301,7 +326,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         Mockito.when(ordemDeServicoPecaRepository.findByOrdemServicoIdAndPecaId(Mockito.any(), Mockito.any()))
                 .thenThrow(new RuntimeException("db error"));
 
-        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.vincularOuSomarPeca(1L, 20L, 2));
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.vincularOuSomarPeca(1L, 20L, 2, BigDecimal.TEN));
     }
 
     @Test
@@ -344,7 +369,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
                 .thenReturn(Optional.empty());
         var captor = ArgumentCaptor.forClass(OrdemDeServicoInsumoEntity.class);
 
-        gateway.vincularOuSomarInsumo(1L, 30L, 5);
+        gateway.vincularOuSomarInsumo(1L, 30L, 5, BigDecimal.TEN);
 
         Mockito.verify(ordemDeServicoInsumoRepository).save(captor.capture());
         var entity = captor.getValue();
@@ -361,7 +386,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         Mockito.when(ordemDeServicoInsumoRepository.findByOrdemServicoIdAndInsumoId(1L, 30L))
                 .thenReturn(Optional.of(existingEntity));
 
-        gateway.vincularOuSomarInsumo(1L, 30L, 3);
+        gateway.vincularOuSomarInsumo(1L, 30L, 3, BigDecimal.TEN);
 
         Mockito.verify(ordemDeServicoInsumoRepository).somarQuantidade(1L, 30L, 3);
         Mockito.verify(ordemDeServicoInsumoRepository, Mockito.never()).save(Mockito.any());
@@ -372,6 +397,6 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
         Mockito.when(ordemDeServicoInsumoRepository.findByOrdemServicoIdAndInsumoId(Mockito.any(), Mockito.any()))
                 .thenThrow(new RuntimeException("db error"));
 
-        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.vincularOuSomarInsumo(1L, 30L, 3));
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.vincularOuSomarInsumo(1L, 30L, 3, BigDecimal.TEN));
     }
 }

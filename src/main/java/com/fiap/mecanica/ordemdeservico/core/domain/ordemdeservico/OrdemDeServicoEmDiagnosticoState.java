@@ -7,6 +7,7 @@ class OrdemDeServicoEmDiagnosticoState implements OrdemDeServicoState {
 	@Override
 	public void concluirDiagnostico(OrdemDeServico ordemDeServico) {
 		ordemDeServico.setDataConclusaoDiagnostico(LocalDateTime.now());
+		ordemDeServico.calcularOrcamento();
 		ordemDeServico.transicionarPara(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, new OrdemDeServicoDiagnosticoConcluidoState());
 	}
 }

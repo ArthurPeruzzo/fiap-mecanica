@@ -9,16 +9,13 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface OrdemDeServicoRepository extends JpaRepository<OrdemDeServicoEntity, Long> {
     boolean existsByVeiculoIdAndStatusNotIn(Long veiculoId, List<StatusOrdemDeServico> statuses);
-
-    @Query("SELECT o FROM OrdemDeServicoEntity o LEFT JOIN FETCH o.servicos WHERE o.id = :id")
-    Optional<OrdemDeServicoEntity> findOrdemDeServicoById(@Param("id") Long id);
 
     @Modifying
     @Transactional
@@ -26,23 +23,25 @@ public interface OrdemDeServicoRepository extends JpaRepository<OrdemDeServicoEn
            "o.mecanicoId = :mecanicoId, " +
            "o.status = :status, " +
            "o.dataInicioDiagnostico = :dataInicioDiagnostico, " +
-           "o.dataConclusaoDiagnostico = :dataConclusaoDiagnostico " +
+           "o.dataConclusaoDiagnostico = :dataConclusaoDiagnostico, " +
+           "o.orcamentoTotal = :orcamentoTotal, " +
+           "o.dataEnvioOrcamento = :dataEnvioOrcamento, " +
+            "o.dataCancelamento = :dataCancelamento, " +
+            "o.dataAprovacao = :dataAprovacao, " +
+            "o.dataFinalizacao = :dataFinalizacao, " +
+            "o.dataEntrega = :dataEntrega " +
            "WHERE o.id = :id")
     void atualizar(
             @Param("id") Long id,
             @Param("mecanicoId") Long mecanicoId,
             @Param("status") StatusOrdemDeServico status,
             @Param("dataInicioDiagnostico") LocalDateTime dataInicioDiagnostico,
-            @Param("dataConclusaoDiagnostico") LocalDateTime dataConclusaoDiagnostico
+            @Param("dataConclusaoDiagnostico") LocalDateTime dataConclusaoDiagnostico,
+            @Param("orcamentoTotal") BigDecimal orcamentoTotal,
+            @Param("dataEnvioOrcamento") LocalDateTime dataEnvioOrcamento,
+            @Param("dataCancelamento") LocalDateTime dataCancelamento,
+            @Param("dataAprovacao") LocalDateTime dataAprovacao,
+            @Param("dataFinalizacao") LocalDateTime dataFinalizacao,
+            @Param("dataEntrega") LocalDateTime dataEntrega
     );
-
-    @Modifying
-    @Transactional
-    @Query(value = "INSERT INTO ordem_servico_servico (ordem_servico_id, servico_id) VALUES (:ordemId, :servicoId)", nativeQuery = true)
-    void vincularServico(@Param("ordemId") Long ordemId, @Param("servicoId") Long servicoId);
-
-    @Modifying
-    @Transactional
-    @Query(value = "DELETE FROM ordem_servico_servico WHERE ordem_servico_id = :ordemId AND servico_id = :servicoId", nativeQuery = true)
-    void desvincularServico(@Param("ordemId") Long ordemId, @Param("servicoId") Long servicoId);
 }

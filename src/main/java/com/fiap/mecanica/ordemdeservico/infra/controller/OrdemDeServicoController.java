@@ -1,9 +1,12 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
+import com.fiap.mecanica.ordemdeservico.core.dto.OrdemDeServicoListagemDto;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.*;
 import com.fiap.mecanica.shared.exception.dto.ExceptionDto;
+import com.fiap.mecanica.shared.page.PageResponse;
+import com.fiap.mecanica.shared.page.Pagina;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -31,6 +34,13 @@ public class OrdemDeServicoController {
     private final DesvincularPecaOrdemDeServicoUseCase desvincularPecaOrdemDeServicoUseCase;
     private final VincularInsumoOrdemDeServicoUseCase vincularInsumoOrdemDeServicoUseCase;
     private final DesvincularInsumoOrdemDeServicoUseCase desvincularInsumoOrdemDeServicoUseCase;
+    private final EnviarOrcamentoOrdemDeServicoUseCase enviarOrcamentoOrdemDeServicoUseCase;
+    private final OrcamentoRecusadoOrdemDeServicoUseCase orcamentoRecusadoOrdemDeServicoUseCase;
+    private final OrcamentoAprovadoOrdemDeServicoUseCase orcamentoAprovadoOrdemDeServicoUseCase;
+    private final IniciarServicoOrdemDeServicoUseCase iniciarServicoOrdemDeServicoUseCase;
+    private final FinalizarServicoOrdemDeServicoUseCase finalizarServicoOrdemDeServicoUseCase;
+    private final EntregarOrdemDeServicoUseCase entregarOrdemDeServicoUseCase;
+    private final ListarOrdemDeServicoUseCase listarOrdemDeServicoUseCase;
 
     @Operation(summary = "Criar Ordem de Serviço",
             description = "Cria uma nova Ordem de Serviço com status RECEBIDA. A descrição registra o relato do cliente. O atendente é identificado pelo token JWT.")
@@ -195,5 +205,129 @@ public class OrdemDeServicoController {
                                                 @RequestBody @Valid DesvincularInsumoRequestJson request) {
         desvincularInsumoOrdemDeServicoUseCase.desvincular(ordemServicoId, insumoId, request.quantidade());
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Enviar orçamento da Ordem de Serviço",
+            description = "Envia o orçamento para o cliente. Após isso o status passa a ser 'AGUARDANDO_APROVACAO' ")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Orçamento enviado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Parâmetros de entrada inválidos",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil ATENDENTE"),
+            @ApiResponse(responseCode = "404", description = "Ordem de Serviço não encontrada",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "status inválido para a operação",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+    })
+    @PostMapping("/orcamento/envio/{ordemServicoId}")
+    public ResponseEntity<Void> enviarOrcamento(@PathVariable Long ordemServicoId) {
+        enviarOrcamentoOrdemDeServicoUseCase.enviar(ordemServicoId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @Operation(summary = "Recusar orçamento da Ordem de Serviço",
+            description = "Após o cliente recusar o orçamento a ordem de servico deve ser cancelada. Após isso o status passa a ser 'CANCELADA' ")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Orçamento recusado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Parâmetros de entrada inválidos",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil ATENDENTE"),
+            @ApiResponse(responseCode = "404", description = "Ordem de Serviço não encontrada",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "status inválido para a operação",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+    })
+    @PostMapping("/orcamento/recusar/{ordemServicoId}")
+    public ResponseEntity<Void> recusar(@PathVariable Long ordemServicoId) {
+        orcamentoRecusadoOrdemDeServicoUseCase.recursar(ordemServicoId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @Operation(summary = "Aprovar orçamento da Ordem de Serviço",
+            description = "Após o cliente aprovar o orçamento a ordem de servico deve ser executada. Após isso o status passa a ser 'EM_EXECUCAO' ")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Orçamento aprovado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Parâmetros de entrada inválidos",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil ATENDENTE"),
+            @ApiResponse(responseCode = "404", description = "Ordem de Serviço não encontrada",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "status inválido para a operação",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+    })
+    @PostMapping("/orcamento/aprovar/{ordemServicoId}")
+    public ResponseEntity<Void> aprovar(@PathVariable Long ordemServicoId) {
+        orcamentoAprovadoOrdemDeServicoUseCase.aprovar(ordemServicoId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @Operation(summary = "Iniciar Servico",
+            description = "Inicia o serviço da Ordem de Serviço.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Serviço iniciado com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço, serviço ou mecânico não encontrado",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está em execução, serviço não está vinculado ou já foi iniciado/finalizado",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+    })
+    @PatchMapping("/{ordemServicoId}/servicos/{servicoId}/iniciar")
+    public ResponseEntity<Void> iniciarServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
+        iniciarServicoOrdemDeServicoUseCase.iniciar(ordemServicoId, servicoId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Finalizar Servico",
+            description = "Finaliza o serviço da Ordem de Serviço.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Serviço finalizado com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço, serviço ou mecânico não encontrado",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está em execução, serviço não está vinculado ou já foi finalizado",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+    })
+    @PatchMapping("/{ordemServicoId}/servicos/{servicoId}/finalizar")
+    public ResponseEntity<Void> finalizarServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
+        finalizarServicoOrdemDeServicoUseCase.finalizar(ordemServicoId, servicoId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Entregar Ordem de Serviço",
+            description = "Entrega a Ordem de Serviço.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Ordem de serviço entregue com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil Atendente"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço não encontrada",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "422", description = "status inválido para a operação",
+                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+    })
+    @PatchMapping("/{ordemServicoId}/entregar")
+    public ResponseEntity<Void> entregar(@PathVariable Long ordemServicoId) {
+        entregarOrdemDeServicoUseCase.entregar(ordemServicoId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(
+            summary = "Listar ordens de serviços",
+            description = "Retorna a lista paginada de ordens de serviços"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado")
+    })
+    @GetMapping("/detalhamento")
+    public ResponseEntity<PageResponse<OrdemDeServicoResponseJson>> detalhamento(@RequestParam(defaultValue = "0") int page,
+                                                                                 @RequestParam(defaultValue = "10") int size) {
+        Pagina<OrdemDeServicoListagemDto> pagina = listarOrdemDeServicoUseCase.listar(page, size);
+        return ResponseEntity.ok(PageResponse.from(pagina.map(OrdemDeServicoResponseJson::from)));
     }
 }

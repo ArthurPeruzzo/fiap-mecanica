@@ -10,7 +10,7 @@ import jakarta.validation.constraints.NotBlank;
 public record LoginRequestJson(
         @Schema(
                 description = "Email",
-                example = "email@email.com"
+                example = "administrador@mecanica.com"
         )
         @NotBlank(message = "O email deve ser preenchido")
         String email,
