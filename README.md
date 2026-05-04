@@ -11,11 +11,20 @@ API REST para gestão de uma oficina mecânica, desenvolvida como projeto acadê
 
 ## Stack
 
-- Java 25 + Spring Boot 4.0.5
-- Spring Web MVC, Spring Security, Spring Data JPA
-- MySQL 8.4 + Flyway
-- Autenticação JWT (Auth0 `java-jwt`)
-- Documentação via SpringDoc OpenAPI (Swagger UI)
+- Java 25
+- Spring Boot 4.0.5
+- Spring Web MVC
+- Spring Security + JWT (Auth0 `java-jwt`)
+- Spring Data JPA + Hibernate
+- Flyway
+- Lombok
+- SpringDoc OpenAPI (Swagger UI)
+- Testcontainers
+- MySQL 8.4
+
+### Justificativa para a escolha do MySQL
+
+A aplicação possui entidades com relacionamentos bem definidos, o que se encaixa naturalmente no modelo relacional. As garantias ACID são essenciais para operações críticas como baixa de estoque ao vincular peças e insumos a uma ordem de serviço. Além disso, o MySQL é amplamente adotado no mercado e possui integração nativa com o ecossistema Spring.
 
 ---
 
