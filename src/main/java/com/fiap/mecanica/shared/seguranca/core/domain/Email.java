@@ -1,4 +1,6 @@
 package com.fiap.mecanica.shared.seguranca.core.domain;
 
-public record Email(String value) {
+import java.io.Serializable;
+
+public record Email(String value) implements Serializable {
 }
