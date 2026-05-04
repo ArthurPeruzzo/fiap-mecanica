@@ -11,11 +11,20 @@ API REST para gestão de uma oficina mecânica, desenvolvida como projeto acadê
 
 ## Stack
 
-- Java 25 + Spring Boot 4.0.5
-- Spring Web MVC, Spring Security, Spring Data JPA
-- MySQL 8.4 + Flyway
-- Autenticação JWT (Auth0 `java-jwt`)
-- Documentação via SpringDoc OpenAPI (Swagger UI)
+- Java 25
+- Spring Boot 4.0.5
+- Spring Web MVC
+- Spring Security + JWT (Auth0 `java-jwt`)
+- Spring Data JPA + Hibernate
+- Flyway
+- Lombok
+- SpringDoc OpenAPI (Swagger UI)
+- Testcontainers
+- MySQL 8.4
+
+### Justificativa para a escolha do MySQL
+
+A aplicação possui entidades com relacionamentos bem definidos, o que se encaixa naturalmente no modelo relacional. Além disso, o MySQL é amplamente adotado no mercado e possui integração nativa com o ecossistema Spring.
 
 ---
 
@@ -36,10 +45,7 @@ API REST para gestão de uma oficina mecânica, desenvolvida como projeto acadê
 Sobe a aplicação e o banco de dados juntos, sem necessidade de instalar Java ou MySQL localmente.
 
 ```bash
-# Primeira vez ou após alterações no código
-docker compose up --build
-
-# Nas execuções seguintes (sem rebuild)
+# Comando utilizado para subir a aplicação
 docker compose up
 ```
 
@@ -104,18 +110,6 @@ Criados automaticamente pelas migrations do Flyway. Todos compartilham a mesma s
 | `administrador@mecanica.com` | `MeCanica2026!@#` | Administrador |
 | `atendente@mecanica.com` | `MeCanica2026!@#` | Atendente |
 | `mecanico@mecanica.com` | `MeCanica2026!@#` | Mecânico |
-
-### Autenticando
-
-```http
-POST /authenticate/login
-Content-Type: application/json
-
-{
-  "email": "administrador@mecanica.com",
-  "password": "MeCanica2026!@#"
-}
-```
 
 Use o token retornado no header `Authorization: Bearer <token>` nas demais requisições.
 

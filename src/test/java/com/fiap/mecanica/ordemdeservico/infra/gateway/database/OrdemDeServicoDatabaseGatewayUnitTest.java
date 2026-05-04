@@ -186,7 +186,7 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
                         2L, List.of(StatusOrdemDeServico.FINALIZADA, StatusOrdemDeServico.ENTREGUE, StatusOrdemDeServico.CANCELADA)))
                 .thenReturn(true);
 
-;        assertTrue(gateway.existeOrdemAbertaParaVeiculo(2L));
+        assertTrue(gateway.existeOrdemAbertaParaVeiculo(2L));
     }
 
     @Test

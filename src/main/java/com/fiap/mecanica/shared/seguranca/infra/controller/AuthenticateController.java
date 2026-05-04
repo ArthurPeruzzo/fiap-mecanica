@@ -5,7 +5,6 @@ import com.fiap.mecanica.shared.seguranca.infra.controller.dto.LoginInputDto;
 import com.fiap.mecanica.shared.seguranca.infra.controller.json.request.LoginRequestJson;
 import com.fiap.mecanica.shared.seguranca.infra.controller.json.response.LoginResponseJson;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
