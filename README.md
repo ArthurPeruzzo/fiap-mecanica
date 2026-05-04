@@ -45,10 +45,7 @@ A aplicação possui entidades com relacionamentos bem definidos, o que se encai
 Sobe a aplicação e o banco de dados juntos, sem necessidade de instalar Java ou MySQL localmente.
 
 ```bash
-# Primeira vez ou após alterações no código
-docker compose up --build
-
-# Nas execuções seguintes (sem rebuild)
+# Comando utilizado para subir a aplicação
 docker compose up
 ```
 
@@ -113,18 +110,6 @@ Criados automaticamente pelas migrations do Flyway. Todos compartilham a mesma s
 | `administrador@mecanica.com` | `MeCanica2026!@#` | Administrador |
 | `atendente@mecanica.com` | `MeCanica2026!@#` | Atendente |
 | `mecanico@mecanica.com` | `MeCanica2026!@#` | Mecânico |
-
-### Autenticando
-
-```http
-POST /authenticate/login
-Content-Type: application/json
-
-{
-  "email": "administrador@mecanica.com",
-  "password": "MeCanica2026!@#"
-}
-```
 
 Use o token retornado no header `Authorization: Bearer <token>` nas demais requisições.
 
