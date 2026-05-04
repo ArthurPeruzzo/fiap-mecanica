@@ -24,7 +24,7 @@ API REST para gestão de uma oficina mecânica, desenvolvida como projeto acadê
 
 ### Justificativa para a escolha do MySQL
 
-A aplicação possui entidades com relacionamentos bem definidos, o que se encaixa naturalmente no modelo relacional. As garantias ACID são essenciais para operações críticas como baixa de estoque ao vincular peças e insumos a uma ordem de serviço. Além disso, o MySQL é amplamente adotado no mercado e possui integração nativa com o ecossistema Spring.
+A aplicação possui entidades com relacionamentos bem definidos, o que se encaixa naturalmente no modelo relacional. Além disso, o MySQL é amplamente adotado no mercado e possui integração nativa com o ecossistema Spring.
 
 ---
 
