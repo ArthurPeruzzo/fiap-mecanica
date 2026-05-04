@@ -162,36 +162,36 @@ Dicionário de termos do domínio utilizados no sistema.
 
 ### Ordem de Serviço
 
-| Termo | Definição |
-|---|---|
-| **Ordem de Serviço (OS)** | Registro central do ciclo de atendimento de um veículo, desde a recepção até a entrega. Agrega serviços, peças e insumos vinculados. |
-| **Diagnóstico** | Fase em que o mecânico responsável inspeciona o veículo e determina quais serviços, peças e insumos serão necessários. |
+| Termo | Definição                                                                                                                            |
+|---|--------------------------------------------------------------------------------------------------------------------------------------|
+| **Ordem de Serviço** | Registro central do ciclo de atendimento de um veículo, desde a recepção até a entrega. Agrega serviços, peças e insumos vinculados. |
+| **Diagnóstico** | Fase em que o mecânico responsável inspeciona o veículo e determina quais serviços, peças e insumos serão necessários.               |
 | **Orçamento** | Valor total calculado ao concluir o diagnóstico, somando os preços de todos os serviços, peças e insumos vinculados naquele momento. |
-| **Vínculo** | Associação de um serviço, peça ou insumo a uma OS. Permitido apenas durante a fase de diagnóstico. |
-| **Mecânico Responsável** | O mecânico que iniciou o diagnóstico de uma OS. Somente ele pode continuar as operações daquela ordem. |
+| **Vínculo** | Associação de um serviço, peça ou insumo a uma ordem de serviço. Permitido apenas durante a fase de diagnóstico.                     |
+| **Mecânico Responsável** | O mecânico que iniciou o diagnóstico de uma ordem de serviço. Somente ele pode continuar as operações daquela ordem.                               |
 
-### Ciclo de vida da OS
+### Ciclo de vida da Ordem de Serviço
 
 | Status | Significado |
 |---|---|
-| **Recebida** | OS criada pelo atendente. Aguardando que um mecânico inicie o diagnóstico. |
+| **Recebida** | Ordem de Serviço criada pelo atendente. Aguardando que um mecânico inicie o diagnóstico. |
 | **Em Diagnóstico** | Diagnóstico iniciado pelo mecânico responsável. Permite vincular serviços, peças e insumos. |
 | **Diagnóstico Concluído** | Diagnóstico encerrado e orçamento calculado. Aguarda envio ao cliente. |
 | **Aguardando Aprovação** | Orçamento enviado ao cliente. Aguarda aprovação ou recusa. |
-| **Em Execução** (OS) | Orçamento aprovado. Os serviços vinculados podem ser iniciados e finalizados individualmente pelo mecânico. |
+| **Em Execução** (Ordem de Serviço) | Orçamento aprovado. Os serviços vinculados podem ser iniciados e finalizados individualmente pelo mecânico. |
 | **Finalizada** | Todos os serviços vinculados foram concluídos. Aguarda entrega do veículo. |
 | **Entregue** | Veículo devolvido ao cliente. Estado terminal positivo. |
 | **Cancelada** | Orçamento recusado pelo cliente. Estado terminal negativo. Estoque devolvido automaticamente. |
 
 ### Execução de serviços
 
-> Os status de serviço são independentes do status da OS. Uma OS pode estar **Em Execução** enquanto cada serviço vinculado evolui individualmente entre os estados abaixo.
+> Os status de serviço são independentes do status da Ordem de Serviço. Uma Ordem de Serviço pode estar **Em Execução** enquanto cada serviço vinculado evolui individualmente entre os estados abaixo.
 
 | Termo | Definição |
 |---|---|
 | **Serviço** | Atividade catalogada que pode ser executada pela oficina, com preço e descrição definidos. Ex: alinhamento, troca de óleo. |
-| **Serviço Vinculado** | Instância de um serviço associada a uma OS específica, com preço e status de execução próprios. |
-| **Não Iniciado** (serviço) | Serviço vinculado à OS mas ainda não iniciado pelo mecânico. |
+| **Serviço Vinculado** | Instância de um serviço associada a uma Ordem de Serviço específica, com preço e status de execução próprios. |
+| **Não Iniciado** (serviço) | Serviço vinculado à Ordem de Serviço mas ainda não iniciado pelo mecânico. |
 | **Em Execução** (serviço) | Serviço em andamento pelo mecânico responsável. |
-| **Finalizado** (serviço) | Serviço concluído. Quando todos os serviços vinculados atingem este status, a OS transita automaticamente para **Finalizada**. |
-| **Tempo Médio de Execução** | Média das durações de todos os serviços finalizados de uma OS. Ausente quando nenhum serviço foi concluído. |
+| **Finalizado** (serviço) | Serviço concluído. Quando todos os serviços vinculados atingem este status, a Ordem de Serviço transita automaticamente para **Finalizada**. |
+| **Tempo Médio de Execução** | Média das durações de todos os serviços finalizados de uma Ordem de Serviço. Ausente quando nenhum serviço foi concluído. |
