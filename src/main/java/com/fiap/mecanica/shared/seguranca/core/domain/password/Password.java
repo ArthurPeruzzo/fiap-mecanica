@@ -3,7 +3,7 @@ package com.fiap.mecanica.shared.seguranca.core.domain.password;
 import java.util.regex.Pattern;
 
 public final class Password extends PasswordBase {
-    private static final String REGEX_VALIDATE = "^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,20}$";
+    private static final Pattern REGEX_VALIDATE = Pattern.compile("^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,20}$");
 
     private static final String MENSAGEM_FORMATO_INVALIDO = """
             O formato da senha não é válido. A senha deve seguir as seguintes especificações:
@@ -20,7 +20,7 @@ public final class Password extends PasswordBase {
     }
 
     private static String validar(String value) {
-        if (!Pattern.compile(REGEX_VALIDATE).matcher(value).matches()) {
+        if (!REGEX_VALIDATE.matcher(value).matches()) {
             throw new IllegalArgumentException(MENSAGEM_FORMATO_INVALIDO);
         }
         return value;

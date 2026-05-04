@@ -5,10 +5,10 @@ import java.util.regex.Pattern;
 
 public record Email(String value) implements Serializable {
 
-    private static final String REGEX_VALIDATE = "^(.+)@(\\S+)$";
+    private static final Pattern REGEX_VALIDATE = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
     public Email {
-        boolean isValid = Pattern.compile(REGEX_VALIDATE)
+        boolean isValid = REGEX_VALIDATE
                 .matcher(value)
                 .matches();
 
