@@ -298,8 +298,8 @@ VALUES (@os6_id, @i_oleo, 5, 38.00);
 -- OS 7 — FINALIZADA
 -- Volkswagen Gol de Roberto Alves Moreira.
 -- Troca de pastilhas e discos concluída. Aguardando retirada.
--- Orçamento calculado: R$ 929,60
---   Serviços: Revisão de Freios (R$150)                        = R$150
+-- Orçamento calculado: R$ 1.049,60
+--   Serviços: Revisão de Freios (R$150) + Alinhamento (R$120)  = R$270
 --   Peças:    Pastilha 4x R$89,90 (R$359,60) + Disco 2x R$210 = R$779,60
 -- ==============================================================
 
@@ -311,14 +311,19 @@ VALUES
     (@cliente_roberto, @v_gol, @atendente_id, @mecanico_id, 'FINALIZADA',
      'Desgaste acentuado nas pastilhas e discos dianteiros. Pedal esponjoso e distância de frenagem aumentada.',
      '2026-03-20 08:00:00', '2026-03-21 09:00:00', '2026-03-22 10:00:00',
-     '2026-03-23 08:30:00', 929.60, '2026-03-24 09:00:00', '2026-04-02 16:30:00');
+     '2026-03-23 08:30:00', 1049.60, '2026-03-24 09:00:00', '2026-03-26 15:00:00');
 
 SET @os7_id = LAST_INSERT_ID();
 
 INSERT INTO `ordem_servico_servico`
     (ordem_servico_id, servico_id, preco, status, data_inicio_execucao, data_fim_execucao)
 VALUES
-    (@os7_id, @s_revisao_freios, 150.00, 'FINALIZADO', '2026-03-24 10:00:00', '2026-04-02 16:30:00');
+    (@os7_id, @s_revisao_freios, 150.00, 'FINALIZADO', '2026-03-24 10:00:00', '2026-03-25 16:30:00');
+
+INSERT INTO `ordem_servico_servico`
+    (ordem_servico_id, servico_id, preco, status, data_inicio_execucao, data_fim_execucao)
+VALUES
+    (@os7_id, @s_alinhamento, 120.00, 'FINALIZADO', '2026-03-25 17:00:00', '2026-03-26 15:00:00');
 
 INSERT INTO `ordem_servico_peca` (ordem_servico_id, peca_id, quantidade, preco)
 VALUES
@@ -329,10 +334,10 @@ VALUES
 -- OS 8 — ENTREGUE
 -- Renault Sandero de Roberto Alves Moreira.
 -- Manutenção preventiva concluída e veículo entregue ao cliente.
--- Orçamento calculado: R$ 274,00
---   Serviços: Troca de Óleo (R$80)    = R$80
---   Peças:    Filtro de Ar 1x R$42    = R$42
---   Insumos:  Óleo 5W30 4L x R$38    = R$152
+-- Orçamento calculado: R$ 474,00
+--   Serviços: Troca de Óleo (R$80) + Troca de Correia (R$200)  = R$280
+--   Peças:    Filtro de Ar 1x R$42                              = R$42
+--   Insumos:  Óleo 5W30 4L x R$38                              = R$152
 -- ==============================================================
 
 INSERT INTO `ordem_servico`
@@ -343,14 +348,19 @@ VALUES
     (@cliente_roberto, @v_sandero, @atendente_id, @mecanico_id, 'ENTREGUE',
      'Manutenção preventiva padrão. Troca de óleo, filtro de ar e verificação geral do veículo.',
      '2026-03-10 09:00:00', '2026-03-11 10:00:00', '2026-03-12 11:00:00',
-     '2026-03-13 09:00:00', 274.00, '2026-03-14 10:00:00', '2026-03-25 15:00:00', '2026-03-25 17:00:00');
+     '2026-03-13 09:00:00', 474.00, '2026-03-14 10:00:00', '2026-03-14 16:30:00', '2026-03-15 09:00:00');
 
 SET @os8_id = LAST_INSERT_ID();
 
 INSERT INTO `ordem_servico_servico`
     (ordem_servico_id, servico_id, preco, status, data_inicio_execucao, data_fim_execucao)
 VALUES
-    (@os8_id, @s_troca_oleo, 80.00, 'FINALIZADO', '2026-03-14 11:00:00', '2026-03-25 14:30:00');
+    (@os8_id, @s_troca_oleo, 80.00, 'FINALIZADO', '2026-03-14 11:00:00', '2026-03-14 13:00:00');
+
+INSERT INTO `ordem_servico_servico`
+    (ordem_servico_id, servico_id, preco, status, data_inicio_execucao, data_fim_execucao)
+VALUES
+    (@os8_id, @s_correia_dentada, 200.00, 'FINALIZADO', '2026-03-14 13:30:00', '2026-03-14 16:30:00');
 
 INSERT INTO `ordem_servico_peca` (ordem_servico_id, peca_id, quantidade, preco)
 VALUES (@os8_id, @p_filtro_ar, 1, 42.00);

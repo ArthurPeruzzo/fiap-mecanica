@@ -1,5 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller.json;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fiap.mecanica.ordemdeservico.core.dto.OrdemDeServicoListagemDto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
@@ -41,12 +42,15 @@ public class OrdemDeServicoResponseJson {
     private String descricao;
 
     @Schema(description = "Data e hora de abertura da ordem de serviço")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss", locale = "pt-BR", timezone = "America/Sao_Paulo")
     private LocalDateTime dataCriacao;
 
     @Schema(description = "Data e hora de início do diagnóstico")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss", locale = "pt-BR", timezone = "America/Sao_Paulo")
     private LocalDateTime dataInicioDiagnostico;
 
     @Schema(description = "Data e hora de conclusão do diagnóstico")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss", locale = "pt-BR", timezone = "America/Sao_Paulo")
     private LocalDateTime dataConclusaoDiagnostico;
 
     @Schema(description = "Serviços vinculados à ordem de serviço")
@@ -65,18 +69,23 @@ public class OrdemDeServicoResponseJson {
     private TempoMedioExecucaoResponseJson tempoMedioExecucaoServicos;
 
     @Schema(description = "Data e hora de envio do orçamento ao cliente")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss", locale = "pt-BR", timezone = "America/Sao_Paulo")
     private LocalDateTime dataEnvioOrcamento;
 
     @Schema(description = "Data e hora de cancelamento da ordem")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss", locale = "pt-BR", timezone = "America/Sao_Paulo")
     private LocalDateTime dataCancelamento;
 
     @Schema(description = "Data e hora de aprovação do orçamento pelo cliente")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss", locale = "pt-BR", timezone = "America/Sao_Paulo")
     private LocalDateTime dataAprovacao;
 
     @Schema(description = "Data e hora de finalização de todos os serviços")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss", locale = "pt-BR", timezone = "America/Sao_Paulo")
     private LocalDateTime dataFinalizacao;
 
     @Schema(description = "Data e hora de entrega do veículo ao cliente")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss", locale = "pt-BR", timezone = "America/Sao_Paulo")
     private LocalDateTime dataEntrega;
 
     public static OrdemDeServicoResponseJson from(OrdemDeServicoListagemDto os) {
