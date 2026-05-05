@@ -80,7 +80,7 @@ class VeiculoIntegrationTest extends AbstractContainer {
                 .contentType("application/json")
                 .header("Authorization", "Bearer " + token)
                 .body("""
-                        {"nome":"Pedro","sobrenome":"Silva","cpf":"188.254.690-39"}
+                        {"nome":"Pedro","cpf":"188.254.690-39"}
                         """)
                 .when().post("/cliente").then().statusCode(201);
 

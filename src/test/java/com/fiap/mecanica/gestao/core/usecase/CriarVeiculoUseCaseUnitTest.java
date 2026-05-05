@@ -6,7 +6,6 @@ import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.VeiculoJaExisteException;
 import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
 import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
-import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -32,7 +31,7 @@ class CriarVeiculoUseCaseUnitTest {
 
     @Test
     void shouldCreateVeiculoSuccessfully() {
-        var cliente = Cliente.reconstituir(1L, new NomeCompleto("Pedro", "Silva"), null, "12345678909");
+        var cliente = Cliente.reconstituir(1L, "Pedro", null, "12345678909");
         var dto = new CriarVeiculoDto(1L, "ABC1234", "Gol", 2020);
 
         Mockito.when(clienteGateway.buscarPorId(1L)).thenReturn(Optional.of(cliente));
@@ -56,7 +55,7 @@ class CriarVeiculoUseCaseUnitTest {
 
     @Test
     void shouldThrowVeiculoJaExisteExceptionWhenPlacaAlreadyExists() {
-        var cliente = Cliente.reconstituir(1L, new NomeCompleto("Pedro", "Silva"), null, "12345678909");
+        var cliente = Cliente.reconstituir(1L, "Pedro", null, "12345678909");
         var dto = new CriarVeiculoDto(1L, "ABC1234", "Gol", 2020);
 
         Mockito.when(clienteGateway.buscarPorId(1L)).thenReturn(Optional.of(cliente));
@@ -69,7 +68,7 @@ class CriarVeiculoUseCaseUnitTest {
 
     @Test
     void shouldStripHyphenFromPlacaBeforeCheckingDuplicate() {
-        var cliente = Cliente.reconstituir(1L, new NomeCompleto("Pedro", "Silva"), null, "12345678909");
+        var cliente = Cliente.reconstituir(1L,"Pedro", null, "12345678909");
         var dto = new CriarVeiculoDto(1L, "ABC-1234", "Gol", 2020);
 
         Mockito.when(clienteGateway.buscarPorId(1L)).thenReturn(Optional.of(cliente));

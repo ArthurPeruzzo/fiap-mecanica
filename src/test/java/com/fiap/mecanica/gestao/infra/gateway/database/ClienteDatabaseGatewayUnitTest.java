@@ -4,7 +4,7 @@ import com.fiap.mecanica.gestao.core.domain.Cliente;
 import com.fiap.mecanica.gestao.infra.gateway.entity.ClienteEntity;
 import com.fiap.mecanica.gestao.infra.gateway.repository.ClienteRepository;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
-import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
+import com.fiap.mecanica.shared.valueobjects.Cnpj;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -34,7 +34,7 @@ class ClienteDatabaseGatewayUnitTest {
 
     @Test
     void criar_shouldSaveEntityWithCpfAndNullCnpj() {
-        var cliente = new Cliente(new NomeCompleto("Pedro", "Silva"), null, "12345678909");
+        var cliente = new Cliente("Pedro", null, "12345678909");
         var captor = ArgumentCaptor.forClass(ClienteEntity.class);
 
         gateway.criar(cliente);
@@ -42,14 +42,13 @@ class ClienteDatabaseGatewayUnitTest {
         Mockito.verify(clienteRepository).save(captor.capture());
         var entity = captor.getValue();
         assertEquals("Pedro", entity.getNome());
-        assertEquals("Silva", entity.getSobrenome());
         assertEquals("12345678909", entity.getCpf());
         assertNull(entity.getCnpj());
     }
 
     @Test
     void criar_shouldSaveEntityWithCnpjAndNullCpf() {
-        var cliente = new Cliente(new NomeCompleto("Empresa", "LTDA"), "00000000000191", null);
+        var cliente = new Cliente("Empresa", "00000000000191", null);
         var captor = ArgumentCaptor.forClass(ClienteEntity.class);
 
         gateway.criar(cliente);
@@ -57,14 +56,13 @@ class ClienteDatabaseGatewayUnitTest {
         Mockito.verify(clienteRepository).save(captor.capture());
         var entity = captor.getValue();
         assertEquals("Empresa", entity.getNome());
-        assertEquals("LTDA", entity.getSobrenome());
         assertEquals("00000000000191", entity.getCnpj());
         assertNull(entity.getCpf());
     }
 
     @Test
     void criar_shouldPropagateExceptionFromRepository() {
-        var cliente = new Cliente(new NomeCompleto("Pedro", "Silva"), null, "12345678909");
+        var cliente = new Cliente("Pedro", null, "12345678909");
 
         Mockito.when(clienteRepository.save(Mockito.any(ClienteEntity.class)))
                 .thenThrow(new RuntimeException("erro no banco"));
@@ -78,14 +76,14 @@ class ClienteDatabaseGatewayUnitTest {
 
     @Test
     void buscarPorId_shouldReturnMappedClienteWhenFound() {
-        var entity = ClienteEntity.builder().id(1L).nome("Pedro").sobrenome("Silva").cpf("12345678909").build();
+        var entity = ClienteEntity.builder().id(1L).nome("Pedro").cpf("12345678909").build();
         Mockito.when(clienteRepository.findById(1L)).thenReturn(java.util.Optional.of(entity));
 
         var result = gateway.buscarPorId(1L);
 
         assertTrue(result.isPresent());
         assertEquals(1L, result.get().getId());
-        assertEquals("Pedro", result.get().getNomeCompleto().nome());
+        assertEquals("Pedro", result.get().getNome());
         assertEquals("12345678909", result.get().getCpf().get().getValor());
     }
 
@@ -110,7 +108,7 @@ class ClienteDatabaseGatewayUnitTest {
 
     @Test
     void atualizar_shouldSaveEntityWithId() {
-        var cliente = Cliente.reconstituir(1L, new NomeCompleto("Carlos", "Costa"), null, "12345678909");
+        var cliente = Cliente.reconstituir(1L, "Carlos", null, "12345678909");
         var captor = ArgumentCaptor.forClass(ClienteEntity.class);
 
         gateway.atualizar(cliente);
@@ -125,7 +123,7 @@ class ClienteDatabaseGatewayUnitTest {
 
     @Test
     void atualizar_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
-        var cliente = Cliente.reconstituir(1L, new NomeCompleto("Pedro", "Silva"), null, "12345678909");
+        var cliente = Cliente.reconstituir(1L,"Pedro", null, "12345678909");
         Mockito.when(clienteRepository.save(Mockito.any())).thenThrow(new RuntimeException("db error"));
 
         assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.atualizar(cliente));
@@ -185,7 +183,7 @@ class ClienteDatabaseGatewayUnitTest {
 
     @Test
     void listar_shouldReturnMappedPaginaWithCpf() {
-        var entity = ClienteEntity.builder().id(1L).nome("Pedro").sobrenome("Silva").cpf("12345678909").build();
+        var entity = ClienteEntity.builder().id(1L).nome("Pedro").cpf("12345678909").build();
         var springPage = new PageImpl<>(List.of(entity), PageRequest.of(0, 10), 1);
         Mockito.when(clienteRepository.findAll(PageRequest.of(0, 10))).thenReturn(springPage);
 
@@ -196,21 +194,21 @@ class ClienteDatabaseGatewayUnitTest {
         assertEquals(1, resultado.totalPages());
         var cliente = resultado.content().getFirst();
         assertEquals(1L, cliente.getId());
-        assertEquals("Pedro", cliente.getNomeCompleto().nome());
+        assertEquals("Pedro", cliente.getNome());
         assertEquals("12345678909", cliente.getCpf().get().getValor());
         assertTrue(cliente.getCnpj().isEmpty());
     }
 
     @Test
     void listar_shouldReturnMappedPaginaWithCnpj() {
-        var entity = ClienteEntity.builder().id(2L).nome("Empresa").sobrenome("LTDA").cnpj("00000000000191").build();
+        var entity = ClienteEntity.builder().id(2L).nome("Empresa").cnpj("00000000000191").build();
         var springPage = new PageImpl<>(List.of(entity), PageRequest.of(0, 10), 1);
         Mockito.when(clienteRepository.findAll(PageRequest.of(0, 10))).thenReturn(springPage);
 
         var resultado = gateway.listar(0, 10);
 
         var cliente = resultado.content().getFirst();
-        assertEquals("00000000000191", cliente.getCnpj().get().getValor());
+        assertEquals("00000000000191", cliente.getCnpj().map(Cnpj::getValor).orElse(null));
         assertTrue(cliente.getCpf().isEmpty());
     }
 

@@ -101,7 +101,7 @@ abstract class AbstractOrdemDeServicoIntegrationTest extends AbstractContainer {
 
     protected Long criarClienteERetornarId() {
         return clienteRepository.saveAndFlush(ClienteEntity.builder()
-                .nome("Maria").sobrenome("Santos").cpf("12345678900").build()).getId();
+                .nome("Maria").cpf("12345678900").build()).getId();
     }
 
     protected Long criarVeiculoERetornarId(Long clienteId) {

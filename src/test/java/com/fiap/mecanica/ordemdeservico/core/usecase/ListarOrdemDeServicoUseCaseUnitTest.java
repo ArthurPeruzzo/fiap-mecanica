@@ -8,11 +8,7 @@ import com.fiap.mecanica.gestao.core.gateway.AtendenteGateway;
 import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
 import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
 import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.InsumoVinculado;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.PecaVinculada;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.ServicoVinculado;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.ListarOrdemDeServicoUseCase;
@@ -60,7 +56,7 @@ class ListarOrdemDeServicoUseCaseUnitTest {
     private static final Long MECANICO_ID = 40L;
 
     private Cliente clientePadrao() {
-        return Cliente.reconstituir(CLIENTE_ID, new NomeCompleto("Maria", "Santos"), null, "12345678909");
+        return Cliente.reconstituir(CLIENTE_ID,"Maria", null, "12345678909");
     }
 
     private Veiculo veiculoPadrao() {
@@ -117,7 +113,7 @@ class ListarOrdemDeServicoUseCaseUnitTest {
         assertEquals(1, resultado.content().size());
         var dto = resultado.content().getFirst();
         assertEquals(ORDEM_ID, dto.getId());
-        assertEquals("Maria Santos", dto.getNomeCliente());
+        assertEquals("Maria", dto.getNomeCliente());
         assertEquals("123.456.789-09", dto.getDocumentoCliente());
         assertEquals("Civic 2020 ABC-1234", dto.getVeiculo());
         assertEquals("João Silva", dto.getNomeAtendente());

@@ -3,7 +3,6 @@ package com.fiap.mecanica.gestao.core.usecase;
 import com.fiap.mecanica.gestao.core.domain.Cliente;
 import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
-import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -26,7 +25,7 @@ class DeletarClienteUseCaseUnitTest {
 
 	@Test
 	void shouldDeletarClienteSuccessfully() {
-		var cliente = Cliente.reconstituir(1L, new NomeCompleto("Pedro", "Silva"), null, "12345678909");
+		var cliente = Cliente.reconstituir(1L, "Pedro", null, "12345678909");
 		Mockito.when(clienteGateway.buscarPorId(1L)).thenReturn(Optional.of(cliente));
 
 		deletarClienteUseCase.deletar(1L);

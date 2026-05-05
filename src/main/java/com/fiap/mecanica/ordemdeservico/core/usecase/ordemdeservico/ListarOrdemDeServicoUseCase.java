@@ -56,7 +56,7 @@ public class ListarOrdemDeServicoUseCase {
 
 		return OrdemDeServicoListagemDto.builder()
 				.id(os.getId())
-				.nomeCliente(cliente.getNomeCompleto().nomeCompleto())
+				.nomeCliente(cliente.getNome())
 				.documentoCliente(cliente.getDocumento().getValorFormatado())
 				.veiculo(veiculo.getInformacoesConcatenadas())
 				.nomeAtendente(atendente.getNomeCompleto().nomeCompleto())

@@ -26,7 +26,7 @@ class DetalhamentoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIn
                 .when().get("/ordem-servico/detalhamento")
                 .then().statusCode(200)
                 .body("content.size()", Matchers.equalTo(1))
-                .body("content[0].nomeCliente", Matchers.equalTo("Maria Santos"))
+                .body("content[0].nomeCliente", Matchers.equalTo("Maria"))
                 .body("content[0].veiculo", Matchers.equalTo("Civic 2020 ABC-1234"))
                 .body("content[0].nomeAtendente", Matchers.equalTo("João Silva"))
                 .body("content[0].nomeMecanico", Matchers.nullValue())

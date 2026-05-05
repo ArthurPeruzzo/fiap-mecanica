@@ -8,20 +8,20 @@
 -- CLIENTES
 -- ==============================================================
 
-INSERT INTO `cliente` (`nome`, `sobrenome`, `cpf`, `cnpj`)
-VALUES ('Carlos Eduardo', 'Ferreira', '65997627004', NULL);
+INSERT INTO `cliente` (`nome`, `cpf`, `cnpj`)
+VALUES ('Carlos Eduardo', '65997627004', NULL);
 
-INSERT INTO `cliente` (`nome`, `sobrenome`, `cpf`, `cnpj`)
-VALUES ('Ana Paula', 'Costa', '30014140063', NULL);
+INSERT INTO `cliente` (`nome`, `cpf`, `cnpj`)
+VALUES ('Ana Paula', '30014140063', NULL);
 
-INSERT INTO `cliente` (`nome`, `sobrenome`, `cpf`, `cnpj`)
-VALUES ('Roberto Alves', 'Moreira', '90196973074', NULL);
+INSERT INTO `cliente` (`nome`, `cpf`, `cnpj`)
+VALUES ('Roberto Alves', '90196973074', NULL);
 
-INSERT INTO `cliente` (`nome`, `sobrenome`, `cpf`, `cnpj`)
-VALUES ('Transportes Veloz', 'Ltda', NULL, 'G9NTLNHH000135');
+INSERT INTO `cliente` (`nome`, `cpf`, `cnpj`)
+VALUES ('Transportes Veloz', NULL, 'G9NTLNHH000135');
 
-INSERT INTO `cliente` (`nome`, `sobrenome`, `cpf`, `cnpj`)
-VALUES ('Maria Lucia', 'Santos', '09962456002', NULL);
+INSERT INTO `cliente` (`nome`, `cpf`, `cnpj`)
+VALUES ('Maria Lucia', '09962456002', NULL);
 
 -- ==============================================================
 -- VEÍCULOS
