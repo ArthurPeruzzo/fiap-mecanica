@@ -4,12 +4,9 @@ import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
 import com.fiap.mecanica.ordemdeservico.core.dto.OrdemDeServicoListagemDto;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.*;
-import com.fiap.mecanica.shared.exception.dto.ExceptionDto;
 import com.fiap.mecanica.shared.page.PageResponse;
 import com.fiap.mecanica.shared.page.Pagina;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,14 +43,11 @@ public class OrdemDeServicoController {
             description = "Cria uma nova Ordem de Serviço com status RECEBIDA. A descrição registra o relato do cliente. O atendente é identificado pelo token JWT.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "Ordem de Serviço criada com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Parâmetros de entrada inválidos",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "400", description = "Parâmetros de entrada inválidos"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
             @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil ATENDENTE"),
-            @ApiResponse(responseCode = "404", description = "Atendente, cliente ou veículo não encontrado",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "Veículo não pertence ao cliente informado ou já existe uma ordem de serviço aberta para este veículo",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+            @ApiResponse(responseCode = "404", description = "Atendente, cliente ou veículo não encontrado"),
+            @ApiResponse(responseCode = "422", description = "Veículo não pertence ao cliente informado ou já existe uma ordem de serviço aberta para este veículo")
     })
     @PostMapping
     public ResponseEntity<Void> criar(@RequestBody @Valid OrdemDeServicoRequestJson request) {
@@ -78,15 +72,13 @@ public class OrdemDeServicoController {
     }
 
     @Operation(summary = "Concluir Diagnóstico",
-            description = "Conclui o diagnóstico e avança o status para DIAGNOSTICO_CONCLUIDO.")
+            description = "Conclui o diagnóstico, calcula o valor total do orçamento com base nos serviços, peças e insumos vinculados, e avança o status para DIAGNOSTICO_CONCLUIDO. Somente o mecânico responsável pela ordem pode concluir o diagnóstico.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Status atualizado com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
             @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
-            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou mecânico não encontrado",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "Mecânico não é o responsável, nenhum serviço vinculado ou status inválido para a operação",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou mecânico não encontrado"),
+            @ApiResponse(responseCode = "422", description = "Mecânico não é o responsável, nenhum serviço vinculado ou status inválido para a operação")
     })
     @PatchMapping("/{ordemServicoId}/diagnostico/conclusao")
     public ResponseEntity<Void> concluirDiagnostico(@PathVariable Long ordemServicoId) {
@@ -95,14 +87,13 @@ public class OrdemDeServicoController {
     }
 
     @Operation(summary = "Vincular Serviço",
-            description = "Vincula um serviço à ordem de serviço.")
+            description = "Vincula um serviço à ordem de serviço. Somente permitido enquanto a ordem estiver no status EM_DIAGNOSTICO.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Serviço vinculado com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
-            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou serviço não encontrado",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "Serviço já está vinculado à ordem de serviço ou ordem de serviço não está em diagnóstico",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou serviço não encontrado"),
+            @ApiResponse(responseCode = "422", description = "Serviço já está vinculado à ordem de serviço ou ordem de serviço não está em diagnóstico")
     })
     @PutMapping("/{ordemServicoId}/servicos/{servicoId}")
     public ResponseEntity<Void> vincularServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
@@ -111,14 +102,13 @@ public class OrdemDeServicoController {
     }
 
     @Operation(summary = "Desvincular Serviço",
-            description = "Remove o vínculo de um serviço da ordem de serviço.")
+            description = "Remove o vínculo de um serviço da ordem de serviço. Somente permitido enquanto a ordem estiver no status EM_DIAGNOSTICO.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Serviço desvinculado com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
-            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou serviço não encontrado",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "Serviço não está vinculado à ordem de serviço ou ordem de serviço não está em diagnóstico",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou serviço não encontrado"),
+            @ApiResponse(responseCode = "422", description = "Serviço não está vinculado à ordem de serviço ou ordem de serviço não está em diagnóstico")
     })
     @DeleteMapping("/{ordemServicoId}/servicos/{servicoId}")
     public ResponseEntity<Void> desvincularServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
@@ -127,11 +117,12 @@ public class OrdemDeServicoController {
     }
 
     @Operation(summary = "Vincular Peça",
-            description = "Vincula uma peça à ordem de serviço, baixando o estoque correspondente. Se a peça já estiver vinculada, soma a quantidade informada." +
-                    " Para vincular a peça a ordem de servico precisar estar com status 'EM DIAGNOSTICO'")
+            description = "Vincula uma peça à ordem de serviço, baixando o estoque correspondente. Se a peça já estiver vinculada, soma a quantidade informada. Somente permitido enquanto a ordem estiver no status EM_DIAGNOSTICO.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Peça vinculada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Quantidade inválida"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
             @ApiResponse(responseCode = "404", description = "Ordem de serviço ou peça não encontrada"),
             @ApiResponse(responseCode = "422", description = "Estoque insuficiente para realizar a operação ou ordem de serviço não está em diagnóstico")
     })
@@ -144,16 +135,14 @@ public class OrdemDeServicoController {
 
     @Operation(summary = "Desvincular Peça",
             description = "Remove ou subtrai a quantidade de uma peça vinculada à ordem de serviço, devolvendo o estoque correspondente. " +
-                    "Se a quantidade informada for igual à vinculada, o vínculo é removido integralmente.")
+                    "Se a quantidade informada for igual à vinculada, o vínculo é removido integralmente. Somente permitido enquanto a ordem estiver no status EM_DIAGNOSTICO.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Peça desvinculada com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Quantidade inválida",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "400", description = "Quantidade inválida"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
-            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou peça não encontrada",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está em diagnóstico, peça não está vinculada ou quantidade a desvincular é maior que a vinculada",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou peça não encontrada"),
+            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está em diagnóstico, peça não está vinculada ou quantidade a desvincular é maior que a vinculada")
     })
     @DeleteMapping("/{ordemServicoId}/pecas/{pecaId}")
     public ResponseEntity<Void> desvincularPeca(@PathVariable Long ordemServicoId, @PathVariable Long pecaId,
@@ -164,16 +153,14 @@ public class OrdemDeServicoController {
 
     @Operation(summary = "Vincular Insumo",
             description = "Vincula um insumo à ordem de serviço, baixando o estoque correspondente. " +
-                    "Se o insumo já estiver vinculado, soma a quantidade informada.")
+                    "Se o insumo já estiver vinculado, soma a quantidade informada. Somente permitido enquanto a ordem estiver no status EM_DIAGNOSTICO.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Insumo vinculado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Quantidade inválida",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "400", description = "Quantidade inválida"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
-            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou insumo não encontrado",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "Estoque insuficiente para realizar a operação ou ordem de serviço não está em diagnóstico",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou insumo não encontrado"),
+            @ApiResponse(responseCode = "422", description = "Estoque insuficiente para realizar a operação ou ordem de serviço não está em diagnóstico")
     })
     @PutMapping("/{ordemServicoId}/insumos/{insumoId}")
     public ResponseEntity<Void> vincularInsumo(@PathVariable Long ordemServicoId, @PathVariable Long insumoId,
@@ -184,16 +171,14 @@ public class OrdemDeServicoController {
 
     @Operation(summary = "Desvincular Insumo",
             description = "Remove ou subtrai a quantidade de um insumo vinculado à ordem de serviço, devolvendo o estoque correspondente. " +
-                    "Se a quantidade informada for igual à vinculada, o vínculo é removido integralmente.")
+                    "Se a quantidade informada for igual à vinculada, o vínculo é removido integralmente. Somente permitido enquanto a ordem estiver no status EM_DIAGNOSTICO.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Insumo desvinculado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Quantidade inválida",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "400", description = "Quantidade inválida"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
-            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou insumo não encontrado",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está em diagnóstico, insumo não está vinculado ou quantidade a desvincular é maior que a vinculada",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou insumo não encontrado"),
+            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está em diagnóstico, insumo não está vinculado ou quantidade a desvincular é maior que a vinculada")
     })
     @DeleteMapping("/{ordemServicoId}/insumos/{insumoId}")
     public ResponseEntity<Void> desvincularInsumo(@PathVariable Long ordemServicoId, @PathVariable Long insumoId,
@@ -203,17 +188,13 @@ public class OrdemDeServicoController {
     }
 
     @Operation(summary = "Enviar orçamento da Ordem de Serviço",
-            description = "Envia o orçamento para o cliente. Após isso o status passa a ser 'AGUARDANDO_APROVACAO' ")
+            description = "Envia o orçamento ao cliente e avança o status para AGUARDANDO_APROVACAO. Somente permitido quando a ordem estiver no status DIAGNOSTICO_CONCLUIDO.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Orçamento enviado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Parâmetros de entrada inválidos",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
+            @ApiResponse(responseCode = "204", description = "Orçamento enviado com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
             @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil ATENDENTE"),
-            @ApiResponse(responseCode = "404", description = "Ordem de Serviço não encontrada",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "status inválido para a operação",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+            @ApiResponse(responseCode = "404", description = "Ordem de Serviço não encontrada"),
+            @ApiResponse(responseCode = "422", description = "Status inválido para a operação")
     })
     @PostMapping("/orcamento/envio/{ordemServicoId}")
     public ResponseEntity<Void> enviarOrcamento(@PathVariable Long ordemServicoId) {
@@ -222,17 +203,14 @@ public class OrdemDeServicoController {
     }
 
     @Operation(summary = "Recusar orçamento da Ordem de Serviço",
-            description = "Após o cliente recusar o orçamento a ordem de servico deve ser cancelada. Após isso o status passa a ser 'CANCELADA' ")
+            description = "Registra a recusa do cliente e cancela a ordem de serviço, avançando o status para CANCELADA. Somente permitido quando a ordem estiver no status AGUARDANDO_APROVACAO. " +
+                    "As quantidades de peças e insumos são devolvidas ao estoque, mas o vinculo na ordem de serviço continua para rastreabilidade")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Orçamento recusado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Parâmetros de entrada inválidos",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
             @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil ATENDENTE"),
-            @ApiResponse(responseCode = "404", description = "Ordem de Serviço não encontrada",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "status inválido para a operação",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+            @ApiResponse(responseCode = "404", description = "Ordem de Serviço não encontrada"),
+            @ApiResponse(responseCode = "422", description = "Status inválido para a operação")
     })
     @PostMapping("/orcamento/recusar/{ordemServicoId}")
     public ResponseEntity<Void> recusar(@PathVariable Long ordemServicoId) {
@@ -241,17 +219,13 @@ public class OrdemDeServicoController {
     }
 
     @Operation(summary = "Aprovar orçamento da Ordem de Serviço",
-            description = "Após o cliente aprovar o orçamento a ordem de servico deve ser executada. Após isso o status passa a ser 'EM_EXECUCAO' ")
+            description = "Registra a aprovação do cliente e libera a execução dos serviços, avançando o status para EM_EXECUCAO. Somente permitido quando a ordem estiver no status AGUARDANDO_APROVACAO.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Orçamento aprovado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Parâmetros de entrada inválidos",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
             @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil ATENDENTE"),
-            @ApiResponse(responseCode = "404", description = "Ordem de Serviço não encontrada",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "status inválido para a operação",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+            @ApiResponse(responseCode = "404", description = "Ordem de Serviço não encontrada"),
+            @ApiResponse(responseCode = "422", description = "Status inválido para a operação")
     })
     @PostMapping("/orcamento/aprovar/{ordemServicoId}")
     public ResponseEntity<Void> aprovar(@PathVariable Long ordemServicoId) {
@@ -259,16 +233,14 @@ public class OrdemDeServicoController {
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
-    @Operation(summary = "Iniciar Servico",
-            description = "Inicia o serviço da Ordem de Serviço.")
+    @Operation(summary = "Iniciar Serviço",
+            description = "Inicia a execução de um serviço vinculado à ordem de serviço. A ordem precisa estar no status EM_EXECUCAO e o serviço ainda não pode ter sido iniciado.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Serviço iniciado com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
             @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
-            @ApiResponse(responseCode = "404", description = "Ordem de serviço, serviço ou mecânico não encontrado",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está em execução, serviço não está vinculado ou já foi iniciado/finalizado",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou serviço não encontrado"),
+            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está em execução, serviço não está vinculado ou já foi iniciado/finalizado")
     })
     @PatchMapping("/{ordemServicoId}/servicos/{servicoId}/iniciar")
     public ResponseEntity<Void> iniciarServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
@@ -276,16 +248,14 @@ public class OrdemDeServicoController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Finalizar Servico",
-            description = "Finaliza o serviço da Ordem de Serviço.")
+    @Operation(summary = "Finalizar Serviço",
+            description = "Finaliza a execução de um serviço vinculado à ordem de serviço. O serviço precisa ter sido previamente iniciado. Quando todos os serviços da ordem forem finalizados, a ordem avança automaticamente para o status FINALIZADA.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Serviço finalizado com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
             @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
-            @ApiResponse(responseCode = "404", description = "Ordem de serviço, serviço ou mecânico não encontrado",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está em execução, serviço não está vinculado ou já foi finalizado",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou serviço não encontrado"),
+            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está em execução, serviço não está vinculado ou ainda não foi iniciado")
     })
     @PatchMapping("/{ordemServicoId}/servicos/{servicoId}/finalizar")
     public ResponseEntity<Void> finalizarServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
@@ -294,15 +264,13 @@ public class OrdemDeServicoController {
     }
 
     @Operation(summary = "Entregar Ordem de Serviço",
-            description = "Entrega a Ordem de Serviço.")
+            description = "Entrega a Ordem de Serviço. A ordem de serviço só será entregue se o status estiver em 'FINALIZADA'")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Ordem de serviço entregue com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil Atendente"),
-            @ApiResponse(responseCode = "404", description = "Ordem de serviço não encontrada",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "status inválido para a operação",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil ATENDENTE"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço não encontrada"),
+            @ApiResponse(responseCode = "422", description = "status inválido para a operação")
     })
     @PatchMapping("/{ordemServicoId}/entregar")
     public ResponseEntity<Void> entregar(@PathVariable Long ordemServicoId) {
@@ -312,12 +280,12 @@ public class OrdemDeServicoController {
 
     @Operation(
             summary = "Listar ordens de serviços",
-            description = "Retorna a lista paginada de ordens de serviços"
+            description = "Retorna a lista paginada de ordens de serviços. Somente perfil de ADMINISTRADOR tem permissão para listar"
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado")
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil ADMINISTRADOR")
     })
     @GetMapping("/detalhamento")
     public ResponseEntity<PageResponse<OrdemDeServicoResponseJson>> detalhamento(@RequestParam(defaultValue = "0") int page,

@@ -26,7 +26,7 @@ public class OrdemDeServicoListagemDto {
 	private List<PecaVinculadaDto> pecas;
 	private List<InsumoVinculadoDto> insumos;
 	private BigDecimal valorTotal;
-	private Duration tempoMedioExecucao;
+	private Duration tempoMedioExecucaoServicos;
 	private LocalDateTime dataEnvioOrcamento;
 	private LocalDateTime dataCancelamento;
 	private LocalDateTime dataAprovacao;
