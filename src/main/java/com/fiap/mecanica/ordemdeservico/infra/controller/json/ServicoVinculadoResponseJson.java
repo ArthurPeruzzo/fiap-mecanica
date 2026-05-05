@@ -1,5 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller.json;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fiap.mecanica.ordemdeservico.core.dto.ServicoVinculadoDto;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -20,9 +21,11 @@ public record ServicoVinculadoResponseJson(
         String status,
 
         @Schema(description = "Data e hora de início da execução")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss", locale = "pt-BR", timezone = "America/Sao_Paulo")
         LocalDateTime dataInicioExecucao,
 
         @Schema(description = "Data e hora de conclusão da execução")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss", locale = "pt-BR", timezone = "America/Sao_Paulo")
         LocalDateTime dataFimExecucao
 ) {
     public static ServicoVinculadoResponseJson from(ServicoVinculadoDto sv) {
