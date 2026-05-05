@@ -5,7 +5,6 @@ import com.fiap.mecanica.gestao.core.dto.AtualizarClienteDto;
 import com.fiap.mecanica.gestao.core.exception.ClienteJaExisteException;
 import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
-import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,8 +26,8 @@ class AtualizarClienteUseCaseUnitTest {
 
 	@Test
 	void shouldUpdateClienteWithCpfSuccessfully() {
-		var clienteExistente = Cliente.reconstituir(1L, new NomeCompleto("Pedro", "Silva"), null, "95114752073");
-		var dto = new AtualizarClienteDto(1L, "Pedro", "Santos", null, "951.147.520-73");
+		var clienteExistente = Cliente.reconstituir(1L, "Pedro", null, "95114752073");
+		var dto = new AtualizarClienteDto(1L, "Pedro", null, "951.147.520-73");
 
 		Mockito.when(clienteGateway.buscarPorId(1L)).thenReturn(Optional.of(clienteExistente));
 		Mockito.when(clienteGateway.existePorCpfExcluindoId("95114752073", 1L)).thenReturn(false);
@@ -40,8 +39,8 @@ class AtualizarClienteUseCaseUnitTest {
 
 	@Test
 	void shouldUpdateClienteWithCnpjSuccessfully() {
-		var clienteExistente = Cliente.reconstituir(1L, new NomeCompleto("Empresa", "LTDA"), "00000000000191", null);
-		var dto = new AtualizarClienteDto(1L, "Empresa", "SA", "00.000.000/0001-91", null);
+		var clienteExistente = Cliente.reconstituir(1L,"Empresa", "00000000000191", null);
+		var dto = new AtualizarClienteDto(1L, "Empresa", "00.000.000/0001-91", null);
 
 		Mockito.when(clienteGateway.buscarPorId(1L)).thenReturn(Optional.of(clienteExistente));
 		Mockito.when(clienteGateway.existePorCnpjExcluindoId("00000000000191", 1L)).thenReturn(false);
@@ -53,7 +52,7 @@ class AtualizarClienteUseCaseUnitTest {
 
 	@Test
 	void shouldThrowClienteNaoEncontradoExceptionWhenClienteNotFound() {
-		var dto = new AtualizarClienteDto(99L, "Pedro", "Silva", null, "951.147.520-73");
+		var dto = new AtualizarClienteDto(99L, "Pedro", null, "951.147.520-73");
 
 		Mockito.when(clienteGateway.buscarPorId(99L)).thenReturn(Optional.empty());
 
@@ -65,8 +64,8 @@ class AtualizarClienteUseCaseUnitTest {
 
 	@Test
 	void shouldThrowClienteJaExisteExceptionWhenCpfBelongsToAnotherCliente() {
-		var clienteExistente = Cliente.reconstituir(1L, new NomeCompleto("Pedro", "Silva"), null, "95114752073");
-		var dto = new AtualizarClienteDto(1L, "Pedro", "Silva", null, "951.147.520-73");
+		var clienteExistente = Cliente.reconstituir(1L,"Pedro", null, "95114752073");
+		var dto = new AtualizarClienteDto(1L, "Pedro", null, "951.147.520-73");
 
 		Mockito.when(clienteGateway.buscarPorId(1L)).thenReturn(Optional.of(clienteExistente));
 		Mockito.when(clienteGateway.existePorCpfExcluindoId("95114752073", 1L)).thenReturn(true);
@@ -79,8 +78,8 @@ class AtualizarClienteUseCaseUnitTest {
 
 	@Test
 	void shouldThrowClienteJaExisteExceptionWhenCnpjBelongsToAnotherCliente() {
-		var clienteExistente = Cliente.reconstituir(1L, new NomeCompleto("Empresa", "LTDA"), "00000000000191", null);
-		var dto = new AtualizarClienteDto(1L, "Empresa", "LTDA", "00.000.000/0001-91", null);
+		var clienteExistente = Cliente.reconstituir(1L,"Empresa", "00000000000191", null);
+		var dto = new AtualizarClienteDto(1L, "Empresa", "00.000.000/0001-91", null);
 
 		Mockito.when(clienteGateway.buscarPorId(1L)).thenReturn(Optional.of(clienteExistente));
 		Mockito.when(clienteGateway.existePorCnpjExcluindoId("00000000000191", 1L)).thenReturn(true);
@@ -93,15 +92,14 @@ class AtualizarClienteUseCaseUnitTest {
 
 	@Test
 	void shouldUpdateNomeCompletoOnDomainObject() {
-		var clienteExistente = Cliente.reconstituir(1L, new NomeCompleto("Pedro", "Silva"), null, "95114752073");
-		var dto = new AtualizarClienteDto(1L, "Carlos", "Costa", null, "951.147.520-73");
+		var clienteExistente = Cliente.reconstituir(1L,"Pedro", null, "95114752073");
+		var dto = new AtualizarClienteDto(1L, "Carlos", null, "951.147.520-73");
 
 		Mockito.when(clienteGateway.buscarPorId(1L)).thenReturn(Optional.of(clienteExistente));
 		Mockito.when(clienteGateway.existePorCpfExcluindoId("95114752073", 1L)).thenReturn(false);
 
 		atualizarClienteUseCase.atualizar(dto);
 
-		Assertions.assertEquals("Carlos", clienteExistente.getNomeCompleto().nome());
-		Assertions.assertEquals("Costa", clienteExistente.getNomeCompleto().sobrenome());
+		Assertions.assertEquals("Carlos", clienteExistente.getNome());
 	}
 }

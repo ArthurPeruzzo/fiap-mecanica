@@ -4,7 +4,6 @@ import com.fiap.mecanica.gestao.core.domain.Cliente;
 import com.fiap.mecanica.gestao.core.dto.ListarClientesDto;
 import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
 import com.fiap.mecanica.shared.page.Pagina;
-import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +36,7 @@ class ListarClientesUseCaseUnitTest {
 
 	@Test
 	void shouldReturnPaginaFromGateway() {
-		var cliente = Cliente.reconstituir(1L, new NomeCompleto("Pedro", "Silva"), null, "12345678909");
+		var cliente = Cliente.reconstituir(1L,"Pedro", null, "12345678909");
 		var pagina = new Pagina<>(List.of(cliente), 0, 10, 1L, 1);
 		Mockito.when(clienteGateway.listar(0, 10)).thenReturn(pagina);
 
@@ -46,7 +45,7 @@ class ListarClientesUseCaseUnitTest {
 		Assertions.assertEquals(1, resultado.content().size());
 		Assertions.assertEquals(1L, resultado.totalElements());
 		Assertions.assertEquals(1, resultado.totalPages());
-		Assertions.assertEquals("Pedro", resultado.content().getFirst().getNomeCompleto().nome());
+		Assertions.assertEquals("Pedro", resultado.content().getFirst().getNome());
 	}
 
 	@Test

@@ -4,22 +4,17 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class ClienteEntityUnitTest {
 
     @Test
-    void shouldCreateWithNoArgsConstructor() {
-        assertNotNull(new ClienteEntity());
-    }
-
-    @Test
     void shouldCreateWithAllArgsConstructor() {
-        var entity = new ClienteEntity(1L, "Pedro", "Silva", "12345678900012", null, new ArrayList<>());
+        var entity = new ClienteEntity(1L, "Pedro", "12345678900012", null, new ArrayList<>());
 
         assertEquals(1L, entity.getId());
         assertEquals("Pedro", entity.getNome());
-        assertEquals("Silva", entity.getSobrenome());
         assertEquals("12345678900012", entity.getCnpj());
         assertEquals(0, entity.getVeiculos().size());
         assertNull(entity.getCpf());
@@ -30,7 +25,6 @@ class ClienteEntityUnitTest {
         var entity = ClienteEntity.builder()
                 .id(1L)
                 .nome("Pedro")
-                .sobrenome("Silva")
                 .cpf("12345678909")
                 .build();
 
@@ -43,7 +37,6 @@ class ClienteEntityUnitTest {
         var entity = ClienteEntity.builder()
                 .id(2L)
                 .nome("Empresa")
-                .sobrenome("LTDA")
                 .cnpj("00000000000191")
                 .build();
 

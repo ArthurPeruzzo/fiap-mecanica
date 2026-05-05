@@ -20,13 +20,6 @@ public record ClienteRequestJson(
 		String nome,
 
 		@Schema(
-				description = "Sobrenome do cliente",
-				example = "Silva"
-		)
-		@NotBlank(message = "O sobrenome deve ser preenchido")
-		String sobrenome,
-
-		@Schema(
 				description = "CPF do cliente pessoa física. Exemplo: 123.456.789-09 com ou sem formatação",
 				example = "123.456.789-09"
 		)

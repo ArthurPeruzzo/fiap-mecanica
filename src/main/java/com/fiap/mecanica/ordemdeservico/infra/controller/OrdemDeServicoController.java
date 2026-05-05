@@ -63,21 +63,17 @@ public class OrdemDeServicoController {
 
     @Operation(summary = "Iniciar Diagnóstico",
             description = "Atribui o mecânico autenticado à ordem de serviço e avança o status para EM_DIAGNOSTICO. " +
-                    "Somente permitido se a ordem estiver no status RECEBIDA, sem mecânico vinculado ou com o mesmo mecânico já responsável.")
+                    "Somente permitido se a ordem estiver no status RECEBIDA e sem mecânico vinculado")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Status atualizado com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
             @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
-            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou mecânico não encontrado",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "409", description = "Ordem de serviço já está em diagnóstico",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "Outro mecânico já é responsável por esta ordem de serviço ou status inválido para a operação",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou mecânico não encontrado"),
+            @ApiResponse(responseCode = "422", description = "Outro mecânico já é responsável por esta ordem de serviço ou status inválido para a operação")
     })
-    @PatchMapping("/{id}/diagnostico")
-    public ResponseEntity<Void> iniciarDiagnostico(@PathVariable Long id) {
-        iniciarDiagnosticoOrdemDeServicoUseCase.iniciarDiagnostico(id);
+    @PatchMapping("/{ordemServicoId}/diagnostico")
+    public ResponseEntity<Void> iniciarDiagnostico(@PathVariable Long ordemServicoId) {
+        iniciarDiagnosticoOrdemDeServicoUseCase.iniciarDiagnostico(ordemServicoId);
         return ResponseEntity.noContent().build();
     }
 
@@ -131,14 +127,13 @@ public class OrdemDeServicoController {
     }
 
     @Operation(summary = "Vincular Peça",
-            description = "Vincula uma peça à ordem de serviço.")
+            description = "Vincula uma peça à ordem de serviço, baixando o estoque correspondente. Se a peça já estiver vinculada, soma a quantidade informada." +
+                    " Para vincular a peça a ordem de servico precisar estar com status 'EM DIAGNOSTICO'")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Peça vinculada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
-            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou peça não encontrada",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class))),
-            @ApiResponse(responseCode = "422", description = "Estoque insuficiente para realizar a operação ou ordem de serviço não está em diagnóstico",
-                    content = @Content(schema = @Schema(implementation = ExceptionDto.class)))
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou peça não encontrada"),
+            @ApiResponse(responseCode = "422", description = "Estoque insuficiente para realizar a operação ou ordem de serviço não está em diagnóstico")
     })
     @PutMapping("/{ordemServicoId}/pecas/{pecaId}")
     public ResponseEntity<Void> vincularPeca(@PathVariable Long ordemServicoId, @PathVariable Long pecaId,

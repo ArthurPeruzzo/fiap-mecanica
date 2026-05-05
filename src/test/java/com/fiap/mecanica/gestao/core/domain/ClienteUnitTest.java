@@ -1,14 +1,13 @@
 package com.fiap.mecanica.gestao.core.domain;
 
 import com.fiap.mecanica.gestao.core.exception.DocumentoInvalidoException;
-import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class ClienteUnitTest {
 
-    private static final NomeCompleto NOME = new NomeCompleto("Pedro", "Silva");
+    private static final String NOME = "Pedro";
 
     @Test
     void shouldCreateClienteWithCpfOnly() {
@@ -66,8 +65,7 @@ class ClienteUnitTest {
     void shouldStoreNomeCompleto() {
         var cliente = new Cliente(NOME, null, "12345678909");
 
-        assertEquals("Pedro", cliente.getNomeCompleto().nome());
-        assertEquals("Silva", cliente.getNomeCompleto().sobrenome());
+        assertEquals("Pedro", cliente.getNome());
     }
 
     @Test
@@ -83,10 +81,9 @@ class ClienteUnitTest {
     void atualizar_shouldChangeNomeAndDocumento() {
         var cliente = new Cliente(NOME, null, "12345678909");
 
-        cliente.atualizar(new NomeCompleto("Carlos", "Costa"), "00000000000191", null);
+        cliente.atualizar("Carlos", "00000000000191", null);
 
-        assertEquals("Carlos", cliente.getNomeCompleto().nome());
-        assertEquals("Costa", cliente.getNomeCompleto().sobrenome());
+        assertEquals("Carlos", cliente.getNome());
         assertTrue(cliente.getCnpj().isPresent());
         assertEquals("00000000000191", cliente.getCnpj().get().getValor());
         assertTrue(cliente.getCpf().isEmpty());

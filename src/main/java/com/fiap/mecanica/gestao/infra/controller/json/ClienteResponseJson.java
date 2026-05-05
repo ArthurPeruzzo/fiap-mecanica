@@ -14,9 +14,6 @@ public record ClienteResponseJson(
         @Schema(description = "Nome do cliente", example = "Pedro")
         String nome,
 
-        @Schema(description = "Sobrenome do cliente", example = "Silva")
-        String sobrenome,
-
         @Schema(description = "CPF do cliente (somente dígitos)", example = "18825469039")
         String cpf,
 
@@ -26,8 +23,7 @@ public record ClienteResponseJson(
     public static ClienteResponseJson from(Cliente cliente) {
         return new ClienteResponseJson(
                 cliente.getId(),
-                cliente.getNomeCompleto().nome(),
-                cliente.getNomeCompleto().sobrenome(),
+                cliente.getNome(),
                 cliente.getCpf().map(Cpf::getValorFormatado).orElse(null),
                 cliente.getCnpj().map(Cnpj::getValorFormatado).orElse(null)
         );

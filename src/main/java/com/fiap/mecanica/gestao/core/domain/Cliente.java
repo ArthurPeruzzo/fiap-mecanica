@@ -4,7 +4,6 @@ import com.fiap.mecanica.gestao.core.exception.DocumentoInvalidoException;
 import com.fiap.mecanica.shared.valueobjects.Cnpj;
 import com.fiap.mecanica.shared.valueobjects.Cpf;
 import com.fiap.mecanica.shared.valueobjects.Documento;
-import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
 import lombok.Getter;
 
 import java.util.Optional;
@@ -12,11 +11,11 @@ import java.util.Optional;
 @Getter
 public class Cliente {
 	private Long id;
-	private NomeCompleto nomeCompleto;
+	private String nome;
 	private Documento documento;
 
-	public Cliente(NomeCompleto nomeCompleto, String cnpj, String cpf) {
-		this.nomeCompleto = nomeCompleto;
+	public Cliente(String nome, String cnpj, String cpf) {
+		this.nome = nome;
 
 		boolean temCnpj = cnpj != null;
 		boolean temCpf  = cpf  != null;
@@ -32,7 +31,7 @@ public class Cliente {
 		}
 	}
 
-	public void atualizar(NomeCompleto nomeCompleto, String cnpj, String cpf) {
+	public void atualizar(String nome, String cnpj, String cpf) {
 		boolean temCnpj = cnpj != null;
 		boolean temCpf  = cpf  != null;
 
@@ -40,12 +39,12 @@ public class Cliente {
 			throw new DocumentoInvalidoException();
 		}
 
-		this.nomeCompleto = nomeCompleto;
+		this.nome = nome;
 		this.documento = cnpj != null ? new Cnpj(cnpj) : new Cpf(cpf);
 	}
 
-	public static Cliente reconstituir(Long id, NomeCompleto nomeCompleto, String cnpj, String cpf) {
-		var cliente = new Cliente(nomeCompleto, cnpj, cpf);
+	public static Cliente reconstituir(Long id, String nome, String cnpj, String cpf) {
+		var cliente = new Cliente(nome, cnpj, cpf);
 		cliente.id = id;
 		return cliente;
 	}

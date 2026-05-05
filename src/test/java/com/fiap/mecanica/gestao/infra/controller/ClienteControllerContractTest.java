@@ -8,13 +8,10 @@ import com.fiap.mecanica.gestao.core.usecase.DeletarClienteUseCase;
 import com.fiap.mecanica.gestao.core.usecase.ListarClientesUseCase;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.page.Pagina;
-import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mockito;
-
-import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -23,6 +20,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+
+import java.util.List;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -49,10 +48,9 @@ class ClienteControllerContractTest {
 
 	@ParameterizedTest
 	@CsvSource({
-			"'{\"nome\":\"\",\"sobrenome\":\"Silva\",\"cpf\":\"951.147.520-73\"}', nome, 'O nome deve ser preenchido'",
-			"'{\"nome\":\"Pedro\",\"sobrenome\":\"\",\"cpf\":\"951.147.520-73\"}', sobrenome, 'O sobrenome deve ser preenchido'",
-			"'{\"nome\":\"Pedro\",\"sobrenome\":\"Silva\",\"cpf\":\"000.000.000-00\"}', cpf, 'O conteúdo ou a formatação do CPF não é válida'",
-			"'{\"nome\":\"Pedro\",\"sobrenome\":\"Silva\",\"cnpj\":\"00.000.000/0000-00\"}', cnpj, 'O conteúdo ou a formatação do CNPJ não é válida. Segue formatos de exemplo: AA.AAA.AAA/AAAA-DV ou 00.000.000/0000-00 com ou sem formatação'"
+			"'{\"nome\":\"\",\"cpf\":\"951.147.520-73\"}', nome, 'O nome deve ser preenchido'",
+			"'{\"nome\":\"Pedro\",\"cpf\":\"000.000.000-00\"}', cpf, 'O conteúdo ou a formatação do CPF não é válida'",
+			"'{\"nome\":\"Pedro\",\"cnpj\":\"00.000.000/0000-00\"}', cnpj, 'O conteúdo ou a formatação do CNPJ não é válida. Segue formatos de exemplo: AA.AAA.AAA/AAAA-DV ou 00.000.000/0000-00 com ou sem formatação'"
 	})
 	void shouldReturn400WithFieldValidationMessage(String requestJson, String field, String expectedMessage) throws Exception {
 		mockMvc.perform(MockMvcRequestBuilders.post("/cliente")
@@ -69,7 +67,6 @@ class ClienteControllerContractTest {
 		String json = """
 				{
 				  "nome": "Pedro",
-				  "sobrenome": "Silva",
 				  "cpf": "951.147.520-73",
 				  "cnpj": "1A.3BC.45D/0001-EF"
 				}
@@ -88,8 +85,7 @@ class ClienteControllerContractTest {
 	void shouldReturn400WhenNeitherCpfNorCnpjProvided() throws Exception {
 		String json = """
 				{
-				  "nome": "Pedro",
-				  "sobrenome": "Silva"
+				  "nome": "Pedro"
 				}
 				""";
 
@@ -107,7 +103,6 @@ class ClienteControllerContractTest {
 		String json = """
 				{
 				  "nome": "Pedro",
-				  "sobrenome": "Silva",
 				  "cpf": "951.147.520-73"
 				}
 				""";
@@ -125,7 +120,6 @@ class ClienteControllerContractTest {
 		String json = """
 				{
 				  "nome": "Empresa",
-				  "sobrenome": "LTDA",
 				  "cnpj": "9B.X1W.34S/0001-44"
 				}
 				""";
@@ -158,7 +152,7 @@ class ClienteControllerContractTest {
 
 	@Test
 	void shouldReturn200WithClientesMappedToResponseJson() throws Exception {
-		var cliente = Cliente.reconstituir(1L, new NomeCompleto("Pedro", "Silva"), null, "12345678909");
+		var cliente = Cliente.reconstituir(1L,"Pedro" , null, "12345678909");
 		Mockito.when(listarClientesUseCase.listar(Mockito.any()))
 				.thenReturn(new Pagina<>(List.of(cliente), 0, 10, 1L, 1));
 
@@ -168,7 +162,6 @@ class ClienteControllerContractTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.content[0].id").value(1))
 				.andExpect(jsonPath("$.content[0].nome").value("Pedro"))
-				.andExpect(jsonPath("$.content[0].sobrenome").value("Silva"))
 				.andExpect(jsonPath("$.content[0].cpf").value("123.456.789-09"))
 				.andExpect(jsonPath("$.content[0].cnpj").doesNotExist())
 				.andExpect(jsonPath("$.totalElements").value(1));
@@ -189,10 +182,9 @@ class ClienteControllerContractTest {
 
 	@ParameterizedTest
 	@CsvSource({
-			"'{\"nome\":\"\",\"sobrenome\":\"Silva\",\"cpf\":\"951.147.520-73\"}', nome, 'O nome deve ser preenchido'",
-			"'{\"nome\":\"Pedro\",\"sobrenome\":\"\",\"cpf\":\"951.147.520-73\"}', sobrenome, 'O sobrenome deve ser preenchido'",
-			"'{\"nome\":\"Pedro\",\"sobrenome\":\"Silva\",\"cpf\":\"000.000.000-00\"}', cpf, 'O conteúdo ou a formatação do CPF não é válida'",
-			"'{\"nome\":\"Pedro\",\"sobrenome\":\"Silva\",\"cnpj\":\"00.000.000/0000-00\"}', cnpj, 'O conteúdo ou a formatação do CNPJ não é válida. Segue formatos de exemplo: AA.AAA.AAA/AAAA-DV ou 00.000.000/0000-00 com ou sem formatação'"
+			"'{\"nome\":\"\",\"cpf\":\"951.147.520-73\"}', nome, 'O nome deve ser preenchido'",
+			"'{\"nome\":\"Pedro\",\"cpf\":\"000.000.000-00\"}', cpf, 'O conteúdo ou a formatação do CPF não é válida'",
+			"'{\"nome\":\"Pedro\",\"cnpj\":\"00.000.000/0000-00\"}', cnpj, 'O conteúdo ou a formatação do CNPJ não é válida. Segue formatos de exemplo: AA.AAA.AAA/AAAA-DV ou 00.000.000/0000-00 com ou sem formatação'"
 	})
 	void shouldReturn400WithFieldValidationMessageOnUpdate(String requestJson, String field, String expectedMessage) throws Exception {
 		mockMvc.perform(MockMvcRequestBuilders.put("/cliente/1")
@@ -209,7 +201,6 @@ class ClienteControllerContractTest {
 		String json = """
 				{
 				  "nome": "Pedro",
-				  "sobrenome": "Silva",
 				  "cpf": "951.147.520-73",
 				  "cnpj": "1A.3BC.45D/0001-EF"
 				}
@@ -229,7 +220,6 @@ class ClienteControllerContractTest {
 		String json = """
 				{
 				  "nome": "Pedro",
-				  "sobrenome": "Silva",
 				  "cpf": "951.147.520-73"
 				}
 				""";
@@ -247,7 +237,6 @@ class ClienteControllerContractTest {
 		String json = """
 				{
 				  "nome": "Pedro",
-				  "sobrenome": "Silva",
 				  "cpf": "951.147.520-73"
 				}
 				""";

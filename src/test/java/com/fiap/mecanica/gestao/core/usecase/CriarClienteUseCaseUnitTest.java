@@ -24,7 +24,7 @@ class CriarClienteUseCaseUnitTest {
 
 	@Test
 	void shouldDelegateToGatewayWhenCpfProvided() {
-		var dto = new CriarClienteDto("Pedro", "Silva", "951.147.520-73", null);
+		var dto = new CriarClienteDto("Pedro",  "951.147.520-73", null);
 
 		Mockito.when(clienteGateway.existePorCpf(Mockito.anyString())).thenReturn(false);
 
@@ -37,7 +37,7 @@ class CriarClienteUseCaseUnitTest {
 
 	@Test
 	void shouldDelegateToGatewayWhenCnpjProvided() {
-		var dto = new CriarClienteDto("Pedro", "Silva", null, "00.000.000/0001-91");
+		var dto = new CriarClienteDto("Pedro",  null, "00.000.000/0001-91");
 
 		Mockito.when(clienteGateway.existePorCnpj(Mockito.anyString())).thenReturn(false);
 
@@ -50,7 +50,7 @@ class CriarClienteUseCaseUnitTest {
 
 	@Test
 	void shouldPassCorrectNomeToGatewayWhenCpfProvided() {
-		var dto = new CriarClienteDto("Pedro", "Silva", "951.147.520-73", null);
+		var dto = new CriarClienteDto("Pedro", "951.147.520-73", null);
 		var captor = ArgumentCaptor.forClass(Cliente.class);
 
 		Mockito.when(clienteGateway.existePorCpf(Mockito.anyString())).thenReturn(false);
@@ -59,13 +59,12 @@ class CriarClienteUseCaseUnitTest {
 
 		Mockito.verify(clienteGateway).criar(captor.capture());
 		var clienteCapturado = captor.getValue();
-		Assertions.assertEquals("Pedro", clienteCapturado.getNomeCompleto().nome());
-		Assertions.assertEquals("Silva", clienteCapturado.getNomeCompleto().sobrenome());
+		Assertions.assertEquals("Pedro", clienteCapturado.getNome());
 	}
 
 	@Test
 	void shouldPassCorrectNomeToGatewayWhenCnpjProvided() {
-		var dto = new CriarClienteDto("Pedro", "Silva", null, "00.000.000/0001-91");
+		var dto = new CriarClienteDto("Pedro", null, "00.000.000/0001-91");
 		var captor = ArgumentCaptor.forClass(Cliente.class);
 
 		Mockito.when(clienteGateway.existePorCnpj(Mockito.anyString())).thenReturn(false);
@@ -74,13 +73,12 @@ class CriarClienteUseCaseUnitTest {
 
 		Mockito.verify(clienteGateway).criar(captor.capture());
 		var clienteCapturado = captor.getValue();
-		Assertions.assertEquals("Pedro", clienteCapturado.getNomeCompleto().nome());
-		Assertions.assertEquals("Silva", clienteCapturado.getNomeCompleto().sobrenome());
+		Assertions.assertEquals("Pedro", clienteCapturado.getNome());
 	}
 
 	@Test
 	void shouldThrowClienteJaExisteExceptionWhenCpfAlreadyExists() {
-		var dto = new CriarClienteDto("Pedro", "Silva", "951.147.520-73", null);
+		var dto = new CriarClienteDto("Pedro", "951.147.520-73", null);
 
 		Mockito.when(clienteGateway.existePorCpf("95114752073")).thenReturn(true);
 
@@ -92,7 +90,7 @@ class CriarClienteUseCaseUnitTest {
 
 	@Test
 	void shouldThrowClienteJaExisteExceptionWhenCnpjAlreadyExists() {
-		var dto = new CriarClienteDto("Pedro", "Silva", null, "00.000.000/0001-91");
+		var dto = new CriarClienteDto("Pedro", null, "00.000.000/0001-91");
 
 		Mockito.when(clienteGateway.existePorCnpj("00000000000191")).thenReturn(true);
 
@@ -104,7 +102,7 @@ class CriarClienteUseCaseUnitTest {
 
 	@Test
 	void shouldPropagateExceptionFromGateway() {
-		var dto = new CriarClienteDto("Pedro", "Silva", "951.147.520-73", null);
+		var dto = new CriarClienteDto("Pedro", "951.147.520-73", null);
 
 		Mockito.when(clienteGateway.existePorCpf(Mockito.anyString())).thenReturn(false);
 		Mockito.doThrow(new RuntimeException("erro no banco"))

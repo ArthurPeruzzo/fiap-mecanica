@@ -8,13 +8,12 @@ import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import com.fiap.mecanica.shared.page.Pagina;
 import com.fiap.mecanica.shared.valueobjects.Cnpj;
 import com.fiap.mecanica.shared.valueobjects.Cpf;
-import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
-import org.springframework.data.domain.PageRequest;
-
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
+
+import java.util.Optional;
 
 @Component
 @Slf4j
@@ -27,8 +26,7 @@ public class ClienteDatabaseGateway implements ClienteGateway {
 	public void criar(Cliente cliente) {
 		try {
 			var entity = ClienteEntity.builder()
-					.nome(cliente.getNomeCompleto().nome())
-					.sobrenome(cliente.getNomeCompleto().sobrenome())
+					.nome(cliente.getNome())
 					.cpf(cliente.getCpf().map(Cpf::getValor).orElse(null))
 					.cnpj(cliente.getCnpj().map(Cnpj::getValor).orElse(null))
 					.build();
@@ -45,7 +43,7 @@ public class ClienteDatabaseGateway implements ClienteGateway {
 			return clienteRepository.findById(id)
 					.map(e -> Cliente.reconstituir(
 							e.getId(),
-							new NomeCompleto(e.getNome(), e.getSobrenome()),
+							e.getNome(),
 							e.getCnpj(),
 							e.getCpf()));
 		} catch (Exception e) {
@@ -59,8 +57,7 @@ public class ClienteDatabaseGateway implements ClienteGateway {
 		try {
 			var entity = ClienteEntity.builder()
 					.id(cliente.getId())
-					.nome(cliente.getNomeCompleto().nome())
-					.sobrenome(cliente.getNomeCompleto().sobrenome())
+					.nome(cliente.getNome())
 					.cpf(cliente.getCpf().map(Cpf::getValor).orElse(null))
 					.cnpj(cliente.getCnpj().map(Cnpj::getValor).orElse(null))
 					.build();
@@ -98,7 +95,7 @@ public class ClienteDatabaseGateway implements ClienteGateway {
 			var clientes = resultado.getContent().stream()
 					.map(e -> Cliente.reconstituir(
 							e.getId(),
-							new NomeCompleto(e.getNome(), e.getSobrenome()),
+							e.getNome(),
 							e.getCnpj(),
 							e.getCpf()))
 					.toList();

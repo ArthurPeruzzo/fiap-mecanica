@@ -17,7 +17,6 @@ import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClien
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.CriarOrdemDeServicoUseCase;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
-import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -62,7 +61,7 @@ class CriarOrdemDeServicoUseCaseUnitTest {
     }
 
     private Cliente clientePadrao() {
-        return Cliente.reconstituir(CLIENTE_ID, new NomeCompleto("Pedro", "Silva"), null, "12345678909");
+        return Cliente.reconstituir(CLIENTE_ID, "Pedro", null, "12345678909");
     }
 
     private Veiculo veiculoPadrao() {

@@ -18,9 +18,9 @@ public class IniciarDiagnosticoOrdemDeServicoUseCase {
     private final TokenGateway tokenGateway;
     private final OrdemDeServicoGateway ordemDeServicoGateway;
 
-    public void iniciarDiagnostico(Long ordemId) {
+    public void iniciarDiagnostico(Long ordemServicoId) {
         Mecanico mecanico = buscaMecanicoPorUsuarioId();
-        OrdemDeServico ordemDeServico = ordemDeServicoGateway.buscarPorId(ordemId)
+        OrdemDeServico ordemDeServico = ordemDeServicoGateway.buscarPorId(ordemServicoId)
                 .orElseThrow(OrdemDeServicoNaoEncontradaException::new);
 
         ordemDeServico.iniciarDiagnostico(mecanico.getId());

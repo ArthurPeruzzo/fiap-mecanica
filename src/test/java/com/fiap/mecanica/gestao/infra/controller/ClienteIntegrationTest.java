@@ -85,7 +85,6 @@ class ClienteIntegrationTest extends AbstractContainer {
 				.body("""
 						{
 						  "nome": "Pedro",
-						  "sobrenome": "Silva",
 						  "cpf": "188.254.690-39"
 						}
 						""")
@@ -107,7 +106,6 @@ class ClienteIntegrationTest extends AbstractContainer {
 		String body = """
 				{
 				  "nome": "Pedro",
-				  "sobrenome": "Silva",
 				  "cpf": "975.730.520-06"
 				}
 				""";
@@ -141,7 +139,6 @@ class ClienteIntegrationTest extends AbstractContainer {
 		String body = """
 				{
 				  "nome": "Empresa",
-				  "sobrenome": "LTDA",
 				  "cnpj": "D4.779.442/0001-21"
 				}
 				""";
@@ -194,10 +191,10 @@ class ClienteIntegrationTest extends AbstractContainer {
 		String token = obterToken();
 
 		String cpf1 = """
-				{"nome":"Pedro","sobrenome":"Silva","cpf":"909.815.060-89"}
+				{"nome":"Pedro","cpf":"909.815.060-89"}
 				""";
 		String cpf2 = """
-				{"nome":"Ana","sobrenome":"Costa","cpf":"859.886.590-71"}
+				{"nome":"Ana","cpf":"859.886.590-71"}
 				""";
 
 		RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
@@ -227,10 +224,10 @@ class ClienteIntegrationTest extends AbstractContainer {
 		String token = obterToken();
 
 		String cpf1 = """
-				{"nome":"Pedro","sobrenome":"Silva","cpf":"909.815.060-89"}
+				{"nome":"Pedro","cpf":"909.815.060-89"}
 				""";
 		String cpf2 = """
-				{"nome":"Ana","sobrenome":"Costa","cpf":"859.886.590-71"}
+				{"nome":"Ana","cpf":"859.886.590-71"}
 				""";
 
 		RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
@@ -259,7 +256,7 @@ class ClienteIntegrationTest extends AbstractContainer {
 		String token = obterToken();
 
 		String createBody = """
-				{"nome":"Pedro","sobrenome":"Silva","cpf":"188.254.690-39"}
+				{"nome":"Pedro","cpf":"188.254.690-39"}
 				""";
 
 		RestAssured
@@ -279,7 +276,7 @@ class ClienteIntegrationTest extends AbstractContainer {
 				.contentType("application/json")
 				.header("Authorization", "Bearer " + token)
 				.body("""
-						{"nome":"Carlos","sobrenome":"Costa","cpf":"951.147.520-73"}
+						{"nome":"Carlos","cpf":"951.147.520-73"}
 						""")
 				.when()
 				.put("/cliente/" + id)
@@ -288,7 +285,6 @@ class ClienteIntegrationTest extends AbstractContainer {
 
 		var updated = clienteRepository.findById(id).orElseThrow();
 		Assertions.assertEquals("Carlos", updated.getNome());
-		Assertions.assertEquals("Costa", updated.getSobrenome());
 		Assertions.assertEquals("95114752073", updated.getCpf());
 	}
 
@@ -301,7 +297,7 @@ class ClienteIntegrationTest extends AbstractContainer {
 				.contentType("application/json")
 				.header("Authorization", "Bearer " + token)
 				.body("""
-						{"nome":"Pedro","sobrenome":"Silva","cpf":"951.147.520-73"}
+						{"nome":"Pedro","cpf":"951.147.520-73"}
 						""")
 				.when()
 				.put("/cliente/9999")
@@ -316,13 +312,13 @@ class ClienteIntegrationTest extends AbstractContainer {
 
 		RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
 				.body("""
-						{"nome":"Pedro","sobrenome":"Silva","cpf":"188.254.690-39"}
+						{"nome":"Pedro","cpf":"188.254.690-39"}
 						""")
 				.when().post("/cliente").then().statusCode(201);
 
 		RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
 				.body("""
-						{"nome":"Ana","sobrenome":"Costa","cpf":"951.147.520-73"}
+						{"nome":"Ana","cpf":"951.147.520-73"}
 						""")
 				.when().post("/cliente").then().statusCode(201);
 
@@ -335,7 +331,7 @@ class ClienteIntegrationTest extends AbstractContainer {
 				.contentType("application/json")
 				.header("Authorization", "Bearer " + token)
 				.body("""
-						{"nome":"Ana","sobrenome":"Costa","cpf":"188.254.690-39"}
+						{"nome":"Ana","cpf":"188.254.690-39"}
 						""")
 				.when()
 				.put("/cliente/" + secondId)
@@ -350,7 +346,7 @@ class ClienteIntegrationTest extends AbstractContainer {
 
 		RestAssured.given().contentType("application/json").header("Authorization", "Bearer " + token)
 				.body("""
-						{"nome":"Pedro","sobrenome":"Silva","cpf":"188.254.690-39"}
+						{"nome":"Pedro","cpf":"188.254.690-39"}
 						""")
 				.when().post("/cliente").then().statusCode(201);
 
@@ -389,7 +385,6 @@ class ClienteIntegrationTest extends AbstractContainer {
 				.body("""
 						{
 						  "nome": "Pedro",
-						  "sobrenome": "Silva",
 						  "cpf": "188.254.690-39"
 						}
 						""")
