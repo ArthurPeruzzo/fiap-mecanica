@@ -35,7 +35,7 @@ class DetalhamentoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIn
                 .body("content[0].servicos.size()", Matchers.equalTo(0))
                 .body("content[0].pecas.size()", Matchers.equalTo(0))
                 .body("content[0].insumos.size()", Matchers.equalTo(0))
-                .body("content[0].tempoMedioExecucao", Matchers.nullValue())
+                .body("content[0].tempoMedioExecucaoServicos", Matchers.nullValue())
                 .body("totalElements", Matchers.equalTo(1))
                 .body("totalPages", Matchers.equalTo(1));
     }
@@ -59,7 +59,7 @@ class DetalhamentoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIn
                 .queryParam("size", 10)
                 .when().get("/ordem-servico/detalhamento")
                 .then().statusCode(200)
-                .body("content[0].tempoMedioExecucao", Matchers.nullValue());
+                .body("content[0].tempoMedioExecucaoServicos", Matchers.nullValue());
     }
 
     @Test
@@ -90,9 +90,9 @@ class DetalhamentoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIn
                 .queryParam("size", 10)
                 .when().get("/ordem-servico/detalhamento")
                 .then().statusCode(200)
-                .body("content[0].tempoMedioExecucao.dias", Matchers.equalTo(0))
-                .body("content[0].tempoMedioExecucao.horas", Matchers.equalTo(3))
-                .body("content[0].tempoMedioExecucao.minutos", Matchers.equalTo(0));
+                .body("content[0].tempoMedioExecucaoServicos.dias", Matchers.equalTo(0))
+                .body("content[0].tempoMedioExecucaoServicos.horas", Matchers.equalTo(3))
+                .body("content[0].tempoMedioExecucaoServicos.minutos", Matchers.equalTo(0));
     }
 
     @Test
@@ -117,9 +117,9 @@ class DetalhamentoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIn
                 .queryParam("size", 10)
                 .when().get("/ordem-servico/detalhamento")
                 .then().statusCode(200)
-                .body("content[0].tempoMedioExecucao.dias", Matchers.equalTo(1))
-                .body("content[0].tempoMedioExecucao.horas", Matchers.equalTo(4))
-                .body("content[0].tempoMedioExecucao.minutos", Matchers.equalTo(30));
+                .body("content[0].tempoMedioExecucaoServicos.dias", Matchers.equalTo(1))
+                .body("content[0].tempoMedioExecucaoServicos.horas", Matchers.equalTo(4))
+                .body("content[0].tempoMedioExecucaoServicos.minutos", Matchers.equalTo(30));
     }
 
     private Long criarOrdemEmExecucaoComServicos(String tokenAtendente, String tokenMecanico, List<Long> servicoIds) {
