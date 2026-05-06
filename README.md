@@ -22,6 +22,11 @@ API REST para gestão de uma oficina mecânica, desenvolvida como projeto acadê
 - Testcontainers
 - MySQL 8.4
 
+## Arquitetura
+
+A aplicação é um monolito que utiliza arquitetura limpa em sua estrutura. A escolha por arquitetura limpa traz grandes benefícios pois com ela é possível separar muito bem as camadas de negócio das camadas de infraestrutura,
+protegendo o core do negócio dos detalhes de infraestrutura e trazendo uma manutenibilidade e evolução do sistema de forma muito mais organizada. A separação clara de responsabilidades traz também grandes ganhos na escrita dos testes pois é possível testar cada camada de forma clara e objetiva.
+
 ### Justificativa para a escolha do MySQL
 
 A aplicação possui entidades com relacionamentos bem definidos, o que se encaixa naturalmente no modelo relacional. Além disso, o MySQL é amplamente adotado no mercado e possui integração nativa com o ecossistema Spring.
@@ -34,17 +39,25 @@ A aplicação possui entidades com relacionamentos bem definidos, o que se encai
 
 ### Pré-requisitos
 
-| Via Docker | Via Maven/IDE |
-|---|---|
-| Docker + Docker Compose | Java 25, Maven, MySQL 8.x |
+| Pré-requisito |
+|---|
+| Docker + Docker Compose |
 
 ---
 
-### Opção 1 — Docker (recomendado)
+### Clone do repositório
+
+Realize o clone do repositório em sua máquina local.
+
+```
+git clone https://github.com/ArthurPeruzzo/fiap-mecanica.git
+```
+
+### Docker Compose
 
 Sobe a aplicação e o banco de dados juntos, sem necessidade de instalar Java ou MySQL localmente.
 
-```bash
+```
 # Comando utilizado para subir a aplicação
 docker compose up
 ```
@@ -63,39 +76,12 @@ O MySQL ficará acessível no host em `localhost:3307` (útil para conectar com 
 
 Para parar:
 
-```bash
+```
 docker compose down        # mantém os dados do banco
 docker compose down -v     # apaga os dados do banco também
 ```
 
 ---
-
-### Opção 2 — Maven / IDE
-
-**1. Suba o MySQL localmente** na porta `3306` com database `mecanica` criada.
-
-**2. Configure as variáveis de ambiente** na sua run configuration ou como VM options:
-
-```
-DB_URL=jdbc:mysql://127.0.0.1:3306/mecanica
-DB_USERNAME=root
-DB_PASSWORD=root
-JWT_SECRET=<sua-chave-base64url-min-32-bytes>
-```
-
-Como VM options (IntelliJ / VS Code):
-```
--Dspring.datasource.url=jdbc:mysql://127.0.0.1:3306/mecanica
--Dspring.datasource.username=root
--Dspring.datasource.password=root
--DJWT_SECRET=<sua-chave>
-```
-
-**3. Execute a aplicação:**
-
-```bash
-./mvnw spring-boot:run
-```
 
 As migrations do Flyway rodam automaticamente na inicialização e criam todas as tabelas.
 
