@@ -7,8 +7,8 @@ import com.fiap.mecanica.shared.seguranca.core.domain.User;
 import com.fiap.mecanica.shared.seguranca.core.domain.password.PasswordHash;
 import com.fiap.mecanica.shared.seguranca.core.exception.BadCredentialsAuthenticateException;
 import com.fiap.mecanica.shared.seguranca.core.exception.UnexpectedErrorAuthenticateException;
-import com.fiap.mecanica.shared.seguranca.infra.controller.dto.LoginInputDto;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
+import com.fiap.mecanica.shared.seguranca.infra.controller.dto.LoginInputDto;
 import com.fiap.mecanica.shared.seguranca.infra.token.dto.TokenParams;
 import com.fiap.mecanica.shared.seguranca.infra.userdetails.UserDetailsImpl;
 import org.junit.jupiter.api.Assertions;
@@ -18,7 +18,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.InternalAuthenticationServiceException;
@@ -52,7 +51,7 @@ class AuthenticateUserUseCaseUnitTest {
 
         Mockito.verifyNoInteractions(tokenGateway);
 
-        Assertions.assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatus());
+        Assertions.assertEquals(401, exception.getStatusCode());
         Assertions.assertEquals("Usuário ou senha incorretos", exception.getMessage());
     }
 
@@ -71,7 +70,7 @@ class AuthenticateUserUseCaseUnitTest {
 
         Mockito.verifyNoInteractions(tokenGateway);
 
-        Assertions.assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatus());
+        Assertions.assertEquals(401, exception.getStatusCode());
         Assertions.assertEquals("Usuário ou senha incorretos", exception.getMessage());
     }
 
@@ -90,7 +89,7 @@ class AuthenticateUserUseCaseUnitTest {
 
         Mockito.verifyNoInteractions(tokenGateway);
 
-        Assertions.assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatus());
+        Assertions.assertEquals(500, exception.getStatusCode());
         Assertions.assertEquals("Não foi possível realizar a autenticação", exception.getMessage());
     }
 
@@ -109,7 +108,7 @@ class AuthenticateUserUseCaseUnitTest {
 
         Mockito.verifyNoInteractions(tokenGateway);
 
-        Assertions.assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatus());
+        Assertions.assertEquals(500, exception.getStatusCode());
         Assertions.assertEquals("Não foi possível realizar a autenticação", exception.getMessage());
     }
 
@@ -128,7 +127,7 @@ class AuthenticateUserUseCaseUnitTest {
 
         Mockito.verifyNoInteractions(tokenGateway);
 
-        Assertions.assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatus());
+        Assertions.assertEquals(500, exception.getStatusCode());
         Assertions.assertEquals("Não foi possível realizar a autenticação", exception.getMessage());
     }
 

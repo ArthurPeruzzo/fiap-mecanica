@@ -1,15 +1,14 @@
 package com.fiap.mecanica.shared.exception;
 
 import lombok.Getter;
-import org.springframework.http.HttpStatus;
 
 @Getter
 public abstract class BaseException extends RuntimeException {
 
-    private final HttpStatus status;
+    private final int statusCode;
 
-    protected BaseException(HttpStatus status, String message) {
+    protected BaseException(int statusCode, String message) {
         super(message);
-        this.status = status;
+        this.statusCode = statusCode;
     }
 }

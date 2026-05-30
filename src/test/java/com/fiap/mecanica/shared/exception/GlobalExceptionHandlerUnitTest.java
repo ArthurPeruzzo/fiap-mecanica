@@ -9,7 +9,6 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
@@ -41,9 +40,9 @@ class GlobalExceptionHandlerUnitTest {
 
         ResponseEntity<ExceptionDto> response = handler.exceptionHandler(exception);
 
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertEquals(500, response.getStatusCode().value());
         assertNotNull(response.getBody());
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getBody().status());
+        assertEquals(500, response.getBody().status());
         assertEquals("Ocorreu um erro inesperado: erro genérico", response.getBody().message());
         assertTrue(response.getBody().timestamp().matches(TIMESTAMP_PATTERN));
     }
@@ -54,9 +53,9 @@ class GlobalExceptionHandlerUnitTest {
 
         ResponseEntity<ExceptionDto> response = handler.baseExceptionHandler(exception);
 
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals(404, response.getStatusCode().value());
         assertNotNull(response.getBody());
-        assertEquals(HttpStatus.NOT_FOUND, response.getBody().status());
+        assertEquals(404, response.getBody().status());
         assertEquals("Usuario nao encontrado", response.getBody().message());
         assertTrue(response.getBody().timestamp().matches(TIMESTAMP_PATTERN));
     }
@@ -67,9 +66,9 @@ class GlobalExceptionHandlerUnitTest {
 
         ResponseEntity<ExceptionDto> response = handler.illegalArgumentExceptionHandler(exception);
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(400, response.getStatusCode().value());
         assertNotNull(response.getBody());
-        assertEquals(HttpStatus.BAD_REQUEST, response.getBody().status());
+        assertEquals(400, response.getBody().status());
         assertEquals("argumento inválido", response.getBody().message());
         assertTrue(response.getBody().timestamp().matches(TIMESTAMP_PATTERN));
     }
@@ -80,9 +79,9 @@ class GlobalExceptionHandlerUnitTest {
 
         ResponseEntity<ExceptionDto> response = handler.dataIntegrityViolationExceptionHandler(exception);
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(400, response.getStatusCode().value());
         assertNotNull(response.getBody());
-        assertEquals(HttpStatus.BAD_REQUEST, response.getBody().status());
+        assertEquals(400, response.getBody().status());
         assertEquals("violação de integridade", response.getBody().message());
         assertTrue(response.getBody().timestamp().matches(TIMESTAMP_PATTERN));
     }
@@ -93,9 +92,9 @@ class GlobalExceptionHandlerUnitTest {
 
         ResponseEntity<ExceptionDto> response = handler.httpRequestMethodNotSupportedExceptionHandler(exception);
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(400, response.getStatusCode().value());
         assertNotNull(response.getBody());
-        assertEquals(HttpStatus.BAD_REQUEST, response.getBody().status());
+        assertEquals(400, response.getBody().status());
         assertEquals("Método DELETE não suportado", response.getBody().message());
         assertTrue(response.getBody().timestamp().matches(TIMESTAMP_PATTERN));
     }
@@ -109,7 +108,7 @@ class GlobalExceptionHandlerUnitTest {
 
         ResponseEntity<Map<String, String>> response = handler.methodArgumentNotValidExceptionHandler(methodArgumentNotValidException);
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(400, response.getStatusCode().value());
         assertNotNull(response.getBody());
         assertEquals("não pode ser nulo", response.getBody().get("email"));
     }

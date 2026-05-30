@@ -4,9 +4,9 @@ import com.fiap.mecanica.shared.seguranca.core.exception.BadCredentialsAuthentic
 import com.fiap.mecanica.shared.seguranca.core.exception.UnexpectedErrorAuthenticateException;
 import com.fiap.mecanica.shared.seguranca.core.exception.UserNotFoundException;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 class ExceptionsUnitTest {
 
@@ -16,15 +16,15 @@ class ExceptionsUnitTest {
 
     @Test
     void baseException_shouldStoreStatusAndMessage() {
-        BaseException exception = new BaseException(HttpStatus.BAD_REQUEST, "mensagem de teste") {};
+        BaseException exception = new BaseException(400, "mensagem de teste") {};
 
-        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatus());
+        assertEquals(400, exception.getStatusCode());
         assertEquals("mensagem de teste", exception.getMessage());
     }
 
     @Test
     void baseException_shouldExtendRuntimeException() {
-        BaseException exception = new BaseException(HttpStatus.BAD_REQUEST, "mensagem de teste") {};
+        BaseException exception = new BaseException(400, "mensagem de teste") {};
 
         assertInstanceOf(RuntimeException.class, exception);
     }
@@ -38,7 +38,7 @@ class ExceptionsUnitTest {
         ErroAcessoBaseDeDadosException exception = new ErroAcessoBaseDeDadosException();
 
         assertInstanceOf(BaseException.class, exception);
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatus());
+        assertEquals(500, exception.getStatusCode());
         assertEquals("Erro ao acessar base de dados", exception.getMessage());
     }
 
@@ -51,7 +51,7 @@ class ExceptionsUnitTest {
         UserNotFoundException exception = new UserNotFoundException();
 
         assertInstanceOf(BaseException.class, exception);
-        assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
+        assertEquals(404, exception.getStatusCode());
         assertEquals("Usuario nao encontrado", exception.getMessage());
     }
 
@@ -64,7 +64,7 @@ class ExceptionsUnitTest {
         BadCredentialsAuthenticateException exception = new BadCredentialsAuthenticateException();
 
         assertInstanceOf(BaseException.class, exception);
-        assertEquals(HttpStatus.UNAUTHORIZED, exception.getStatus());
+        assertEquals(401, exception.getStatusCode());
         assertEquals("Usuário ou senha incorretos", exception.getMessage());
     }
 
@@ -77,7 +77,7 @@ class ExceptionsUnitTest {
         UnexpectedErrorAuthenticateException exception = new UnexpectedErrorAuthenticateException();
 
         assertInstanceOf(BaseException.class, exception);
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exception.getStatus());
+        assertEquals(500, exception.getStatusCode());
         assertEquals("Não foi possível realizar a autenticação", exception.getMessage());
     }
 }
