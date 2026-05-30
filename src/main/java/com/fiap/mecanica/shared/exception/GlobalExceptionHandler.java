@@ -2,7 +2,6 @@ package com.fiap.mecanica.shared.exception;
 
 import com.fiap.mecanica.shared.exception.dto.ExceptionDto;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -18,44 +17,46 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final int INTERNAL_SERVER_ERROR = 500;
+    private static final int BAD_REQUEST = 400;
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ExceptionDto> exceptionHandler(Exception e) {
         return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-                        new ExceptionDto(HttpStatus.INTERNAL_SERVER_ERROR, LocalDateTime.now().format(FORMATTER), "Ocorreu um erro inesperado: " + e.getMessage())
+                .status(INTERNAL_SERVER_ERROR).body(
+                        new ExceptionDto(INTERNAL_SERVER_ERROR, LocalDateTime.now().format(FORMATTER), "Ocorreu um erro inesperado: " + e.getMessage())
                 );
     }
 
     @ExceptionHandler(BaseException.class)
     public ResponseEntity<ExceptionDto> baseExceptionHandler(BaseException e) {
         return ResponseEntity
-                .status(e.getStatus()).body(
-                        new ExceptionDto(e.getStatus(), LocalDateTime.now().format(FORMATTER), e.getMessage())
+                .status(e.getStatusCode()).body(
+                        new ExceptionDto(e.getStatusCode(), LocalDateTime.now().format(FORMATTER), e.getMessage())
                 );
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ExceptionDto> illegalArgumentExceptionHandler(IllegalArgumentException e){
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                new ExceptionDto(HttpStatus.BAD_REQUEST, LocalDateTime.now().format(FORMATTER), e.getMessage())
+        return ResponseEntity.status(BAD_REQUEST).body(
+                new ExceptionDto(BAD_REQUEST, LocalDateTime.now().format(FORMATTER), e.getMessage())
         );
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ExceptionDto> dataIntegrityViolationExceptionHandler(DataIntegrityViolationException e){
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                new ExceptionDto(HttpStatus.BAD_REQUEST, LocalDateTime.now().format(FORMATTER), e.getMessage())
+        return ResponseEntity.status(BAD_REQUEST).body(
+                new ExceptionDto(BAD_REQUEST, LocalDateTime.now().format(FORMATTER), e.getMessage())
         );
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ExceptionDto> httpRequestMethodNotSupportedExceptionHandler(HttpRequestMethodNotSupportedException e){
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                new ExceptionDto(HttpStatus.BAD_REQUEST, LocalDateTime.now().format(FORMATTER), "Método " + e.getMethod() + " não suportado")
+        return ResponseEntity.status(BAD_REQUEST).body(
+                new ExceptionDto(BAD_REQUEST, LocalDateTime.now().format(FORMATTER), "Método " + e.getMethod() + " não suportado")
         );
     }
 
@@ -72,7 +73,7 @@ public class GlobalExceptionHandler {
             );
         }
 
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
+        return ResponseEntity.status(BAD_REQUEST).body(errors);
     }
 
 }
