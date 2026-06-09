@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -82,6 +83,19 @@ public class PecaDatabaseGateway implements PecaGateway {
 			return new Pagina<>(pecas, resultado.getNumber(), resultado.getSize(), resultado.getTotalElements(), resultado.getTotalPages());
 		} catch (Exception e) {
 			log.error("Erro ao listar pecas", e);
+			throw new ErroAcessoBaseDeDadosException();
+		}
+	}
+
+	@Override
+	public List<Peca> listarPorIds(List<Long> pecasIds) {
+		try {
+			return pecaRepository.findAllById(pecasIds)
+					.stream()
+					.map(e -> Peca.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getQuantidadeEstoque()))
+					.toList();
+		} catch (Exception e) {
+			log.error("Erro ao listar pecas por ids: {}", pecasIds, e);
 			throw new ErroAcessoBaseDeDadosException();
 		}
 	}

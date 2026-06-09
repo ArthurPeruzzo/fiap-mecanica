@@ -121,11 +121,11 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
     }
 
     @Test
-    void shouldThrowWhenOrdemNotEmDiagnostico() {
-        var ordemRecebida = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, null,
-                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null,
-                null, List.of(), List.of(), List.of(), null, null, null, null, null, null);
-        Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemRecebida));
+    void shouldThrowWhenOrdemStatusNotAllowedForVincularInsumo() {
+        var ordemDiagnosticoConcluido = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
+                List.of(), List.of(), List.of(), null, null, null, null, null, null);
+        Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemDiagnosticoConcluido));
         stubInsumo(insumoComEstoque(10));
 
         assertThrows(VinculoInsumoNaoAutorizadaException.class,

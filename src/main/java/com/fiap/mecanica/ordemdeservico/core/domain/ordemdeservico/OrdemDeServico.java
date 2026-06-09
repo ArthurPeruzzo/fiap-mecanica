@@ -50,6 +50,12 @@ public class OrdemDeServico {
         this.state = new OrdemDeServicoRecebidaState();
     }
 
+    public void setId(Long id) {
+        if (this.id == null) {
+            this.id = id;
+        }
+    }
+
     public void iniciarDiagnostico(Long mecanicoId) {
         if (possuiMecanicoResponsavel() && !isMecanicoResponsavel(mecanicoId)) {
             throw new OrdemDeServicoMecanicoResponsavelException();
@@ -134,7 +140,7 @@ public class OrdemDeServico {
     }
 
     public void vincularServico(Long servicoId, BigDecimal preco) {
-        if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
+        if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status) && !StatusOrdemDeServico.RECEBIDA.equals(status)) {
             throw new VinculoServicoNaoAutorizadoException();
         }
 
@@ -146,7 +152,7 @@ public class OrdemDeServico {
     }
 
     public void desvincularServico(Long servicoId) {
-        if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
+        if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status) && !StatusOrdemDeServico.RECEBIDA.equals(status)) {
             throw new VinculoServicoNaoAutorizadoException();
         }
 
@@ -165,7 +171,7 @@ public class OrdemDeServico {
     }
 
     public void vincularPeca(Long pecaId, Integer quantidade, BigDecimal preco) {
-        if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
+        if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status) && !StatusOrdemDeServico.RECEBIDA.equals(status)) {
             throw new VinculoPecaNaoAutorizadaException();
         }
         var existente = pecasVinculadas.stream()
@@ -200,7 +206,7 @@ public class OrdemDeServico {
     }
 
     public void vincularInsumo(Long insumoId, Integer quantidade, BigDecimal preco) {
-        if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status)) {
+        if (!StatusOrdemDeServico.EM_DIAGNOSTICO.equals(status) && !StatusOrdemDeServico.RECEBIDA.equals(status)) {
             throw new VinculoInsumoNaoAutorizadaException();
         }
         var existente = insumosVinculados.stream()

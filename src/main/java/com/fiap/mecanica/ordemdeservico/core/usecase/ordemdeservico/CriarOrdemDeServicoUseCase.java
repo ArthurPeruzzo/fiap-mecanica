@@ -1,22 +1,39 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico;
 
+import com.fiap.mecanica.estoque.core.domain.Insumo;
+import com.fiap.mecanica.estoque.core.domain.Peca;
+import com.fiap.mecanica.estoque.core.exception.InsumoNaoEncontradoException;
+import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
+import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
+import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.gestao.core.domain.Atendente;
 import com.fiap.mecanica.gestao.core.domain.Cliente;
 import com.fiap.mecanica.gestao.core.domain.Veiculo;
+import com.fiap.mecanica.gestao.core.exception.AtendenteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.gateway.AtendenteGateway;
 import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
 import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
+import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
-import com.fiap.mecanica.gestao.core.exception.AtendenteNaoEncontradoException;
+import com.fiap.mecanica.ordemdeservico.core.dto.InsumoVinculadoCriarDto;
+import com.fiap.mecanica.ordemdeservico.core.dto.PecaVinculadaCriarDto;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaVeiculoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,22 +44,25 @@ public class CriarOrdemDeServicoUseCase {
 	private final OrdemDeServicoGateway ordemDeServicoGateway;
 	private final VeiculoGateway veiculoGateway;
 	private final ClienteGateway clienteGateway;
+	private final ServicoGateway servicoGateway;
+	private final PecaGateway pecaGateway;
+	private final InsumoGateway insumoGateway;
 
-	public void criar(CriarOrdemDeServicoDto dto) {
+	public Long criar(CriarOrdemDeServicoDto dto) {
 		Atendente atendente = buscaAtendentePorUsuarioId();
 		Veiculo veiculo = buscaVeiculoPorId(dto.veiculoId());
 		Cliente cliente = buscaClientePorId(dto.clienteId());
 
-		if (!veiculo.pertenceAo(cliente.getId())) {
-			throw new VeiculoNaoPertenceAoClienteException();
-		}
+		validaVinculoVeiculoAndCliente(veiculo, cliente);
+		validaOrdemAbertaParaVeiculo(veiculo);
 
-		if (ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(dto.veiculoId())) {
-			throw new OrdemDeServicoAbertaParaVeiculoException();
-		}
+		OrdemDeServico ordemDeServico = criaOrdemDeServico(dto, atendente);
 
-		OrdemDeServico ordemDeServico = new OrdemDeServico(dto.clienteId(), dto.veiculoId(), atendente.getId(), dto.descricao());
-		ordemDeServicoGateway.criar(ordemDeServico);
+		vincularServicos(ordemDeServico, dto.servicosIds());
+		vincularPecas(ordemDeServico, dto.pecas());
+		vincularInsumos(ordemDeServico, dto.insumos());
+
+		return ordemDeServico.getId();
 	}
 
 	private Atendente buscaAtendentePorUsuarioId() {
@@ -56,5 +76,78 @@ public class CriarOrdemDeServicoUseCase {
 
 	private Cliente buscaClientePorId(Long clienteId) {
 		return clienteGateway.buscarPorId(clienteId).orElseThrow(ClienteNaoEncontradoException::new);
+	}
+
+	private void validaVinculoVeiculoAndCliente(Veiculo veiculo, Cliente cliente) {
+		if (!veiculo.pertenceAo(cliente.getId())) {
+			throw new VeiculoNaoPertenceAoClienteException();
+		}
+	}
+
+	private void validaOrdemAbertaParaVeiculo(Veiculo veiculo) {
+		if (ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(veiculo.getId())) {
+			throw new OrdemDeServicoAbertaParaVeiculoException();
+		}
+	}
+
+	private OrdemDeServico criaOrdemDeServico(CriarOrdemDeServicoDto dto, Atendente atendente) {
+		OrdemDeServico ordemDeServico = new OrdemDeServico(dto.clienteId(), dto.veiculoId(), atendente.getId(), dto.descricao());
+		Long ordemServicoId = ordemDeServicoGateway.criar(ordemDeServico);
+		ordemDeServico.setId(ordemServicoId);
+		return ordemDeServico;
+	}
+
+	private void vincularServicos(OrdemDeServico ordemDeServico, List<Long> servicosIds) {
+		if (servicosIds == null || servicosIds.isEmpty()) return;
+
+		List<Servico> servicos = servicoGateway.listarPorIds(servicosIds);
+		if (servicos.size() != servicosIds.size()) {
+			throw new ServicoNaoEncontradoException();
+		}
+
+		servicos.forEach(servico -> {
+			ordemDeServico.vincularServico(servico.getId(), servico.getPreco());
+			ordemDeServicoGateway.vincularServico(ordemDeServico.getId(), servico.getId(), servico.getPreco(), StatusServico.NAO_INICIADO);
+		});
+	}
+
+	private void vincularPecas(OrdemDeServico ordemDeServico, List<PecaVinculadaCriarDto> pecas) {
+		if (pecas == null || pecas.isEmpty()) return;
+
+		List<Long> pecasIds = pecas.stream().map(PecaVinculadaCriarDto::id).toList();
+		Map<Long, Peca> pecasPorId = pecaGateway.listarPorIds(pecasIds).stream()
+				.collect(Collectors.toMap(Peca::getId, Function.identity()));
+
+		if (pecasPorId.size() != pecasIds.size()) {
+			throw new PecaNaoEncontradaException();
+		}
+
+		pecas.forEach(dto -> {
+			Peca peca = pecasPorId.get(dto.id());
+			peca.baixarEstoque(dto.quantidade());
+			pecaGateway.atualizar(peca);
+			ordemDeServico.vincularPeca(peca.getId(), dto.quantidade(), peca.getPreco());
+			ordemDeServicoGateway.vincularOuSomarPeca(ordemDeServico.getId(), peca.getId(), dto.quantidade(), peca.getPreco());
+		});
+	}
+
+	private void vincularInsumos(OrdemDeServico ordemDeServico, List<InsumoVinculadoCriarDto> insumos) {
+		if (insumos == null || insumos.isEmpty()) return;
+
+		List<Long> insumosIds = insumos.stream().map(InsumoVinculadoCriarDto::id).toList();
+		Map<Long, Insumo> insumosPorId = insumoGateway.listarPorIds(insumosIds).stream()
+				.collect(Collectors.toMap(Insumo::getId, Function.identity()));
+
+		if (insumosPorId.size() != insumosIds.size()) {
+			throw new InsumoNaoEncontradoException();
+		}
+
+		insumos.forEach(dto -> {
+			Insumo insumo = insumosPorId.get(dto.id());
+			insumo.baixarEstoque(dto.quantidade());
+			insumoGateway.atualizar(insumo);
+			ordemDeServico.vincularInsumo(insumo.getId(), dto.quantidade(), insumo.getPreco());
+			ordemDeServicoGateway.vincularOuSomarInsumo(ordemDeServico.getId(), insumo.getId(), dto.quantidade(), insumo.getPreco());
+		});
 	}
 }

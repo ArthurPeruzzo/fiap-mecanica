@@ -1,30 +1,8 @@
 package com.fiap.mecanica.ordemdeservico.core.domain;
 
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.Orcamento;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.InsumoVinculado;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.PecaVinculada;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.ServicoVinculado;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
-import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularInsumoNaoAutorizadaException;
-import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularPecaNaoAutorizadaException;
-import com.fiap.mecanica.ordemdeservico.core.exception.FinalizarServicoNaoAutorizadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.IniciarServicoNaoAutorizadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoIniciadoOuFinalizadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.InsumoNaoVinculadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.MecanicoNaoResponsavelPelaOrdemDeServicoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoMecanicoResponsavelException;
-import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoSemServicosException;
-import com.fiap.mecanica.ordemdeservico.core.exception.PecaNaoVinculadaException;
-import com.fiap.mecanica.ordemdeservico.core.exception.QuantidadeDesvincularInvalidaException;
-import com.fiap.mecanica.ordemdeservico.core.exception.ServicoEmExecucaoOuFinalizadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.ServicoJaVinculadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
-import com.fiap.mecanica.ordemdeservico.core.exception.VinculoInsumoNaoAutorizadaException;
-import com.fiap.mecanica.ordemdeservico.core.exception.VinculoPecaNaoAutorizadaException;
-import com.fiap.mecanica.ordemdeservico.core.exception.VinculoServicoNaoAutorizadoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.*;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -251,8 +229,19 @@ class OrdemDeServicoUnitTest {
     }
 
     @Test
-    void vincularServico_shouldThrowWhenStatusIsNotEmDiagnostico() {
+    void vincularServico_shouldAddServicoToListWhenStatusIsRecebida() {
         var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
+
+        os.vincularServico(10L, BigDecimal.TEN);
+
+        assertTrue(os.getServicosVinculados().stream().anyMatch(s -> s.servicoId().equals(10L)));
+    }
+
+    @Test
+    void vincularServico_shouldThrowWhenStatusIsNotEmDiagnosticoNemRecebida() {
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
+                List.of(), List.of(), List.of(), null, null, null, null, null, null);
 
         assertThrows(VinculoServicoNaoAutorizadoException.class, () -> os.vincularServico(10L, BigDecimal.TEN));
     }
@@ -282,9 +271,9 @@ class OrdemDeServicoUnitTest {
     }
 
     @Test
-    void desvincularServico_shouldThrowWhenStatusIsNotEmDiagnostico() {
+    void desvincularServico_shouldThrowWhenStatusIsNotEmDiagnosticoNemRecebida() {
         var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, null,
-                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null,
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
                 List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)), List.of(), List.of(),
                 null, null, null, null, null, null);
 
@@ -330,10 +319,21 @@ class OrdemDeServicoUnitTest {
     }
 
     @Test
-    void vincularPeca_shouldThrowWhenStatusIsNotEmDiagnostico() {
+    void vincularPeca_shouldAddPecaToListWhenStatusIsRecebida() {
         var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
-        BigDecimal preco = new BigDecimal(10);
-        assertThrows(VinculoPecaNaoAutorizadaException.class, () -> os.vincularPeca(20L, 3, preco));
+
+        os.vincularPeca(20L, 3, new BigDecimal(10));
+
+        assertEquals(1, os.getPecasVinculadas().size());
+        assertEquals(20L, os.getPecasVinculadas().getFirst().pecaId());
+    }
+
+    @Test
+    void vincularPeca_shouldThrowWhenStatusIsNotEmDiagnosticoNemRecebida() {
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
+                List.of(), List.of(), List.of(), null, null, null, null, null, null);
+        assertThrows(VinculoPecaNaoAutorizadaException.class, () -> os.vincularPeca(20L, 3, new BigDecimal(10)));
     }
 
     // --- desvincularPeca ---
@@ -422,9 +422,20 @@ class OrdemDeServicoUnitTest {
     }
 
     @Test
-    void vincularInsumo_shouldThrowWhenStatusIsNotEmDiagnostico() {
+    void vincularInsumo_shouldAddInsumoToListWhenStatusIsRecebida() {
         var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
 
+        os.vincularInsumo(30L, 5, BigDecimal.TEN);
+
+        assertEquals(1, os.getInsumosVinculados().size());
+        assertEquals(30L, os.getInsumosVinculados().getFirst().insumoId());
+    }
+
+    @Test
+    void vincularInsumo_shouldThrowWhenStatusIsNotEmDiagnosticoNemRecebida() {
+        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
+                List.of(), List.of(), List.of(), null, null, null, null, null, null);
         assertThrows(VinculoInsumoNaoAutorizadaException.class, () -> os.vincularInsumo(30L, 5, BigDecimal.TEN));
     }
 

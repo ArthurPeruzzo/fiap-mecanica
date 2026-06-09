@@ -48,12 +48,15 @@ class OrdemDeServicoDatabaseGatewayUnitTest {
     private static final String DESCRICAO = "Barulho ao frear";
 
     @Test
-    void criar_shouldSaveEntityWithAllFields() {
+    void criar_shouldSaveEntityWithAllFieldsAndReturnId() {
         var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
+        var savedEntity = OrdemDeServicoEntity.builder().id(42L).build();
+        Mockito.when(ordemDeServicoRepository.save(Mockito.any())).thenReturn(savedEntity);
         var captor = ArgumentCaptor.forClass(OrdemDeServicoEntity.class);
 
-        gateway.criar(os);
+        var id = gateway.criar(os);
 
+        assertEquals(42L, id);
         Mockito.verify(ordemDeServicoRepository).save(captor.capture());
         var entity = captor.getValue();
         assertEquals(1L, entity.getClienteId());

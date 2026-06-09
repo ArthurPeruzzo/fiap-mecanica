@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -84,6 +85,19 @@ public class InsumoDatabaseGateway implements InsumoGateway {
 			return new Pagina<>(insumos, resultado.getNumber(), resultado.getSize(), resultado.getTotalElements(), resultado.getTotalPages());
 		} catch (Exception e) {
 			log.error("Erro ao listar insumos", e);
+			throw new ErroAcessoBaseDeDadosException();
+		}
+	}
+
+	@Override
+	public List<Insumo> listarPorIds(List<Long> insumosIds) {
+		try {
+			return insumoRepository.findAllById(insumosIds)
+					.stream()
+					.map(e -> Insumo.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getUnidadeMedida(), e.getQuantidadeEstoque()))
+					.toList();
+		} catch (Exception e) {
+			log.error("Erro ao listar insumos por ids: {}", insumosIds, e);
 			throw new ErroAcessoBaseDeDadosException();
 		}
 	}

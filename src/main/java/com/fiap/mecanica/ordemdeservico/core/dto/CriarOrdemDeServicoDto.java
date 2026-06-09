@@ -1,4 +1,13 @@
 package com.fiap.mecanica.ordemdeservico.core.dto;
 
-public record CriarOrdemDeServicoDto(Long clienteId, Long veiculoId, String descricao) {
+import java.util.List;
+
+public record CriarOrdemDeServicoDto(
+        Long clienteId,
+        Long veiculoId,
+        List<Long> servicosIds,
+        List<PecaVinculadaCriarDto> pecas,
+        List<InsumoVinculadoCriarDto> insumos,
+        String descricao
+) {
 }

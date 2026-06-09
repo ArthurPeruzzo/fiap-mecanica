@@ -35,9 +35,9 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
     private final OrdemDeServicoServicoRepository ordemDeServicoServicoRepository;
 
     @Override
-    public void criar(OrdemDeServico ordemDeServico) {
+    public Long criar(OrdemDeServico ordemDeServico) {
         try {
-            ordemDeServicoRepository.save(OrdemDeServicoEntity.builder()
+            OrdemDeServicoEntity entity = ordemDeServicoRepository.save(OrdemDeServicoEntity.builder()
                     .clienteId(ordemDeServico.getClienteId())
                     .veiculoId(ordemDeServico.getVeiculoId())
                     .atendenteId(ordemDeServico.getAtendenteId())
@@ -45,6 +45,7 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
                     .descricao(ordemDeServico.getDescricao())
                     .dataCriacao(ordemDeServico.getDataCriacao())
                     .build());
+            return entity.getId();
         } catch (Exception e) {
             log.error("Erro ao criar ordem de servico", e);
             throw new ErroAcessoBaseDeDadosException();

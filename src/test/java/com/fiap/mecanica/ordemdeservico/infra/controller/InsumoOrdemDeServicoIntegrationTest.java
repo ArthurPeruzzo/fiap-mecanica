@@ -78,9 +78,7 @@ class InsumoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrat
     void shouldReturn422WhenOrdemNaoEmDiagnosticoParaVincularInsumo() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
-        Long clienteId = criarClienteERetornarId();
-        Long veiculoId = criarVeiculoERetornarId(clienteId);
-        Long ordemId = criarOrdemERetornarId(tokenAtendente, clienteId, veiculoId);
+        Long ordemId = criarOrdemAguardandoAprovacaoERetornarId(tokenAtendente, tokenMecanico);
         Long insumoId = criarInsumoERetornarId(10);
 
         RestAssured.given().contentType("application/json")
@@ -88,7 +86,7 @@ class InsumoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrat
                 .body("{\"quantidade\":3}")
                 .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
                 .then().statusCode(422)
-                .body("message", Matchers.equalTo("Não é possível vincular insumos se a ordem de serviço não está em diagnóstico"));
+                .body("message", Matchers.equalTo("Não é possível vincular insumos se a ordem de serviço não está em diagnóstico ou recebida"));
     }
 
     @Test
