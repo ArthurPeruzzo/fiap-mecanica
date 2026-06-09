@@ -75,7 +75,7 @@ class InsumoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrat
     }
 
     @Test
-    void shouldReturn422WhenOrdemNaoEmDiagnosticoParaVincularInsumo() {
+    void shouldReturn422WhenOrdemStatusNaoPermiteVincularInsumo() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemAguardandoAprovacaoERetornarId(tokenAtendente, tokenMecanico);

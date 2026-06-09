@@ -75,7 +75,7 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
     }
 
     @Test
-    void shouldReturn422WhenOrdemNaoEmDiagnosticoParaVincularPeca() {
+    void shouldReturn422WhenOrdemStatusNaoPermiteVincularPeca() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemAguardandoAprovacaoERetornarId(tokenAtendente, tokenMecanico);

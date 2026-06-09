@@ -49,7 +49,7 @@ class ServicoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegra
     }
 
     @Test
-    void shouldReturn422WhenOrdemNaoEmDiagnosticoParaVincular() {
+    void shouldReturn422WhenOrdemStatusNaoPermiteVincularServico() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemAguardandoAprovacaoERetornarId(tokenAtendente, tokenMecanico);
@@ -128,7 +128,7 @@ class ServicoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegra
     }
 
     @Test
-    void shouldReturn422WhenOrdemNaoEmDiagnosticoParaDesvincular() {
+    void shouldReturn422WhenOrdemStatusNaoPermiteDesvincularServico() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemAguardandoAprovacaoERetornarId(tokenAtendente, tokenMecanico);
