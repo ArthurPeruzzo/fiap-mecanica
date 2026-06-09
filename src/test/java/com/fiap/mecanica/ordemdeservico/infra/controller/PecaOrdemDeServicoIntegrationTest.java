@@ -75,12 +75,10 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
     }
 
     @Test
-    void shouldReturn422WhenOrdemNaoEmDiagnosticoParaVincularPeca() {
+    void shouldReturn422WhenOrdemStatusNaoPermiteVincularPeca() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
-        Long clienteId = criarClienteERetornarId();
-        Long veiculoId = criarVeiculoERetornarId(clienteId);
-        Long ordemId = criarOrdemERetornarId(tokenAtendente, clienteId, veiculoId);
+        Long ordemId = criarOrdemAguardandoAprovacaoERetornarId(tokenAtendente, tokenMecanico);
         Long pecaId = criarPecaERetornarId(10);
 
         RestAssured.given().contentType("application/json")
@@ -88,7 +86,7 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
                 .body("{\"quantidade\":2}")
                 .when().put("/ordem-servico/" + ordemId + "/pecas/" + pecaId)
                 .then().statusCode(422)
-                .body("message", Matchers.equalTo("Não é possível vincular peças se a ordem de serviço não está em diagnóstico"));
+                .body("message", Matchers.equalTo("Não é possível vincular peças se a ordem de serviço não está em diagnóstico ou recebida"));
     }
 
     @Test

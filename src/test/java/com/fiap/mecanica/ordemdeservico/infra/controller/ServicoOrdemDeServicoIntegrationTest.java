@@ -49,19 +49,17 @@ class ServicoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegra
     }
 
     @Test
-    void shouldReturn422WhenOrdemNaoEmDiagnosticoParaVincular() {
+    void shouldReturn422WhenOrdemStatusNaoPermiteVincularServico() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
-        Long clienteId = criarClienteERetornarId();
-        Long veiculoId = criarVeiculoERetornarId(clienteId);
-        Long ordemId = criarOrdemERetornarId(tokenAtendente, clienteId, veiculoId);
+        Long ordemId = criarOrdemAguardandoAprovacaoERetornarId(tokenAtendente, tokenMecanico);
         Long servicoId = criarServicoERetornarId();
 
         RestAssured.given()
                 .header("Authorization", "Bearer " + tokenMecanico)
                 .when().put("/ordem-servico/" + ordemId + "/servicos/" + servicoId)
                 .then().statusCode(422)
-                .body("message", Matchers.equalTo("Não é possível adicionar ou remover serviços se a ordem de serviço não está em diagnóstico"));
+                .body("message", Matchers.equalTo("Não é possível adicionar ou remover serviços se a ordem de serviço não está em diagnóstico ou recebida"));
     }
 
     @Test
@@ -130,19 +128,17 @@ class ServicoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegra
     }
 
     @Test
-    void shouldReturn422WhenOrdemNaoEmDiagnosticoParaDesvincular() {
+    void shouldReturn422WhenOrdemStatusNaoPermiteDesvincularServico() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
-        Long clienteId = criarClienteERetornarId();
-        Long veiculoId = criarVeiculoERetornarId(clienteId);
-        Long ordemId = criarOrdemERetornarId(tokenAtendente, clienteId, veiculoId);
+        Long ordemId = criarOrdemAguardandoAprovacaoERetornarId(tokenAtendente, tokenMecanico);
         Long servicoId = criarServicoERetornarId();
 
         RestAssured.given()
                 .header("Authorization", "Bearer " + tokenMecanico)
                 .when().delete("/ordem-servico/" + ordemId + "/servicos/" + servicoId)
                 .then().statusCode(422)
-                .body("message", Matchers.equalTo("Não é possível adicionar ou remover serviços se a ordem de serviço não está em diagnóstico"));
+                .body("message", Matchers.equalTo("Não é possível adicionar ou remover serviços se a ordem de serviço não está em diagnóstico ou recebida"));
     }
 
     @Test

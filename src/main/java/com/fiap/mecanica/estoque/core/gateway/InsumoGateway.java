@@ -3,6 +3,7 @@ package com.fiap.mecanica.estoque.core.gateway;
 import com.fiap.mecanica.estoque.core.domain.Insumo;
 import com.fiap.mecanica.shared.page.Pagina;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface InsumoGateway {
@@ -11,4 +12,5 @@ public interface InsumoGateway {
     void atualizar(Insumo insumo);
     void deletar(Long id);
     Pagina<Insumo> listar(int page, int size);
+    List<Insumo> listarPorIds(List<Long> insumosIds);
 }

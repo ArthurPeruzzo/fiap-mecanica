@@ -105,11 +105,11 @@ class VincularServicoOrdemDeServicoUseCaseUnitTest {
     }
 
     @Test
-    void shouldThrowWhenOrdemNotEmDiagnostico() {
-        var ordemRecebida = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, null,
-                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null,
+    void shouldThrowWhenOrdemStatusNotAllowedForVincular() {
+        var ordemDiagnosticoConcluido = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
+                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
                 List.of(), List.of(), List.of(), null, null, null, null, null, null);
-        stubOrdem(ordemRecebida);
+        stubOrdem(ordemDiagnosticoConcluido);
         stubServico();
 
         assertThrows(VinculoServicoNaoAutorizadoException.class,

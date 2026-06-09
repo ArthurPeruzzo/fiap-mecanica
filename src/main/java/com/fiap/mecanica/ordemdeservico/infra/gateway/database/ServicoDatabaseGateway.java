@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -80,6 +81,19 @@ public class ServicoDatabaseGateway implements ServicoGateway {
             return new Pagina<>(servicos, resultado.getNumber(), resultado.getSize(), resultado.getTotalElements(), resultado.getTotalPages());
         } catch (Exception e) {
             log.error("Erro ao listar servicos", e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+
+    @Override
+    public List<Servico> listarPorIds(List<Long> servicosIds) {
+        try {
+            return servicoRepository.findAllById(servicosIds)
+                    .stream()
+                    .map(e -> Servico.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco()))
+                    .toList();
+        } catch (Exception e) {
+            log.error("Erro ao listar servicos por ids: {}", servicosIds, e);
             throw new ErroAcessoBaseDeDadosException();
         }
     }

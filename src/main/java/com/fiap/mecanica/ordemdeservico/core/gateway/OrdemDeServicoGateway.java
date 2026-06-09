@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface OrdemDeServicoGateway {
-	void criar(OrdemDeServico ordemDeServico);
+	Long criar(OrdemDeServico ordemDeServico);
 	Optional<OrdemDeServico> buscarPorId(Long id);
 	void atualizar(OrdemDeServico ordemDeServico);
 	boolean existeOrdemAbertaParaVeiculo(Long veiculoId);

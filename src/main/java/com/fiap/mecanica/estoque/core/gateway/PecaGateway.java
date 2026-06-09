@@ -3,6 +3,7 @@ package com.fiap.mecanica.estoque.core.gateway;
 import com.fiap.mecanica.estoque.core.domain.Peca;
 import com.fiap.mecanica.shared.page.Pagina;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface PecaGateway {
@@ -11,4 +12,5 @@ public interface PecaGateway {
     void atualizar(Peca peca);
     void deletar(Long id);
     Pagina<Peca> listar(int page, int size);
+    List<Peca> listarPorIds(List<Long> pecasIds);
 }

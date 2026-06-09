@@ -1,7 +1,9 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
+import com.fiap.mecanica.ordemdeservico.core.dto.InsumoVinculadoCriarDto;
 import com.fiap.mecanica.ordemdeservico.core.dto.OrdemDeServicoListagemDto;
+import com.fiap.mecanica.ordemdeservico.core.dto.PecaVinculadaCriarDto;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.*;
 import com.fiap.mecanica.shared.page.PageResponse;
@@ -50,9 +52,16 @@ public class OrdemDeServicoController {
             @ApiResponse(responseCode = "422", description = "Veículo não pertence ao cliente informado ou já existe uma ordem de serviço aberta para este veículo")
     })
     @PostMapping
-    public ResponseEntity<Void> criar(@RequestBody @Valid OrdemDeServicoRequestJson request) {
-        criarOrdemDeServicoUseCase.criar(new CriarOrdemDeServicoDto(request.clienteId(), request.veiculoId(), request.descricao()));
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+    public ResponseEntity<Long> criar(@RequestBody @Valid OrdemDeServicoRequestJson request) {
+        var pecas = request.pecas() == null ? null :
+                request.pecas().stream().map(p -> new PecaVinculadaCriarDto(p.id(), p.quantidade())).toList();
+        var insumos = request.insumos() == null ? null :
+                request.insumos().stream().map(i -> new InsumoVinculadoCriarDto(i.id(), i.quantidade())).toList();
+
+        Long ordemDeServicoId = criarOrdemDeServicoUseCase.criar(new CriarOrdemDeServicoDto(
+                request.clienteId(), request.veiculoId(), request.servicosIds(), pecas, insumos, request.descricao()
+        ));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ordemDeServicoId);
     }
 
     @Operation(summary = "Iniciar Diagnóstico",

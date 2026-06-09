@@ -7,29 +7,8 @@ import com.fiap.mecanica.gestao.core.exception.AtendenteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularInsumoNaoAutorizadaException;
-import com.fiap.mecanica.ordemdeservico.core.exception.DesvincularPecaNaoAutorizadaException;
-import com.fiap.mecanica.ordemdeservico.core.exception.FinalizarServicoNaoAutorizadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.IniciarServicoNaoAutorizadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.InsumoNaoVinculadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.MecanicoNaoResponsavelPelaOrdemDeServicoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaVeiculoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoSemServicosException;
-import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoMecanicoResponsavelException;
-import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
-import com.fiap.mecanica.ordemdeservico.core.exception.PecaNaoVinculadaException;
-import com.fiap.mecanica.ordemdeservico.core.exception.QuantidadeDesvincularInvalidaException;
-import com.fiap.mecanica.ordemdeservico.core.exception.ServicoEmExecucaoOuFinalizadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoIniciadoOuFinalizadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.ServicoJaVinculadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
-import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
-import com.fiap.mecanica.ordemdeservico.core.exception.VinculoInsumoNaoAutorizadaException;
-import com.fiap.mecanica.ordemdeservico.core.exception.VinculoPecaNaoAutorizadaException;
-import com.fiap.mecanica.ordemdeservico.core.exception.VinculoServicoNaoAutorizadoException;
 import com.fiap.mecanica.ordemdeservico.core.dto.OrdemDeServicoListagemDto;
+import com.fiap.mecanica.ordemdeservico.core.exception.*;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.page.Pagina;
@@ -118,6 +97,125 @@ class OrdemDeServicoControllerContractTest {
                 .andExpect(status().isCreated());
 
         Mockito.verify(criarOrdemDeServicoUseCase).criar(Mockito.any());
+    }
+
+    @Test
+    void shouldReturn201WithOrdemIdInBody() throws Exception {
+        Mockito.when(criarOrdemDeServicoUseCase.criar(Mockito.any())).thenReturn(42L);
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_BODY))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$").value(42));
+    }
+
+    @Test
+    void shouldReturn201WhenRequestIncludesPecasAndInsumos() throws Exception {
+        String bodyWithLinks = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"," +
+                "\"servicosIds\":[1],\"pecas\":[{\"id\":1,\"quantidade\":2}],\"insumos\":[{\"id\":3,\"quantidade\":1}]}";
+        Mockito.when(criarOrdemDeServicoUseCase.criar(Mockito.any())).thenReturn(1L);
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(bodyWithLinks))
+                .andExpect(status().isCreated());
+
+        Mockito.verify(criarOrdemDeServicoUseCase).criar(Mockito.any());
+    }
+
+    @Test
+    void shouldReturn400WhenPecaIdIsNull() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"teste\",\"pecas\":[{\"quantidade\":2}]}"))
+                .andExpect(status().isBadRequest());
+
+        Mockito.verifyNoInteractions(criarOrdemDeServicoUseCase);
+    }
+
+    @Test
+    void shouldReturn400WhenPecaQuantidadeIsNullOrZero() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"teste\",\"pecas\":[{\"id\":1}]}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"teste\",\"pecas\":[{\"id\":1,\"quantidade\":0}]}"))
+                .andExpect(status().isBadRequest());
+
+        Mockito.verifyNoInteractions(criarOrdemDeServicoUseCase);
+    }
+
+    @Test
+    void shouldReturn400WhenInsumoIdIsNull() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"teste\",\"insumos\":[{\"quantidade\":2}]}"))
+                .andExpect(status().isBadRequest());
+
+        Mockito.verifyNoInteractions(criarOrdemDeServicoUseCase);
+    }
+
+    @Test
+    void shouldReturn400WhenInsumoQuantidadeIsNullOrZero() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"teste\",\"insumos\":[{\"id\":1}]}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"teste\",\"insumos\":[{\"id\":1,\"quantidade\":0}]}"))
+                .andExpect(status().isBadRequest());
+
+        Mockito.verifyNoInteractions(criarOrdemDeServicoUseCase);
+    }
+
+    @Test
+    void shouldReturn404WhenServicoNotFoundOnCriar() throws Exception {
+        Mockito.doThrow(new ServicoNaoEncontradoException()).when(criarOrdemDeServicoUseCase).criar(Mockito.any());
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_BODY))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Serviço não encontrado"));
+    }
+
+    @Test
+    void shouldReturn404WhenPecaNotFoundOnCriar() throws Exception {
+        Mockito.doThrow(new PecaNaoEncontradaException()).when(criarOrdemDeServicoUseCase).criar(Mockito.any());
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_BODY))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Peça não encontrada"));
+    }
+
+    @Test
+    void shouldReturn404WhenInsumoNotFoundOnCriar() throws Exception {
+        Mockito.doThrow(new InsumoNaoEncontradoException()).when(criarOrdemDeServicoUseCase).criar(Mockito.any());
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_BODY))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Insumo não encontrado"));
+    }
+
+    @Test
+    void shouldReturn422WhenEstoqueInsuficienteOnCriar() throws Exception {
+        Mockito.doThrow(new EstoqueInsuficienteException()).when(criarOrdemDeServicoUseCase).criar(Mockito.any());
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_BODY))
+                .andExpect(status().isUnprocessableContent())
+                .andExpect(jsonPath("$.message").value("Estoque insuficiente para realizar a operação"));
     }
 
     @ParameterizedTest
@@ -342,13 +440,13 @@ class OrdemDeServicoControllerContractTest {
     }
 
     @Test
-    void shouldReturn422WhenOrdemNaoEmDiagnosticoOnVincular() throws Exception {
+    void shouldReturn422WhenOrdemNaoEmDiagnosticoERecebidaOnVincular() throws Exception {
         Mockito.doThrow(new VinculoServicoNaoAutorizadoException())
                 .when(vincularServicoOrdemDeServicoUseCase).vincular(1L, 10L);
 
         mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/servicos/10"))
                 .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Não é possível adicionar ou remover serviços se a ordem de serviço não está em diagnóstico"));
+                .andExpect(jsonPath("$.message").value("Não é possível adicionar ou remover serviços se a ordem de serviço não está em diagnóstico ou recebida"));
     }
 
     // --- desvincularServico ---
@@ -398,7 +496,7 @@ class OrdemDeServicoControllerContractTest {
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/servicos/10"))
                 .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Não é possível adicionar ou remover serviços se a ordem de serviço não está em diagnóstico"));
+                .andExpect(jsonPath("$.message").value("Não é possível adicionar ou remover serviços se a ordem de serviço não está em diagnóstico ou recebida"));
     }
 
     // --- vincularPeca ---
@@ -476,7 +574,7 @@ class OrdemDeServicoControllerContractTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_PECA_BODY))
                 .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Não é possível vincular peças se a ordem de serviço não está em diagnóstico"));
+                .andExpect(jsonPath("$.message").value("Não é possível vincular peças se a ordem de serviço não está em diagnóstico ou recebida"));
     }
 
     // --- desvincularPeca ---
@@ -642,7 +740,7 @@ class OrdemDeServicoControllerContractTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_INSUMO_BODY))
                 .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Não é possível vincular insumos se a ordem de serviço não está em diagnóstico"));
+                .andExpect(jsonPath("$.message").value("Não é possível vincular insumos se a ordem de serviço não está em diagnóstico ou recebida"));
     }
 
     // --- desvincularInsumo ---
