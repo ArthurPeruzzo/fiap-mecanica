@@ -5,6 +5,7 @@ import com.fiap.mecanica.estoque.core.exception.EstoqueInsuficienteException;
 import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
 import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServicoStateFactory;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.PecaVinculada;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
@@ -20,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,9 +46,28 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
     private static final String DESCRICAO = "Barulho ao frear";
 
     private OrdemDeServico ordemEmDiagnostico(List<PecaVinculada> pecasVinculadas) {
-        return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), pecasVinculadas, List.of(), null, null, null, null, null, null);
+        return OrdemDeServico.builder()
+                .id(ORDEM_ID)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(pecasVinculadas))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
     }
 
     private Peca pecaComEstoque(Integer estoque) {
@@ -121,9 +142,28 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
 
     @Test
     void shouldThrowWhenOrdemStatusNotAllowedForVincularPeca() {
-        var ordemDiagnosticoConcluido = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(), List.of(), List.of(), null, null, null, null, null, null);
+        var ordemDiagnosticoConcluido = OrdemDeServico.builder()
+                .id(ORDEM_ID)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO))
+                .build();
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemDiagnosticoConcluido));
         stubPeca(pecaComEstoque(10));
 

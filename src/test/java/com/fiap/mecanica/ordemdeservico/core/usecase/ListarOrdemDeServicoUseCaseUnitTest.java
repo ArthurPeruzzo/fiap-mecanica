@@ -23,6 +23,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -72,21 +73,53 @@ class ListarOrdemDeServicoUseCaseUnitTest {
     }
 
     private OrdemDeServico ordemComMecanico() {
-        return OrdemDeServico.reconstituir(ORDEM_ID, CLIENTE_ID, VEICULO_ID, ATENDENTE_ID, MECANICO_ID,
-                StatusOrdemDeServico.RECEBIDA, "Barulho ao frear",
-                LocalDateTime.now(), null, null,
-                List.of(new ServicoVinculado(1L, new BigDecimal("150.00"), StatusServico.NAO_INICIADO, null, null)),
-                List.of(new PecaVinculada(2L, 2, new BigDecimal("45.00"))),
-                List.of(new InsumoVinculado(3L, 1, new BigDecimal("35.00"))),
-                null, null, null, null, null, null);
+        return OrdemDeServico.builder()
+                .id(ORDEM_ID)
+                .clienteId(CLIENTE_ID)
+                .veiculoId(VEICULO_ID)
+                .atendenteId(ATENDENTE_ID)
+                .mecanicoId(MECANICO_ID)
+                .status(StatusOrdemDeServico.RECEBIDA)
+                .descricao("Barulho ao frear")
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(null)
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(1L, new BigDecimal("150.00"), StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of(new PecaVinculada(2L, 2, new BigDecimal("45.00")))))
+                .insumosVinculados(new ArrayList<>(List.of(new InsumoVinculado(3L, 1, new BigDecimal("35.00")))))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.RECEBIDA))
+                .build();
     }
 
     private OrdemDeServico ordemSemMecanico() {
-        return OrdemDeServico.reconstituir(ORDEM_ID, CLIENTE_ID, VEICULO_ID, ATENDENTE_ID, null,
-                StatusOrdemDeServico.RECEBIDA, "Barulho ao frear",
-                LocalDateTime.now(), null, null,
-                List.of(), List.of(), List.of(),
-                null, null, null, null, null, null);
+        return OrdemDeServico.builder()
+                .id(ORDEM_ID)
+                .clienteId(CLIENTE_ID)
+                .veiculoId(VEICULO_ID)
+                .atendenteId(ATENDENTE_ID)
+                .mecanicoId(null)
+                .status(StatusOrdemDeServico.RECEBIDA)
+                .descricao("Barulho ao frear")
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(null)
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.RECEBIDA))
+                .build();
     }
 
     private void stubGatewaysComMecanico() {

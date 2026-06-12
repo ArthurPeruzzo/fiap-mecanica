@@ -1,9 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase;
 
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.Orcamento;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.ServicoVinculado;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
@@ -18,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,18 +35,29 @@ class EntregarOrdemDeServicoUseCaseUnitTest {
     private static final String DESCRICAO = "Barulho ao frear";
 
     private OrdemDeServico ordemFinalizada() {
-        return OrdemDeServico.reconstituir(ORDEM_ID, CLIENTE_ID, 3L, 4L, 5L,
-                StatusOrdemDeServico.FINALIZADA, DESCRICAO,
-                LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.FINALIZADO,
-                        LocalDateTime.now().minusHours(2), LocalDateTime.now().minusHours(1))),
-                List.of(), List.of(),
-                new Orcamento(BigDecimal.TEN),
-                LocalDateTime.now().minusDays(1),
-                null,
-                LocalDateTime.now().minusDays(1),
-                LocalDateTime.now().minusHours(1),
-                null);
+        return OrdemDeServico.builder()
+                .id(ORDEM_ID)
+                .clienteId(CLIENTE_ID)
+                .veiculoId(3L)
+                .atendenteId(4L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.FINALIZADA)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.FINALIZADO,
+                        LocalDateTime.now().minusHours(2), LocalDateTime.now().minusHours(1)))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(new Orcamento(BigDecimal.TEN))
+                .dataEnvioOrcamento(LocalDateTime.now().minusDays(1))
+                .dataCancelamento(null)
+                .dataAprovacao(LocalDateTime.now().minusDays(1))
+                .dataFinalizacao(LocalDateTime.now().minusHours(1))
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.FINALIZADA))
+                .build();
     }
 
     @Test

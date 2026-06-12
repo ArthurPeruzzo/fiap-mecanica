@@ -21,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,20 +50,34 @@ class OrcamentoRecusadoOrdemDeServicoUseCaseUnitTest {
     private static final Long INSUMO_ID_2 = 31L;
 
     private OrdemDeServico ordemAguardandoAprovacao() {
-        return OrdemDeServico.reconstituir(ORDEM_ID, CLIENTE_ID, 2L, 3L, 5L,
-                StatusOrdemDeServico.AGUARDANDO_APROVACAO, "Barulho ao frear",
-                LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(10L, new BigDecimal("150.00"), StatusServico.NAO_INICIADO, null, null)),
-                List.of(
+        return OrdemDeServico.builder()
+                .id(ORDEM_ID)
+                .clienteId(CLIENTE_ID)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.AGUARDANDO_APROVACAO)
+                .descricao("Barulho ao frear")
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, new BigDecimal("150.00"), StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of(
                         new PecaVinculada(PECA_ID_1, 3, new BigDecimal("45.00")),
                         new PecaVinculada(PECA_ID_2, 2, new BigDecimal("30.00"))
-                ),
-                List.of(
+                )))
+                .insumosVinculados(new ArrayList<>(List.of(
                         new InsumoVinculado(INSUMO_ID_1, 4, new BigDecimal("35.00")),
                         new InsumoVinculado(INSUMO_ID_2, 1, new BigDecimal("20.00"))
-                ),
-                new Orcamento(new BigDecimal("500.00")),
-                LocalDateTime.now(), null, null, null, null);
+                )))
+                .orcamento(new Orcamento(new BigDecimal("500.00")))
+                .dataEnvioOrcamento(LocalDateTime.now())
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.AGUARDANDO_APROVACAO))
+                .build();
     }
 
     private Peca pecaComEstoque(Long id, int estoque) {
@@ -107,10 +122,28 @@ class OrcamentoRecusadoOrdemDeServicoUseCaseUnitTest {
 
     @Test
     void shouldThrowWhenStatusInvalido() {
-        var ordemEmDiagnostico = OrdemDeServico.reconstituir(ORDEM_ID, CLIENTE_ID, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, "Barulho ao frear",
-                LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), List.of(), null, null, null, null, null, null);
+        var ordemEmDiagnostico = OrdemDeServico.builder()
+                .id(ORDEM_ID)
+                .clienteId(CLIENTE_ID)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao("Barulho ao frear")
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemEmDiagnostico));
 
         assertThrows(TransicaoDeStatusInvalidaException.class,

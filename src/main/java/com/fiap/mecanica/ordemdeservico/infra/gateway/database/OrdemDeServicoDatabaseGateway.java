@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -79,27 +80,28 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
 
         var orcamento = entity.getOrcamentoTotal() != null ? new Orcamento(entity.getOrcamentoTotal()) : null;
 
-        return OrdemDeServico.reconstituir(
-                entity.getId(),
-                entity.getClienteId(),
-                entity.getVeiculoId(),
-                entity.getAtendenteId(),
-                entity.getMecanicoId(),
-                entity.getStatus(),
-                entity.getDescricao(),
-                entity.getDataCriacao(),
-                entity.getDataInicioDiagnostico(),
-                entity.getDataConclusaoDiagnostico(),
-                servicosVinculados,
-                pecasVinculadas,
-                insumosVinculados,
-                orcamento,
-                entity.getDataEnvioOrcamento(),
-                entity.getDataCancelamento(),
-                entity.getDataAprovacao(),
-                entity.getDataFinalizacao(),
-                entity.getDataEntrega()
-        );
+        return OrdemDeServico.builder()
+                .id(entity.getId())
+                .clienteId(entity.getClienteId())
+                .veiculoId(entity.getVeiculoId())
+                .atendenteId(entity.getAtendenteId())
+                .mecanicoId(entity.getMecanicoId())
+                .status(entity.getStatus())
+                .descricao(entity.getDescricao())
+                .dataCriacao(entity.getDataCriacao())
+                .dataInicioDiagnostico(entity.getDataInicioDiagnostico())
+                .dataConclusaoDiagnostico(entity.getDataConclusaoDiagnostico())
+                .state(OrdemDeServicoStateFactory.from(entity.getStatus()))
+                .servicosVinculados(new ArrayList<>(servicosVinculados))
+                .pecasVinculadas(new ArrayList<>(pecasVinculadas))
+                .insumosVinculados(new ArrayList<>(insumosVinculados))
+                .orcamento(orcamento)
+                .dataEnvioOrcamento(entity.getDataEnvioOrcamento())
+                .dataCancelamento(entity.getDataCancelamento())
+                .dataAprovacao(entity.getDataAprovacao())
+                .dataFinalizacao(entity.getDataFinalizacao())
+                .dataEntrega(entity.getDataEntrega())
+                .build();
     }
 
     @Override

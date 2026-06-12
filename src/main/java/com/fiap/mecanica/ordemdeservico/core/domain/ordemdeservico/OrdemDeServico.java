@@ -2,6 +2,8 @@ package com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
@@ -14,6 +16,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Getter
+@Builder
+@AllArgsConstructor
 public class OrdemDeServico {
     private Long id;
     private Long clienteId;
@@ -36,9 +40,6 @@ public class OrdemDeServico {
     private LocalDateTime dataEntrega;
 
     private OrdemDeServicoState state;
-
-    private OrdemDeServico() {
-    }
 
     public OrdemDeServico(Long clienteId, Long veiculoId, Long atendenteId, String descricao) {
         this.clienteId = clienteId;
@@ -255,43 +256,6 @@ public class OrdemDeServico {
 
         BigDecimal valorTotal = totalInsumos.add(totalPecas).add(totalServicos);
         this.orcamento = new Orcamento(valorTotal);
-    }
-
-    public static OrdemDeServico reconstituir(Long id, Long clienteId, Long veiculoId, Long atendenteId,
-                                              Long mecanicoId, StatusOrdemDeServico status, String descricao,
-                                              LocalDateTime dataCriacao, LocalDateTime dataInicioDiagnostico,
-                                              LocalDateTime dataConclusaoDiagnostico,
-                                              List<ServicoVinculado> servicosVinculados,
-                                              List<PecaVinculada> pecasVinculadas,
-                                              List<InsumoVinculado> insumosVinculados,
-                                              Orcamento orcamento,
-                                              LocalDateTime dataEnvioOrcamento,
-                                              LocalDateTime dataCancelamento,
-                                              LocalDateTime dataAprovacao,
-                                              LocalDateTime dataFinalizacao,
-                                              LocalDateTime dataEntrega) {
-        var os = new OrdemDeServico();
-        os.id = id;
-        os.clienteId = clienteId;
-        os.veiculoId = veiculoId;
-        os.atendenteId = atendenteId;
-        os.mecanicoId = mecanicoId;
-        os.status = status;
-        os.descricao = descricao;
-        os.dataCriacao = dataCriacao;
-        os.dataInicioDiagnostico = dataInicioDiagnostico;
-        os.dataConclusaoDiagnostico = dataConclusaoDiagnostico;
-        os.state = OrdemDeServicoStateFactory.from(status);
-        os.servicosVinculados = new ArrayList<>(servicosVinculados);
-        os.pecasVinculadas = new ArrayList<>(pecasVinculadas);
-        os.insumosVinculados = new ArrayList<>(insumosVinculados);
-        os.orcamento = orcamento;
-        os.dataEnvioOrcamento = dataEnvioOrcamento;
-        os.dataCancelamento = dataCancelamento;
-        os.dataAprovacao = dataAprovacao;
-        os.dataFinalizacao = dataFinalizacao;
-        os.dataEntrega = dataEntrega;
-        return os;
     }
 
     public Map<Long, Integer> getTotalQuantidadePecasMapeadasPorId() {

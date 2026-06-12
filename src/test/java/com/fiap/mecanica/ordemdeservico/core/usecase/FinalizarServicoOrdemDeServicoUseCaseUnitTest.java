@@ -1,16 +1,9 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase;
 
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.Orcamento;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.ServicoVinculado;
-import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
-import com.fiap.mecanica.ordemdeservico.core.exception.FinalizarServicoNaoAutorizadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
-import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoIniciadoOuFinalizadoException;
-import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.*;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.FinalizarServicoOrdemDeServicoUseCase;
@@ -25,10 +18,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ExtendWith(MockitoExtension.class)
 class FinalizarServicoOrdemDeServicoUseCaseUnitTest {
@@ -51,20 +46,56 @@ class FinalizarServicoOrdemDeServicoUseCaseUnitTest {
     private static final String DESCRICAO = "Barulho ao frear";
 
     private OrdemDeServico ordemEmExecucaoComServico(Long servicoId, StatusServico statusServico) {
-        return OrdemDeServico.reconstituir(ORDEM_ID, CLIENTE_ID, 3L, 4L, 5L,
-                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(servicoId, BigDecimal.TEN, statusServico, LocalDateTime.now().minusHours(1), null)),
-                List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now(), null, null);
+        return OrdemDeServico.builder()
+                .id(ORDEM_ID)
+                .clienteId(CLIENTE_ID)
+                .veiculoId(3L)
+                .atendenteId(4L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_EXECUCAO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(servicoId, BigDecimal.TEN, statusServico, LocalDateTime.now().minusHours(1), null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(new Orcamento(BigDecimal.TEN))
+                .dataEnvioOrcamento(LocalDateTime.now())
+                .dataCancelamento(null)
+                .dataAprovacao(LocalDateTime.now())
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_EXECUCAO))
+                .build();
     }
 
     private OrdemDeServico ordemEmExecucaoComDoisServicos(StatusServico statusServico1, StatusServico statusServico2) {
-        return OrdemDeServico.reconstituir(ORDEM_ID, CLIENTE_ID, 3L, 4L, 5L,
-                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(
+        return OrdemDeServico.builder()
+                .id(ORDEM_ID)
+                .clienteId(CLIENTE_ID)
+                .veiculoId(3L)
+                .atendenteId(4L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_EXECUCAO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(
                         new ServicoVinculado(SERVICO_ID, BigDecimal.TEN, statusServico1, LocalDateTime.now().minusHours(1), null),
                         new ServicoVinculado(20L, BigDecimal.TEN, statusServico2, LocalDateTime.now().minusHours(1), null)
-                ),
-                List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now(), null, null);
+                )))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(new Orcamento(BigDecimal.TEN))
+                .dataEnvioOrcamento(LocalDateTime.now())
+                .dataCancelamento(null)
+                .dataAprovacao(LocalDateTime.now())
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_EXECUCAO))
+                .build();
     }
 
     private void stubOrdem(OrdemDeServico os) {
@@ -142,9 +173,28 @@ class FinalizarServicoOrdemDeServicoUseCaseUnitTest {
 
     @Test
     void shouldThrowWhenOrdemNaoEmExecucao() {
-        var ordemRecebida = OrdemDeServico.reconstituir(ORDEM_ID, CLIENTE_ID, 3L, 4L, null,
-                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null,
-                List.of(), List.of(), List.of(), null, null, null, null, null, null);
+        var ordemRecebida = OrdemDeServico.builder()
+                .id(ORDEM_ID)
+                .clienteId(CLIENTE_ID)
+                .veiculoId(3L)
+                .atendenteId(4L)
+                .mecanicoId(null)
+                .status(StatusOrdemDeServico.RECEBIDA)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(null)
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.RECEBIDA))
+                .build();
         stubOrdem(ordemRecebida);
         stubServico();
 
@@ -157,9 +207,28 @@ class FinalizarServicoOrdemDeServicoUseCaseUnitTest {
 
     @Test
     void shouldThrowWhenServicoNaoVinculado() {
-        var ordemSemServico = OrdemDeServico.reconstituir(ORDEM_ID, CLIENTE_ID, 3L, 4L, 5L,
-                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(), List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now(), null, null);
+        var ordemSemServico = OrdemDeServico.builder()
+                .id(ORDEM_ID)
+                .clienteId(CLIENTE_ID)
+                .veiculoId(3L)
+                .atendenteId(4L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_EXECUCAO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(new Orcamento(BigDecimal.TEN))
+                .dataEnvioOrcamento(LocalDateTime.now())
+                .dataCancelamento(null)
+                .dataAprovacao(LocalDateTime.now())
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_EXECUCAO))
+                .build();
         stubOrdem(ordemSemServico);
         stubServico();
 
