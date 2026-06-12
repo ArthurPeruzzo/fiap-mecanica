@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -17,9 +18,28 @@ class OrdemDeServicoUnitTest {
     private static final String DESCRICAO = "Barulho ao frear";
 
     private OrdemDeServico ordemEmDiagnostico() {
-        return OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), List.of(), null, null, null, null, null, null);
+        return OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
     }
 
     @Test
@@ -57,9 +77,28 @@ class OrdemDeServicoUnitTest {
         var servicosVinculados = List.of(new ServicoVinculado(7L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null),
                 new ServicoVinculado(8L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null));
 
-        var os = OrdemDeServico.reconstituir(10L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, dataCriacao, dataInicio, dataConclusao,
-                servicosVinculados, List.of(), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(10L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO)
+                .descricao(DESCRICAO)
+                .dataCriacao(dataCriacao)
+                .dataInicioDiagnostico(dataInicio)
+                .dataConclusaoDiagnostico(dataConclusao)
+                .servicosVinculados(new ArrayList<>(servicosVinculados))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO))
+                .build();
 
         assertEquals(10L, os.getId());
         assertEquals(1L, os.getClienteId());
@@ -76,9 +115,28 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void reconstituir_shouldAllowNullDates() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, null,
-                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null,
-                List.of(), List.of(), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(null)
+                .status(StatusOrdemDeServico.RECEBIDA)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(null)
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.RECEBIDA))
+                .build();
 
         assertNull(os.getMecanicoId());
         assertNull(os.getDataInicioDiagnostico());
@@ -102,27 +160,84 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void iniciarDiagnostico_shouldThrowOrdemEmDiagnosticoWhenStatusIsEmDiagnostico() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(7L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         assertThrows(TransicaoDeStatusInvalidaException.class, () -> os.iniciarDiagnostico(7L));
     }
 
     @Test
     void iniciarDiagnostico_shouldThrowWhenOutroMecanicoJaResponsavel() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
-                StatusOrdemDeServico.RECEBIDA, DESCRICAO, LocalDateTime.now(), null, null,
-                List.of(), List.of(), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(7L)
+                .status(StatusOrdemDeServico.RECEBIDA)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(null)
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.RECEBIDA))
+                .build();
 
         assertThrows(OrdemDeServicoMecanicoResponsavelException.class, () -> os.iniciarDiagnostico(99L));
     }
 
     @Test
     void iniciarDiagnostico_shouldThrowTransicaoInvalidaWhenStatusIsNotRecebidaOrEmDiagnostico() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(), List.of(), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(7L)
+                .status(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO))
+                .build();
 
         assertThrows(TransicaoDeStatusInvalidaException.class, () -> os.iniciarDiagnostico(7L));
     }
@@ -130,10 +245,28 @@ class OrdemDeServicoUnitTest {
     @Test
     void concluirDiagnostico_shouldSetStatusAndDataConclusao() {
         var before = LocalDateTime.now().minusSeconds(1);
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)),
-                List.of(), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(7L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         os.concluirDiagnostico(7L);
 
@@ -148,12 +281,28 @@ class OrdemDeServicoUnitTest {
     @Test
     void calcularOrcamento_shouldSomarServicoPecaEInsumo() {
         // servico: 50 | peca: 30 × 2 = 60 | insumo: 10 × 3 = 30 | total: 140
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, new BigDecimal("50"), StatusServico.NAO_INICIADO, null, null)),
-                List.of(new PecaVinculada(20L, 2, new BigDecimal("30"))),
-                List.of(new InsumoVinculado(30L, 3, new BigDecimal("10"))),
-                null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(7L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, new BigDecimal("50"), StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of(new PecaVinculada(20L, 2, new BigDecimal("30")))))
+                .insumosVinculados(new ArrayList<>(List.of(new InsumoVinculado(30L, 3, new BigDecimal("10")))))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         os.concluirDiagnostico(7L);
 
@@ -163,13 +312,29 @@ class OrdemDeServicoUnitTest {
     @Test
     void calcularOrcamento_shouldSomarMultiplosPecasEInsumos() {
         // servico: 100 | peca20: 20 × 1 = 20, peca21: 15 × 4 = 60 | insumo30: 5 × 2 = 10 | total: 190
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, new BigDecimal("100"), StatusServico.NAO_INICIADO, null, null)),
-                List.of(new PecaVinculada(20L, 1, new BigDecimal("20")),
-                        new PecaVinculada(21L, 4, new BigDecimal("15"))),
-                List.of(new InsumoVinculado(30L, 2, new BigDecimal("5"))),
-                null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(7L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, new BigDecimal("100"), StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of(new PecaVinculada(20L, 1, new BigDecimal("20")),
+                        new PecaVinculada(21L, 4, new BigDecimal("15")))))
+                .insumosVinculados(new ArrayList<>(List.of(new InsumoVinculado(30L, 2, new BigDecimal("5")))))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         os.concluirDiagnostico(7L);
 
@@ -178,10 +343,28 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void calcularOrcamento_shouldSerApenasServicosQuandoSemPecasEInsumos() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, new BigDecimal("75"), StatusServico.NAO_INICIADO, null, null)),
-                List.of(), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(7L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, new BigDecimal("75"), StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         os.concluirDiagnostico(7L);
 
@@ -190,29 +373,84 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void concluirDiagnostico_shouldThrowWhenMecanicoNaoEhResponsavel() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)), List.of(), List.of(),
-                null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(7L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         assertThrows(MecanicoNaoResponsavelPelaOrdemDeServicoException.class, () -> os.concluirDiagnostico(99L));
     }
 
     @Test
     void concluirDiagnostico_shouldThrowWhenSemServicosVinculados() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(7L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         assertThrows(OrdemDeServicoSemServicosException.class, () -> os.concluirDiagnostico(7L));
     }
 
     @Test
     void concluirDiagnostico_shouldThrowWhenStatusIsNotEmDiagnostico() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)), List.of(), List.of(),
-                null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(7L)
+                .status(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO))
+                .build();
 
         assertThrows(TransicaoDeStatusInvalidaException.class, () -> os.concluirDiagnostico(7L));
     }
@@ -239,19 +477,56 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void vincularServico_shouldThrowWhenStatusIsNotEmDiagnosticoNemRecebida() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(), List.of(), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(7L)
+                .status(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO))
+                .build();
 
         assertThrows(VinculoServicoNaoAutorizadoException.class, () -> os.vincularServico(10L, BigDecimal.TEN));
     }
 
     @Test
     void vincularServico_shouldThrowWhenServicoAlreadyLinked() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)), List.of(), List.of(),
-                null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         assertThrows(ServicoJaVinculadoException.class, () -> os.vincularServico(10L, BigDecimal.TEN));
     }
@@ -260,10 +535,28 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void desvincularServico_shouldRemoveServicoFromListWhenStatusIsEmDiagnostico() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)), List.of(), List.of(),
-                null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         os.desvincularServico(10L);
 
@@ -272,10 +565,28 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void desvincularServico_shouldThrowWhenStatusIsNotEmDiagnosticoNemRecebida() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, null,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)), List.of(), List.of(),
-                null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(null)
+                .status(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO))
+                .build();
 
         assertThrows(VinculoServicoNaoAutorizadoException.class, () -> os.desvincularServico(10L));
     }
@@ -306,9 +617,28 @@ class OrdemDeServicoUnitTest {
     void vincularPeca_shouldSomarQuantidadeWhenPecaAlreadyLinked() {
         BigDecimal preco = new BigDecimal(10);
         var pecaExistente = new PecaVinculada(20L, 2, preco);
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(pecaExistente), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of(pecaExistente)))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         os.vincularPeca(20L, 3, preco);
 
@@ -330,9 +660,28 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void vincularPeca_shouldThrowWhenStatusIsNotEmDiagnosticoNemRecebida() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(), List.of(), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO))
+                .build();
         assertThrows(VinculoPecaNaoAutorizadaException.class, () -> os.vincularPeca(20L, 3, new BigDecimal(10)));
     }
 
@@ -342,9 +691,28 @@ class OrdemDeServicoUnitTest {
     void desvincularPeca_shouldRemovePecaWhenQuantidadeIgualAVinculada() {
         BigDecimal preco = new BigDecimal(10);
         var pecaExistente = new PecaVinculada(20L, 3, preco);
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(pecaExistente), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of(pecaExistente)))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         os.desvincularPeca(20L, 3);
 
@@ -355,9 +723,28 @@ class OrdemDeServicoUnitTest {
     void desvincularPeca_shouldSubtrairQuantidadeWhenParcial() {
         BigDecimal preco = new BigDecimal(10);
         var pecaExistente = new PecaVinculada(20L, 5, preco);
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(pecaExistente), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of(pecaExistente)))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         os.desvincularPeca(20L, 2);
 
@@ -383,9 +770,28 @@ class OrdemDeServicoUnitTest {
     void desvincularPeca_shouldThrowWhenQuantidadeMaiorQueVinculada() {
         BigDecimal preco = new BigDecimal(10);
         var pecaExistente = new PecaVinculada(20L, 2, preco);
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(pecaExistente), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of(pecaExistente)))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         assertThrows(QuantidadeDesvincularInvalidaException.class, () -> os.desvincularPeca(20L, 5));
     }
@@ -409,9 +815,28 @@ class OrdemDeServicoUnitTest {
     void vincularInsumo_shouldSomarQuantidadeWhenInsumoAlreadyLinked() {
         BigDecimal preco = new BigDecimal(10);
         var insumoExistente = new InsumoVinculado(30L, 4, preco);
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), List.of(insumoExistente), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of(insumoExistente)))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         os.vincularInsumo(30L, 3, preco);
 
@@ -433,9 +858,28 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void vincularInsumo_shouldThrowWhenStatusIsNotEmDiagnosticoNemRecebida() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(), List.of(), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO))
+                .build();
         assertThrows(VinculoInsumoNaoAutorizadaException.class, () -> os.vincularInsumo(30L, 5, BigDecimal.TEN));
     }
 
@@ -444,9 +888,28 @@ class OrdemDeServicoUnitTest {
     @Test
     void desvincularInsumo_shouldRemoveInsumoWhenQuantidadeIgualAVinculada() {
         var insumoExistente = new InsumoVinculado(30L, 4, BigDecimal.TEN);
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), List.of(insumoExistente), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of(insumoExistente)))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         os.desvincularInsumo(30L, 4);
 
@@ -456,9 +919,28 @@ class OrdemDeServicoUnitTest {
     @Test
     void desvincularInsumo_shouldSubtrairQuantidadeWhenParcial() {
         var insumoExistente = new InsumoVinculado(30L, 6, BigDecimal.TEN);
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), List.of(insumoExistente), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of(insumoExistente)))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         os.desvincularInsumo(30L, 2);
 
@@ -483,9 +965,28 @@ class OrdemDeServicoUnitTest {
     @Test
     void desvincularInsumo_shouldThrowWhenQuantidadeMaiorQueVinculada() {
         var insumoExistente = new InsumoVinculado(30L, 2, BigDecimal.TEN);
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), List.of(insumoExistente), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of(insumoExistente)))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         assertThrows(QuantidadeDesvincularInvalidaException.class, () -> os.desvincularInsumo(30L, 5));
     }
@@ -493,10 +994,28 @@ class OrdemDeServicoUnitTest {
     // --- iniciarServico ---
 
     private OrdemDeServico ordemEmExecucaoComServico(Long servicoId, StatusServico statusServico) {
-        return OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(servicoId, BigDecimal.TEN, statusServico, null, null)),
-                List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now(), null, null);
+        return OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_EXECUCAO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(servicoId, BigDecimal.TEN, statusServico, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(new Orcamento(BigDecimal.TEN))
+                .dataEnvioOrcamento(LocalDateTime.now())
+                .dataCancelamento(null)
+                .dataAprovacao(LocalDateTime.now())
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_EXECUCAO))
+                .build();
     }
 
     @Test
@@ -519,10 +1038,28 @@ class OrdemDeServicoUnitTest {
     @Test
     void iniciarServico_shouldPreservePrecoOnUpdate() {
         var preco = new BigDecimal("150.00");
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(10L, preco, StatusServico.NAO_INICIADO, null, null)),
-                List.of(), List.of(), new Orcamento(preco), LocalDateTime.now(), null, LocalDateTime.now(), null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_EXECUCAO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, preco, StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(new Orcamento(preco))
+                .dataEnvioOrcamento(LocalDateTime.now())
+                .dataCancelamento(null)
+                .dataAprovacao(LocalDateTime.now())
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_EXECUCAO))
+                .build();
 
         os.iniciarServico(10L);
 
@@ -533,19 +1070,56 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void iniciarServico_shouldThrowWhenOrdemNaoEmExecucao() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)),
-                List.of(), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         assertThrows(IniciarServicoNaoAutorizadoException.class, () -> os.iniciarServico(10L));
     }
 
     @Test
     void iniciarServico_shouldThrowWhenServicoNaoVinculado() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(), List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now(), null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_EXECUCAO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(new Orcamento(BigDecimal.TEN))
+                .dataEnvioOrcamento(LocalDateTime.now())
+                .dataCancelamento(null)
+                .dataAprovacao(LocalDateTime.now())
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_EXECUCAO))
+                .build();
 
         assertThrows(ServicoNaoVinculadoException.class, () -> os.iniciarServico(99L));
     }
@@ -570,10 +1144,28 @@ class OrdemDeServicoUnitTest {
     void finalizarServico_shouldSetStatusFinalizadoEDataFimExecucao() {
         var before = LocalDateTime.now().minusSeconds(1);
         var dataInicio = LocalDateTime.now().minusHours(1);
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.EM_EXECUCAO, dataInicio, null)),
-                List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now(), null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_EXECUCAO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.EM_EXECUCAO, dataInicio, null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(new Orcamento(BigDecimal.TEN))
+                .dataEnvioOrcamento(LocalDateTime.now())
+                .dataCancelamento(null)
+                .dataAprovacao(LocalDateTime.now())
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_EXECUCAO))
+                .build();
 
         os.finalizarServico(10L);
 
@@ -590,10 +1182,28 @@ class OrdemDeServicoUnitTest {
     void finalizarServico_shouldPreserveDataInicioExecucaoAndPreco() {
         var dataInicio = LocalDateTime.now().minusHours(2);
         var preco = new BigDecimal("250.00");
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(10L, preco, StatusServico.EM_EXECUCAO, dataInicio, null)),
-                List.of(), List.of(), new Orcamento(preco), LocalDateTime.now(), null, LocalDateTime.now(), null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_EXECUCAO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, preco, StatusServico.EM_EXECUCAO, dataInicio, null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(new Orcamento(preco))
+                .dataEnvioOrcamento(LocalDateTime.now())
+                .dataCancelamento(null)
+                .dataAprovacao(LocalDateTime.now())
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_EXECUCAO))
+                .build();
 
         os.finalizarServico(10L);
 
@@ -605,10 +1215,28 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void finalizarServico_shouldTransicionarOSParaFinalizadaQuandoUltimoServico() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.EM_EXECUCAO, LocalDateTime.now().minusHours(1), null)),
-                List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now(), null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_EXECUCAO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.EM_EXECUCAO, LocalDateTime.now().minusHours(1), null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(new Orcamento(BigDecimal.TEN))
+                .dataEnvioOrcamento(LocalDateTime.now())
+                .dataCancelamento(null)
+                .dataAprovacao(LocalDateTime.now())
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_EXECUCAO))
+                .build();
 
         os.finalizarServico(10L);
 
@@ -617,13 +1245,31 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void finalizarServico_shouldNaoTransicionarOSQuandoServicosRestantesNaoFinalizados() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_EXECUCAO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(
                         new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.EM_EXECUCAO, LocalDateTime.now().minusHours(1), null),
                         new ServicoVinculado(20L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)
-                ),
-                List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now(), null, null);
+                )))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(new Orcamento(BigDecimal.TEN))
+                .dataEnvioOrcamento(LocalDateTime.now())
+                .dataCancelamento(null)
+                .dataAprovacao(LocalDateTime.now())
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_EXECUCAO))
+                .build();
 
         os.finalizarServico(10L);
 
@@ -632,19 +1278,56 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void finalizarServico_shouldThrowWhenOrdemNaoEmExecucao() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.EM_EXECUCAO, LocalDateTime.now(), null)),
-                List.of(), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.EM_EXECUCAO, LocalDateTime.now(), null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         assertThrows(FinalizarServicoNaoAutorizadoException.class, () -> os.finalizarServico(10L));
     }
 
     @Test
     void finalizarServico_shouldThrowWhenServicoNaoVinculado() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(), List.of(), List.of(), new Orcamento(BigDecimal.TEN), LocalDateTime.now(), null, LocalDateTime.now(), null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_EXECUCAO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(new Orcamento(BigDecimal.TEN))
+                .dataEnvioOrcamento(LocalDateTime.now())
+                .dataCancelamento(null)
+                .dataAprovacao(LocalDateTime.now())
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_EXECUCAO))
+                .build();
 
         assertThrows(ServicoNaoVinculadoException.class, () -> os.finalizarServico(99L));
     }
@@ -668,10 +1351,28 @@ class OrdemDeServicoUnitTest {
     @Test
     void gravarEnvioOrcamento_shouldSetDataEnvioETransicionarParaAguardandoAprovacao() {
         var before = LocalDateTime.now().minusSeconds(1);
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)), List.of(), List.of(),
-                new Orcamento(new BigDecimal("100")), null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(7L)
+                .status(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(new Orcamento(new BigDecimal("100")))
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO))
+                .build();
 
         os.gravarEnvioOrcamento();
 
@@ -684,9 +1385,28 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void gravarEnvioOrcamento_shouldThrowWhenStatusIsNotDiagnosticoConcluido() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 7L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(7L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
 
         assertThrows(TransicaoDeStatusInvalidaException.class, os::gravarEnvioOrcamento);
     }
@@ -695,9 +1415,28 @@ class OrdemDeServicoUnitTest {
 
     @Test
     void calcularTempoMedioExecucaoServicos_shouldReturnNullWhenNoServicosVinculados() {
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.FINALIZADA, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(), List.of(), List.of(), null, null, null, null, LocalDateTime.now(), null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.FINALIZADA)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(LocalDateTime.now())
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.FINALIZADA))
+                .build();
 
         assertNull(os.calcularTempoMedioExecucaoServicos());
     }
@@ -706,9 +1445,28 @@ class OrdemDeServicoUnitTest {
     void calcularTempoMedioExecucaoServicos_shouldReturnNullWhenNoServicosFinalizados() {
         var inicio = LocalDateTime.of(2024, 1, 15, 10, 0);
         var servico = new ServicoVinculado(1L, new BigDecimal("100.00"), StatusServico.EM_EXECUCAO, inicio, null);
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(servico), List.of(), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_EXECUCAO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(servico)))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_EXECUCAO))
+                .build();
 
         assertNull(os.calcularTempoMedioExecucaoServicos());
     }
@@ -718,9 +1476,28 @@ class OrdemDeServicoUnitTest {
         var inicio = LocalDateTime.of(2024, 1, 15, 10, 0);
         var fim = LocalDateTime.of(2024, 1, 15, 12, 30);
         var servico = new ServicoVinculado(1L, new BigDecimal("100.00"), StatusServico.FINALIZADO, inicio, fim);
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.FINALIZADA, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(servico), List.of(), List.of(), null, null, null, null, LocalDateTime.now(), null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.FINALIZADA)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(servico)))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(LocalDateTime.now())
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.FINALIZADA))
+                .build();
 
         var resultado = os.calcularTempoMedioExecucaoServicos();
 
@@ -738,9 +1515,28 @@ class OrdemDeServicoUnitTest {
         // serviço 2: 3h = 10800s
         var s2 = new ServicoVinculado(2L, new BigDecimal("200.00"), StatusServico.FINALIZADO, base, base.plusHours(3));
         // média: 7200s = 2h
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.FINALIZADA, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(s1, s2), List.of(), List.of(), null, null, null, null, LocalDateTime.now(), null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.FINALIZADA)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(s1, s2)))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(LocalDateTime.now())
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.FINALIZADA))
+                .build();
 
         var resultado = os.calcularTempoMedioExecucaoServicos();
 
@@ -753,9 +1549,28 @@ class OrdemDeServicoUnitTest {
         var base = LocalDateTime.of(2024, 1, 15, 8, 0);
         var finalizado = new ServicoVinculado(1L, new BigDecimal("100.00"), StatusServico.FINALIZADO, base, base.plusHours(2));
         var emExecucao = new ServicoVinculado(2L, new BigDecimal("200.00"), StatusServico.EM_EXECUCAO, base, null);
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.EM_EXECUCAO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(finalizado, emExecucao), List.of(), List.of(), null, null, null, null, null, null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_EXECUCAO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(finalizado, emExecucao)))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_EXECUCAO))
+                .build();
 
         var resultado = os.calcularTempoMedioExecucaoServicos();
 
@@ -768,9 +1583,28 @@ class OrdemDeServicoUnitTest {
         var inicio = LocalDateTime.of(2024, 1, 15, 9, 0);
         var fim = LocalDateTime.of(2024, 1, 16, 13, 30);
         var servico = new ServicoVinculado(1L, new BigDecimal("500.00"), StatusServico.FINALIZADO, inicio, fim);
-        var os = OrdemDeServico.reconstituir(1L, 1L, 2L, 3L, 5L,
-                StatusOrdemDeServico.FINALIZADA, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(),
-                List.of(servico), List.of(), List.of(), null, null, null, null, LocalDateTime.now(), null);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.FINALIZADA)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(LocalDateTime.now())
+                .servicosVinculados(new ArrayList<>(List.of(servico)))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(LocalDateTime.now())
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.FINALIZADA))
+                .build();
 
         var resultado = os.calcularTempoMedioExecucaoServicos();
 

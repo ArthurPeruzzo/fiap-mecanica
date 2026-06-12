@@ -4,6 +4,7 @@ import com.fiap.mecanica.gestao.core.domain.Mecanico;
 import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServicoStateFactory;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.ServicoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
@@ -24,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -57,16 +59,53 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
     private static final String DESCRICAO = "Barulho ao frear";
 
     private OrdemDeServico ordemEmDiagnostico() {
-        return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, MECANICO_ID,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)),
-                List.of(), List.of(), null, null, null, null, null, null);
+        return OrdemDeServico.builder()
+                .id(ORDEM_ID)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(MECANICO_ID)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
     }
 
     private OrdemDeServico ordemEmDiagnosticoSemServicos() {
-        return OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, MECANICO_ID,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(), List.of(), List.of(), null, null, null, null, null, null);
+        return OrdemDeServico.builder()
+                .id(ORDEM_ID)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(MECANICO_ID)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
     }
 
     @Test
@@ -109,10 +148,28 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
     @Test
     void shouldThrowWhenMecanicoNaoEhResponsavel() {
         stubMecanico();
-        var ordemDeOutroMecanico = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, 99L,
-                StatusOrdemDeServico.EM_DIAGNOSTICO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)),
-                List.of(), List.of(), null, null, null, null, null, null);
+        var ordemDeOutroMecanico = OrdemDeServico.builder()
+                .id(ORDEM_ID)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(99L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemDeOutroMecanico));
 
         assertThrows(MecanicoNaoResponsavelPelaOrdemDeServicoException.class,
@@ -135,10 +192,28 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
     @Test
     void shouldThrowWhenTransicaoDeStatusInvalida() {
         stubMecanico();
-        var ordemConcluida = OrdemDeServico.reconstituir(ORDEM_ID, 1L, 2L, 3L, MECANICO_ID,
-                StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, DESCRICAO, LocalDateTime.now(), LocalDateTime.now(), null,
-                List.of(new ServicoVinculado(1L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null)),
-                List.of(), List.of(), null, null, null, null, null, null);
+        var ordemConcluida = OrdemDeServico.builder()
+                .id(ORDEM_ID)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(MECANICO_ID)
+                .status(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of(new ServicoVinculado(1L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null))))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO))
+                .build();
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemConcluida));
 
         assertThrows(TransicaoDeStatusInvalidaException.class,
