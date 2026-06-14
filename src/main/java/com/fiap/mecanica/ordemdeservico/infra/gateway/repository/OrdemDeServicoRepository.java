@@ -2,6 +2,8 @@ package com.fiap.mecanica.ordemdeservico.infra.gateway.repository;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -44,4 +46,28 @@ public interface OrdemDeServicoRepository extends JpaRepository<OrdemDeServicoEn
             @Param("dataFinalizacao") LocalDateTime dataFinalizacao,
             @Param("dataEntrega") LocalDateTime dataEntrega
     );
+
+    @Query(
+        value = """
+            SELECT * FROM ordem_servico
+            WHERE status NOT IN ('FINALIZADA', 'ENTREGUE', 'CANCELADA')
+            ORDER BY
+              CASE status
+                WHEN 'EM_EXECUCAO'           THEN 1
+                WHEN 'AGUARDANDO_APROVACAO'  THEN 2
+                WHEN 'EM_DIAGNOSTICO'        THEN 3
+                WHEN 'DIAGNOSTICO_CONCLUIDO' THEN 4
+                WHEN 'RECEBIDA'              THEN 5
+              END ASC,
+              data_criacao ASC
+            """,
+        countQuery = """
+            SELECT COUNT(*) FROM ordem_servico
+            WHERE status NOT IN ('FINALIZADA', 'ENTREGUE', 'CANCELADA')
+            """,
+        nativeQuery = true
+    )
+    Page<OrdemDeServicoEntity> buscaOrdemDeServicos(Pageable pageable);
+
+
 }

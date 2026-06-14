@@ -256,7 +256,7 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
     @Override
     public Pagina<OrdemDeServico> listar(int page, int size) {
         try {
-            var resultado = ordemDeServicoRepository.findAll(PageRequest.of(page, size));
+            var resultado = ordemDeServicoRepository.buscaOrdemDeServicos(PageRequest.of(page, size));
             var ordens = resultado.getContent().stream().map(this::mapear).toList();
             return new Pagina<>(ordens, resultado.getNumber(), resultado.getSize(), resultado.getTotalElements(), resultado.getTotalPages());
         } catch (Exception e) {
