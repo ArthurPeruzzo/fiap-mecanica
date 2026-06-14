@@ -45,6 +45,18 @@ docker compose down -v
 
 MySQL is exposed on the **host at port 3307** (mapped from container port 3306). Connect with DBeaver at `127.0.0.1:3307`, user `root`, password `root`, database `mecanica`. The app connects to MySQL via the service name `db` inside the compose network.
 
+## Default users
+
+Seeded by Flyway migrations. All share the same password `MeCanica2026!@#`.
+
+| E-mail | Role |
+|---|---|
+| `administrador@mecanica.com` | `ROLE_ADMINISTRADOR` |
+| `atendente@mecanica.com` | `ROLE_ATENDENTE` |
+| `mecanico@mecanica.com` | `ROLE_MECANICO` |
+
+Login via `POST /authenticate/login`. Migration `V14` seeds sample data (clients, vehicles, parts, supplies, services, orders in every status) for immediate API exploration. Swagger UI: `http://localhost:8080/swagger-ui.html`.
+
 ## Environment variables
 
 | Variable | Default | Description |
