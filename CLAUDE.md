@@ -20,11 +20,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./mvnw spring-boot:run
 
 # Run all tests — must use Java 25 explicitly (system default may be older)
-JAVA_HOME=/home/arthur/.jdks/loom-ea-25-loom+1-11 ./mvnw test
+JAVA_HOME=/home/arthur/.jdks/jdk-25 ./mvnw test
 
 # Run a single test class or method
-JAVA_HOME=/home/arthur/.jdks/loom-ea-25-loom+1-11 ./mvnw test -Dtest=ClassName
-JAVA_HOME=/home/arthur/.jdks/loom-ea-25-loom+1-11 ./mvnw test -Dtest=ClassName#methodName
+JAVA_HOME=/home/arthur/.jdks/jdk-25 ./mvnw test -Dtest=ClassName
+JAVA_HOME=/home/arthur/.jdks/jdk-25 ./mvnw test -Dtest=ClassName#methodName
 ```
 
 ## Docker

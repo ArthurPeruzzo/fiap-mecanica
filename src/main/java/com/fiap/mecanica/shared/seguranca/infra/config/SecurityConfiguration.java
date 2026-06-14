@@ -68,6 +68,8 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.DELETE, "/ordem-servico/*/pecas/*").hasRole(MECANICO)
                         .requestMatchers(HttpMethod.PUT,    "/ordem-servico/*/insumos/*").hasRole(MECANICO)
                         .requestMatchers(HttpMethod.DELETE, "/ordem-servico/*/insumos/*").hasRole(MECANICO)
+                        // QUALQUER PERFIL AUTENTICADO
+                        .requestMatchers(HttpMethod.GET, "/ordem-servico/*/status").hasAnyRole(ATENDENTE, MECANICO, ADMINISTRADOR)
                         .anyRequest().denyAll()
                 )
                 .exceptionHandling(exception ->
