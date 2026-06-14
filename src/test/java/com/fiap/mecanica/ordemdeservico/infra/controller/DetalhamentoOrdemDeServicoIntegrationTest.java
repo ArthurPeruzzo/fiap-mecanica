@@ -102,9 +102,10 @@ class DetalhamentoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIn
         String tokenAdmin = obterToken(RoleEnum.ROLE_ADMINISTRADOR, "admin@test.com");
 
         Long s1 = criarServicoERetornarId();
-        Long ordemId = criarOrdemEmExecucaoComServicos(tokenAtendente, tokenMecanico, List.of(s1));
+        Long s2 = criarServicoERetornarId();
+        Long ordemId = criarOrdemEmExecucaoComServicos(tokenAtendente, tokenMecanico, List.of(s1, s2));
 
-        // finalizar o único serviço → ordem transiciona para FINALIZADA automaticamente
+        // finalizar um único serviço
         iniciarEFinalizarServico(ordemId, s1, tokenMecanico);
         // 1d 4h 30min
         var inicio = LocalDateTime.of(2024, 1, 15, 9, 0);
