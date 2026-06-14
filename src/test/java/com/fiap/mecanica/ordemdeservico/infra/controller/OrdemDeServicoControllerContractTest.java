@@ -9,6 +9,7 @@ import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.dto.OrdemDeServicoListagemDto;
 import com.fiap.mecanica.ordemdeservico.core.exception.*;
+import com.fiap.mecanica.ordemdeservico.core.dto.ConsultarStatusOrdemDeServicoDto;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.page.Pagina;
@@ -86,6 +87,9 @@ class OrdemDeServicoControllerContractTest {
 
     @MockitoBean
     private ListarOrdemDeServicoUseCase listarOrdemDeServicoUseCase;
+
+    @MockitoBean
+    private ConsultarStatusOrdemDeServicoUseCase consultarStatusOrdemDeServicoUseCase;
 
     private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"}";
 
@@ -1085,5 +1089,30 @@ class OrdemDeServicoControllerContractTest {
                 .andExpect(jsonPath("$.totalPages").value(1));
 
         Mockito.verify(listarOrdemDeServicoUseCase).listar(0, 10);
+    }
+
+    // --- consultarStatus ---
+
+    @Test
+    void shouldReturn200WithStatusWhenConsultarStatusSuccess() throws Exception {
+        Mockito.when(consultarStatusOrdemDeServicoUseCase.consultar(1L))
+                .thenReturn(new ConsultarStatusOrdemDeServicoDto(1L, "RECEBIDA"));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/ordem-servico/1/status"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.status").value("RECEBIDA"));
+
+        Mockito.verify(consultarStatusOrdemDeServicoUseCase).consultar(1L);
+    }
+
+    @Test
+    void shouldReturn404WhenOrdemNotFoundOnConsultarStatus() throws Exception {
+        Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
+                .when(consultarStatusOrdemDeServicoUseCase).consultar(99L);
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/ordem-servico/99/status"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
     }
 }

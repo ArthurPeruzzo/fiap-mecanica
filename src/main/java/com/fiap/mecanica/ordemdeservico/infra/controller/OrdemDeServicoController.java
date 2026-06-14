@@ -5,6 +5,7 @@ import com.fiap.mecanica.ordemdeservico.core.dto.InsumoVinculadoCriarDto;
 import com.fiap.mecanica.ordemdeservico.core.dto.OrdemDeServicoListagemDto;
 import com.fiap.mecanica.ordemdeservico.core.dto.PecaVinculadaCriarDto;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
+import com.fiap.mecanica.ordemdeservico.infra.controller.json.StatusOrdemDeServicoResponseJson;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.*;
 import com.fiap.mecanica.shared.page.PageResponse;
 import com.fiap.mecanica.shared.page.Pagina;
@@ -40,6 +41,7 @@ public class OrdemDeServicoController {
     private final FinalizarServicoOrdemDeServicoUseCase finalizarServicoOrdemDeServicoUseCase;
     private final EntregarOrdemDeServicoUseCase entregarOrdemDeServicoUseCase;
     private final ListarOrdemDeServicoUseCase listarOrdemDeServicoUseCase;
+    private final ConsultarStatusOrdemDeServicoUseCase consultarStatusOrdemDeServicoUseCase;
 
     @Operation(summary = "Criar Ordem de Serviço",
             description = "Cria uma nova Ordem de Serviço com status RECEBIDA. A descrição registra o relato do cliente. O atendente é identificado pelo token JWT. " +
@@ -302,5 +304,19 @@ public class OrdemDeServicoController {
                                                                                  @RequestParam(defaultValue = "10") int size) {
         Pagina<OrdemDeServicoListagemDto> pagina = listarOrdemDeServicoUseCase.listar(page, size);
         return ResponseEntity.ok(PageResponse.from(pagina.map(OrdemDeServicoResponseJson::from)));
+    }
+
+    @Operation(summary = "Consultar status da Ordem de Serviço",
+            description = "Retorna o status atual de uma ordem de serviço pelo ID. Acessível por qualquer perfil autenticado.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Status retornado com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado"),
+            @ApiResponse(responseCode = "404", description = "Ordem de serviço não encontrada")
+    })
+    @GetMapping("/{ordemServicoId}/status")
+    public ResponseEntity<StatusOrdemDeServicoResponseJson> consultarStatus(@PathVariable Long ordemServicoId) {
+        return ResponseEntity.ok(StatusOrdemDeServicoResponseJson.from(
+                consultarStatusOrdemDeServicoUseCase.consultar(ordemServicoId)));
     }
 }
