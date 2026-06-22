@@ -77,7 +77,10 @@ class OrdemDeServicoControllerContractTest {
     private OrcamentoRecusadoViaTokenUseCase orcamentoRecusadoViaTokenUseCase;
 
     @MockitoBean
-    private OrcamentoAprovadoOrdemDeServicoUseCase orcamentoAprovadoOrdemDeServicoUseCase;
+    private OrcamentoAprovadoViaAtendenteUseCase orcamentoAprovadoViaAtendenteUseCase;
+
+    @MockitoBean
+    private OrcamentoAprovadoViaTokenUseCase orcamentoAprovadoViaTokenUseCase;
 
     @MockitoBean
     private IniciarServicoOrdemDeServicoUseCase iniciarServicoOrdemDeServicoUseCase;
@@ -1025,13 +1028,13 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/aprovar/1"))
                 .andExpect(status().isNoContent());
 
-        Mockito.verify(orcamentoAprovadoOrdemDeServicoUseCase).aprovar(1L);
+        Mockito.verify(orcamentoAprovadoViaAtendenteUseCase).aprovar(1L);
     }
 
     @Test
     void shouldReturn404WhenOrdemNotFoundOnAprovar() throws Exception {
         Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
-                .when(orcamentoAprovadoOrdemDeServicoUseCase).aprovar(99L);
+                .when(orcamentoAprovadoViaAtendenteUseCase).aprovar(99L);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/aprovar/99"))
                 .andExpect(status().isNotFound())
@@ -1041,7 +1044,7 @@ class OrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn422WhenTransicaoInvalidaOnAprovar() throws Exception {
         Mockito.doThrow(new TransicaoDeStatusInvalidaException())
-                .when(orcamentoAprovadoOrdemDeServicoUseCase).aprovar(1L);
+                .when(orcamentoAprovadoViaAtendenteUseCase).aprovar(1L);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/aprovar/1"))
                 .andExpect(status().isUnprocessableContent())
@@ -1143,6 +1146,34 @@ class OrdemDeServicoControllerContractTest {
                 .when(orcamentoRecusadoViaTokenUseCase).recusar(Mockito.any());
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/externo/recusar/token-expirado"))
+                .andExpect(status().isGone())
+                .andExpect(jsonPath("$.message").value("Link de aprovação de orçamento expirado ou já utilizado"));
+    }
+
+    @Test
+    void shouldReturn204WhenAprovarExternoSuccessfully() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/externo/aprovar/some-token"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(orcamentoAprovadoViaTokenUseCase).aprovar("some-token");
+    }
+
+    @Test
+    void shouldReturn404WhenAprovarExternoTokenNaoEncontrado() throws Exception {
+        Mockito.doThrow(new LinkAprovacaoOrcamentoNaoEncontradoException())
+                .when(orcamentoAprovadoViaTokenUseCase).aprovar(Mockito.anyString());
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/externo/aprovar/token-inexistente"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Link de aprovação de orçamento não encontrado"));
+    }
+
+    @Test
+    void shouldReturn410WhenAprovarExternoTokenInvalido() throws Exception {
+        Mockito.doThrow(new LinkAprovacaoOrcamentoInvalidoException())
+                .when(orcamentoAprovadoViaTokenUseCase).aprovar(Mockito.anyString());
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/externo/aprovar/token-expirado"))
                 .andExpect(status().isGone())
                 .andExpect(jsonPath("$.message").value("Link de aprovação de orçamento expirado ou já utilizado"));
     }

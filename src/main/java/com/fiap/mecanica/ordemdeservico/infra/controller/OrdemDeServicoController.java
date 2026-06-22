@@ -37,7 +37,8 @@ public class OrdemDeServicoController {
     private final EnviarOrcamentoOrdemDeServicoUseCase enviarOrcamentoOrdemDeServicoUseCase;
     private final OrcamentoRecusadoViaAtendenteUseCase orcamentoRecusadoViaAtendenteUseCase;
     private final OrcamentoRecusadoViaTokenUseCase orcamentoRecusadoViaTokenUseCase;
-    private final OrcamentoAprovadoOrdemDeServicoUseCase orcamentoAprovadoOrdemDeServicoUseCase;
+    private final OrcamentoAprovadoViaAtendenteUseCase orcamentoAprovadoViaAtendenteUseCase;
+    private final OrcamentoAprovadoViaTokenUseCase orcamentoAprovadoViaTokenUseCase;
     private final IniciarServicoOrdemDeServicoUseCase iniciarServicoOrdemDeServicoUseCase;
     private final FinalizarServicoOrdemDeServicoUseCase finalizarServicoOrdemDeServicoUseCase;
     private final EntregarOrdemDeServicoUseCase entregarOrdemDeServicoUseCase;
@@ -260,7 +261,23 @@ public class OrdemDeServicoController {
     })
     @PostMapping("/orcamento/aprovar/{ordemServicoId}")
     public ResponseEntity<Void> aprovar(@PathVariable Long ordemServicoId) {
-        orcamentoAprovadoOrdemDeServicoUseCase.aprovar(ordemServicoId);
+        orcamentoAprovadoViaAtendenteUseCase.aprovar(ordemServicoId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @Operation(summary = "Aprovar orçamento via link público",
+            description = "Endpoint público (sem autenticação) acionado pelo cliente a partir do link recebido por notificação. " +
+                    "Registra a aprovação do orçamento e libera a execução dos serviços, avançando o status para EM_EXECUCAO. " +
+                    "O link expira em 3 dias após o envio do orçamento e só pode ser utilizado uma vez.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Orçamento aprovado com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Link não encontrado"),
+            @ApiResponse(responseCode = "410", description = "Link expirado ou já utilizado"),
+            @ApiResponse(responseCode = "422", description = "Status inválido para a operação — ordem de serviço não está em AGUARDANDO_APROVACAO")
+    })
+    @PostMapping("/orcamento/externo/aprovar/{token}")
+    public ResponseEntity<Void> aprovarExterno(@PathVariable String token) {
+        orcamentoAprovadoViaTokenUseCase.aprovar(token);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
