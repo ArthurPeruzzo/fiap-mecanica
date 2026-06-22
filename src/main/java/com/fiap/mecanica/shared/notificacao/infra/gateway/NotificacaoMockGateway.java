@@ -10,8 +10,8 @@ import java.math.BigDecimal;
 @Slf4j
 public class NotificacaoMockGateway implements NotificacaoGateway {
     @Override
-    public void enviarOrcamento(Long clienteId, BigDecimal valorTotal) {
-        log.info("Orçamento de R$ {} enviado ao cliente id {}", valorTotal, clienteId);
+    public void enviarOrcamento(Long clienteId, BigDecimal valorTotal, String token) {
+        log.info("Orçamento de R$ {} enviado ao cliente id {}. Token para acao: {}", valorTotal, clienteId, token);
     }
 
     @Override

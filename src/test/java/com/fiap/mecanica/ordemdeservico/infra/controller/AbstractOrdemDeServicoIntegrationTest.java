@@ -15,6 +15,7 @@ import com.fiap.mecanica.gestao.infra.gateway.repository.ClienteRepository;
 import com.fiap.mecanica.gestao.infra.gateway.repository.MecanicoRepository;
 import com.fiap.mecanica.gestao.infra.gateway.repository.VeiculoRepository;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.ServicoEntity;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.LinkAprovacaoOrcamentoRepository;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoRepository;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.ServicoRepository;
 import com.fiap.mecanica.resources.testcontainer.AbstractContainer;
@@ -47,6 +48,7 @@ abstract class AbstractOrdemDeServicoIntegrationTest extends AbstractContainer {
     @Autowired protected ClienteRepository clienteRepository;
     @Autowired protected VeiculoRepository veiculoRepository;
     @Autowired protected OrdemDeServicoRepository ordemDeServicoRepository;
+    @Autowired protected LinkAprovacaoOrcamentoRepository linkAprovacaoOrcamentoRepository;
     @Autowired protected ServicoRepository servicoRepository;
     @Autowired protected PecaRepository pecaRepository;
     @Autowired protected InsumoRepository insumoRepository;
