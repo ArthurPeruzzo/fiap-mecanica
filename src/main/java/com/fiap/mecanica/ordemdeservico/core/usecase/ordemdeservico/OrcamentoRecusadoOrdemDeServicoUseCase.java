@@ -7,34 +7,31 @@ import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
 import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
 import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
-import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-@Service
-@RequiredArgsConstructor
-public class OrcamentoRecusadoOrdemDeServicoUseCase {
+public abstract class OrcamentoRecusadoOrdemDeServicoUseCase {
 
-	private final OrdemDeServicoGateway ordemDeServicoGateway;
+	protected final OrdemDeServicoGateway ordemDeServicoGateway;
 	private final PecaGateway pecaGateway;
 	private final InsumoGateway insumoGateway;
 
-	public void recursar(Long ordemDeServicoId) {
-		OrdemDeServico ordemDeServico = ordemDeServicoGateway.buscarPorId(ordemDeServicoId)
-				.orElseThrow(OrdemDeServicoNaoEncontradaException::new);
+	protected OrcamentoRecusadoOrdemDeServicoUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
+													  PecaGateway pecaGateway,
+													  InsumoGateway insumoGateway) {
+		this.ordemDeServicoGateway = ordemDeServicoGateway;
+		this.pecaGateway = pecaGateway;
+		this.insumoGateway = insumoGateway;
+	}
 
+	protected void recusar(OrdemDeServico ordemDeServico) {
 		ordemDeServico.cancelar();
 		devolverQuantidadesDePecaAoEstoque(ordemDeServico);
 		devolverQuantidadesDeInsumoAoEstoque(ordemDeServico);
-
-
 		ordemDeServicoGateway.atualizar(ordemDeServico);
-
 	}
 
 	private void devolverQuantidadesDePecaAoEstoque(OrdemDeServico ordemDeServico) {

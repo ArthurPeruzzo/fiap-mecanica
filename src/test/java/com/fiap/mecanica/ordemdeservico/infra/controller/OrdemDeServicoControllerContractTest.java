@@ -71,7 +71,7 @@ class OrdemDeServicoControllerContractTest {
     private EnviarOrcamentoOrdemDeServicoUseCase enviarOrcamentoOrdemDeServicoUseCase;
 
     @MockitoBean
-    private OrcamentoRecusadoOrdemDeServicoUseCase orcamentoRecusadoOrdemDeServicoUseCase;
+    private OrcamentoRecusadoViaAtendenteUseCase orcamentoRecusadoViaAtendenteUseCase;
 
     @MockitoBean
     private OrcamentoAprovadoOrdemDeServicoUseCase orcamentoAprovadoOrdemDeServicoUseCase;
@@ -872,13 +872,13 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/recusar/1"))
                 .andExpect(status().isNoContent());
 
-        Mockito.verify(orcamentoRecusadoOrdemDeServicoUseCase).recursar(1L);
+        Mockito.verify(orcamentoRecusadoViaAtendenteUseCase).recusar(1L);
     }
 
     @Test
     void shouldReturn404WhenOrdemNotFoundOnRecusar() throws Exception {
         Mockito.doThrow(new OrdemDeServicoNaoEncontradaException())
-                .when(orcamentoRecusadoOrdemDeServicoUseCase).recursar(99L);
+                .when(orcamentoRecusadoViaAtendenteUseCase).recusar(99L);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/recusar/99"))
                 .andExpect(status().isNotFound())
@@ -888,7 +888,7 @@ class OrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn422WhenTransicaoInvalidaOnRecusar() throws Exception {
         Mockito.doThrow(new TransicaoDeStatusInvalidaException())
-                .when(orcamentoRecusadoOrdemDeServicoUseCase).recursar(1L);
+                .when(orcamentoRecusadoViaAtendenteUseCase).recusar(1L);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/recusar/1"))
                 .andExpect(status().isUnprocessableContent())

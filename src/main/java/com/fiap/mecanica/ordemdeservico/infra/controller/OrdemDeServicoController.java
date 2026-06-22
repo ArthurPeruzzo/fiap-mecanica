@@ -35,7 +35,7 @@ public class OrdemDeServicoController {
     private final VincularInsumoOrdemDeServicoUseCase vincularInsumoOrdemDeServicoUseCase;
     private final DesvincularInsumoOrdemDeServicoUseCase desvincularInsumoOrdemDeServicoUseCase;
     private final EnviarOrcamentoOrdemDeServicoUseCase enviarOrcamentoOrdemDeServicoUseCase;
-    private final OrcamentoRecusadoOrdemDeServicoUseCase orcamentoRecusadoOrdemDeServicoUseCase;
+    private final OrcamentoRecusadoViaAtendenteUseCase orcamentoRecusadoViaAtendenteUseCase;
     private final OrcamentoAprovadoOrdemDeServicoUseCase orcamentoAprovadoOrdemDeServicoUseCase;
     private final IniciarServicoOrdemDeServicoUseCase iniciarServicoOrdemDeServicoUseCase;
     private final FinalizarServicoOrdemDeServicoUseCase finalizarServicoOrdemDeServicoUseCase;
@@ -226,7 +226,7 @@ public class OrdemDeServicoController {
     })
     @PostMapping("/orcamento/recusar/{ordemServicoId}")
     public ResponseEntity<Void> recusar(@PathVariable Long ordemServicoId) {
-        orcamentoRecusadoOrdemDeServicoUseCase.recursar(ordemServicoId);
+        orcamentoRecusadoViaAtendenteUseCase.recusar(ordemServicoId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
