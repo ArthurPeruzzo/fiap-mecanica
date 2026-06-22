@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface LinkAprovacaoOrcamentoRepository extends JpaRepository<LinkAprovacaoOrcamentoEntity, Long> {
     Optional<LinkAprovacaoOrcamentoEntity> findByOrdemServicoId(Long ordemServicoId);
+    Optional<LinkAprovacaoOrcamentoEntity> findByToken(String token);
 }

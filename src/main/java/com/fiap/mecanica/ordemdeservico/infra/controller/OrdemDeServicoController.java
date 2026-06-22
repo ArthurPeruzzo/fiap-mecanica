@@ -36,6 +36,7 @@ public class OrdemDeServicoController {
     private final DesvincularInsumoOrdemDeServicoUseCase desvincularInsumoOrdemDeServicoUseCase;
     private final EnviarOrcamentoOrdemDeServicoUseCase enviarOrcamentoOrdemDeServicoUseCase;
     private final OrcamentoRecusadoViaAtendenteUseCase orcamentoRecusadoViaAtendenteUseCase;
+    private final OrcamentoRecusadoViaTokenUseCase orcamentoRecusadoViaTokenUseCase;
     private final OrcamentoAprovadoOrdemDeServicoUseCase orcamentoAprovadoOrdemDeServicoUseCase;
     private final IniciarServicoOrdemDeServicoUseCase iniciarServicoOrdemDeServicoUseCase;
     private final FinalizarServicoOrdemDeServicoUseCase finalizarServicoOrdemDeServicoUseCase;
@@ -200,7 +201,9 @@ public class OrdemDeServicoController {
     }
 
     @Operation(summary = "Enviar orçamento da Ordem de Serviço",
-            description = "Envia o orçamento ao cliente e avança o status para AGUARDANDO_APROVACAO. Somente permitido quando a ordem estiver no status DIAGNOSTICO_CONCLUIDO.")
+            description = "Envia o orçamento ao cliente e avança o status para AGUARDANDO_APROVACAO. " +
+                    "Gera um link de aprovação com validade de 3 dias que é enviado ao cliente via notificação. " +
+                    "Somente permitido quando a ordem estiver no status DIAGNOSTICO_CONCLUIDO.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Orçamento enviado com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
@@ -215,7 +218,7 @@ public class OrdemDeServicoController {
     }
 
     @Operation(summary = "Recusar orçamento da Ordem de Serviço",
-            description = "Registra a recusa do cliente e cancela a ordem de serviço, avançando o status para CANCELADA. Somente permitido quando a ordem estiver no status AGUARDANDO_APROVACAO. " +
+            description = "O atendente registra a recusa do cliente e cancela a ordem de serviço, avançando o status para CANCELADA. Somente permitido quando a ordem estiver no status AGUARDANDO_APROVACAO. " +
                     "As quantidades de peças e insumos são devolvidas ao estoque, mas o vinculo na ordem de serviço continua para rastreabilidade")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Orçamento recusado com sucesso"),
@@ -227,6 +230,22 @@ public class OrdemDeServicoController {
     @PostMapping("/orcamento/recusar/{ordemServicoId}")
     public ResponseEntity<Void> recusar(@PathVariable Long ordemServicoId) {
         orcamentoRecusadoViaAtendenteUseCase.recusar(ordemServicoId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @Operation(summary = "Recusar orçamento via link público",
+            description = "Endpoint público (sem autenticação) acionado pelo cliente a partir do link recebido por notificação. " +
+                    "Cancela a ordem de serviço avançando o status para CANCELADA e devolve peças e insumos ao estoque. " +
+                    "O link expira em 3 dias após o envio do orçamento e só pode ser utilizado uma vez.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Orçamento recusado com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Link não encontrado"),
+            @ApiResponse(responseCode = "410", description = "Link expirado ou já utilizado"),
+            @ApiResponse(responseCode = "422", description = "Status inválido para a operação — ordem de serviço não está em AGUARDANDO_APROVACAO")
+    })
+    @PostMapping("/orcamento/externo/recusar/{token}")
+    public ResponseEntity<Void> recusarExterno(@PathVariable String token) {
+        orcamentoRecusadoViaTokenUseCase.recusar(token);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 

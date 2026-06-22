@@ -74,6 +74,9 @@ class OrdemDeServicoControllerContractTest {
     private OrcamentoRecusadoViaAtendenteUseCase orcamentoRecusadoViaAtendenteUseCase;
 
     @MockitoBean
+    private OrcamentoRecusadoViaTokenUseCase orcamentoRecusadoViaTokenUseCase;
+
+    @MockitoBean
     private OrcamentoAprovadoOrdemDeServicoUseCase orcamentoAprovadoOrdemDeServicoUseCase;
 
     @MockitoBean
@@ -1114,5 +1117,33 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.get("/ordem-servico/99/status"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    @Test
+    void shouldReturn204WhenRecusarExternoSuccessfully() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/externo/recusar/some-token"))
+                .andExpect(status().isNoContent());
+
+        Mockito.verify(orcamentoRecusadoViaTokenUseCase).recusar("some-token");
+    }
+
+    @Test
+    void shouldReturn404WhenTokenNaoEncontrado() throws Exception {
+        Mockito.doThrow(new LinkAprovacaoOrcamentoNaoEncontradoException())
+                .when(orcamentoRecusadoViaTokenUseCase).recusar(Mockito.any());
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/externo/recusar/token-inexistente"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Link de aprovação de orçamento não encontrado"));
+    }
+
+    @Test
+    void shouldReturn410WhenTokenInvalido() throws Exception {
+        Mockito.doThrow(new LinkAprovacaoOrcamentoInvalidoException())
+                .when(orcamentoRecusadoViaTokenUseCase).recusar(Mockito.any());
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/externo/recusar/token-expirado"))
+                .andExpect(status().isGone())
+                .andExpect(jsonPath("$.message").value("Link de aprovação de orçamento expirado ou já utilizado"));
     }
 }

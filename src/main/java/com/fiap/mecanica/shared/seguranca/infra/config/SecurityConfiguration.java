@@ -33,7 +33,8 @@ public class SecurityConfiguration {
             "/v3/api-docs/**",
             "/swagger-ui.html",
             "/swagger-ui/**",
-            "/favicon.ico"
+            "/favicon.ico",
+            "/ordem-servico/orcamento/externo/**"
     };
 
     private static final String[] ENDPOINTS_ADMINISTRADOR = {
