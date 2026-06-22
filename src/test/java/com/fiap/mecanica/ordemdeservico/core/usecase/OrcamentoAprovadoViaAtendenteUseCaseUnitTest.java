@@ -6,6 +6,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontra
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.OrcamentoAprovadoOrdemDeServicoUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.OrcamentoAprovadoViaAtendenteUseCase;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -23,10 +24,10 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
-class OrcamentoAprovadoOrdemDeServicoUseCaseUnitTest {
+class OrcamentoAprovadoViaAtendenteUseCaseUnitTest {
 
     @InjectMocks
-    private OrcamentoAprovadoOrdemDeServicoUseCase orcamentoAprovadoOrdemDeServicoUseCase;
+    private OrcamentoAprovadoViaAtendenteUseCase orcamentoAprovadoViaAtendenteUseCase;
 
     @Mock
     private OrdemDeServicoGateway ordemDeServicoGateway;
@@ -63,7 +64,7 @@ class OrcamentoAprovadoOrdemDeServicoUseCaseUnitTest {
     void shouldAprovarOrcamentoSuccessfully() {
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemAguardandoAprovacao()));
 
-        orcamentoAprovadoOrdemDeServicoUseCase.aprovar(ORDEM_ID);
+        orcamentoAprovadoViaAtendenteUseCase.aprovar(ORDEM_ID);
 
         var captor = ArgumentCaptor.forClass(OrdemDeServico.class);
         Mockito.verify(ordemDeServicoGateway).atualizar(captor.capture());
@@ -77,7 +78,7 @@ class OrcamentoAprovadoOrdemDeServicoUseCaseUnitTest {
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.empty());
 
         assertThrows(OrdemDeServicoNaoEncontradaException.class,
-                () -> orcamentoAprovadoOrdemDeServicoUseCase.aprovar(ORDEM_ID));
+                () -> orcamentoAprovadoViaAtendenteUseCase.aprovar(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
     }
@@ -109,7 +110,7 @@ class OrcamentoAprovadoOrdemDeServicoUseCaseUnitTest {
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemEmDiagnostico));
 
         assertThrows(TransicaoDeStatusInvalidaException.class,
-                () -> orcamentoAprovadoOrdemDeServicoUseCase.aprovar(ORDEM_ID));
+                () -> orcamentoAprovadoViaAtendenteUseCase.aprovar(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
     }

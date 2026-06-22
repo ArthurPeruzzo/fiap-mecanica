@@ -155,6 +155,8 @@ Dicionário de termos do domínio utilizados no sistema.
 | **Orçamento** | Valor total calculado ao concluir o diagnóstico, somando os preços de todos os serviços, peças e insumos vinculados naquele momento. |
 | **Vínculo** | Associação de um serviço, peça ou insumo a uma ordem de serviço. Permitido apenas durante a fase de diagnóstico.                     |
 | **Mecânico Responsável** | O mecânico que iniciou o diagnóstico de uma ordem de serviço. Somente ele pode continuar as operações daquela ordem.                               |
+| **Link de Aprovação de Orçamento** | Token UUID gerado ao enviar o orçamento ao cliente. Tem validade de 3 dias e uso único. O cliente utiliza o link para aprovar ou recusar o orçamento sem necessidade de autenticação, desde que a ordem esteja em **Aguardando Aprovação**. |
+| **Aprovação/Recusa pelo Atendente** | O atendente pode registrar a decisão do cliente diretamente pelo sistema, sem uso do link, desde que a ordem esteja em **Aguardando Aprovação**. |
 
 ### Ciclo de vida da Ordem de Serviço
 
@@ -163,7 +165,7 @@ Dicionário de termos do domínio utilizados no sistema.
 | **Recebida** | Ordem de Serviço criada pelo atendente. Aguardando que um mecânico inicie o diagnóstico. |
 | **Em Diagnóstico** | Diagnóstico iniciado pelo mecânico responsável. Permite vincular serviços, peças e insumos. |
 | **Diagnóstico Concluído** | Diagnóstico encerrado e orçamento calculado. Aguarda envio ao cliente. |
-| **Aguardando Aprovação** | Orçamento enviado ao cliente. Aguarda aprovação ou recusa. |
+| **Aguardando Aprovação** | Orçamento enviado ao cliente via notificação com link de aprovação. O cliente ou o atendente registram a decisão. |
 | **Em Execução** (Ordem de Serviço) | Orçamento aprovado. Os serviços vinculados podem ser iniciados e finalizados individualmente pelo mecânico. |
 | **Finalizada** | Todos os serviços vinculados foram concluídos. Aguarda entrega do veículo. |
 | **Entregue** | Veículo devolvido ao cliente. Estado terminal positivo. |

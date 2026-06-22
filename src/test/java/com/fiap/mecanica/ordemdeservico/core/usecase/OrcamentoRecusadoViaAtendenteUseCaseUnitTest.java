@@ -10,7 +10,7 @@ import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
-import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.OrcamentoRecusadoOrdemDeServicoUseCase;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.OrcamentoRecusadoViaAtendenteUseCase;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -28,10 +28,10 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
-class OrcamentoRecusadoOrdemDeServicoUseCaseUnitTest {
+class OrcamentoRecusadoViaAtendenteUseCaseUnitTest {
 
     @InjectMocks
-    private OrcamentoRecusadoOrdemDeServicoUseCase orcamentoRecusadoOrdemDeServicoUseCase;
+    private OrcamentoRecusadoViaAtendenteUseCase orcamentoRecusadoViaAtendenteUseCase;
 
     @Mock
     private OrdemDeServicoGateway ordemDeServicoGateway;
@@ -96,7 +96,7 @@ class OrcamentoRecusadoOrdemDeServicoUseCaseUnitTest {
         Mockito.when(insumoGateway.buscarPorId(INSUMO_ID_1)).thenReturn(Optional.of(insumoComEstoque(INSUMO_ID_1, 6)));
         Mockito.when(insumoGateway.buscarPorId(INSUMO_ID_2)).thenReturn(Optional.of(insumoComEstoque(INSUMO_ID_2, 9)));
 
-        orcamentoRecusadoOrdemDeServicoUseCase.recursar(ORDEM_ID);
+        orcamentoRecusadoViaAtendenteUseCase.recusar(ORDEM_ID);
 
         var ordemCaptor = ArgumentCaptor.forClass(OrdemDeServico.class);
         Mockito.verify(ordemDeServicoGateway).atualizar(ordemCaptor.capture());
@@ -113,7 +113,7 @@ class OrcamentoRecusadoOrdemDeServicoUseCaseUnitTest {
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.empty());
 
         assertThrows(OrdemDeServicoNaoEncontradaException.class,
-                () -> orcamentoRecusadoOrdemDeServicoUseCase.recursar(ORDEM_ID));
+                () -> orcamentoRecusadoViaAtendenteUseCase.recusar(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
         Mockito.verifyNoInteractions(pecaGateway);
@@ -147,7 +147,7 @@ class OrcamentoRecusadoOrdemDeServicoUseCaseUnitTest {
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemEmDiagnostico));
 
         assertThrows(TransicaoDeStatusInvalidaException.class,
-                () -> orcamentoRecusadoOrdemDeServicoUseCase.recursar(ORDEM_ID));
+                () -> orcamentoRecusadoViaAtendenteUseCase.recusar(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
         Mockito.verifyNoInteractions(pecaGateway);

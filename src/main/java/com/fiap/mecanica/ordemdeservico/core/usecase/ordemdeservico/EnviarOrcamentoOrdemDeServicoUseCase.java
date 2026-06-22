@@ -1,7 +1,9 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico;
 
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.LinkAprovacaoOrcamento;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
+import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
 public class EnviarOrcamentoOrdemDeServicoUseCase {
 
     private final OrdemDeServicoGateway ordemDeServicoGateway;
+    private final LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway;
     private final NotificacaoGateway notificacaoGateway;
 
     public void enviar(Long ordemServicoId) {
@@ -20,6 +23,10 @@ public class EnviarOrcamentoOrdemDeServicoUseCase {
 
         ordemDeServico.gravarEnvioOrcamento();
         ordemDeServicoGateway.atualizar(ordemDeServico);
-        notificacaoGateway.enviarOrcamento(ordemDeServico.getClienteId(), ordemDeServico.getOrcamento().valorTotal());
+
+        LinkAprovacaoOrcamento link = new LinkAprovacaoOrcamento(ordemServicoId);
+        linkAprovacaoOrcamentoGateway.salvar(link);
+
+        notificacaoGateway.enviarOrcamento(ordemDeServico.getClienteId(), ordemDeServico.getOrcamento().valorTotal(), link.getToken());
     }
 }

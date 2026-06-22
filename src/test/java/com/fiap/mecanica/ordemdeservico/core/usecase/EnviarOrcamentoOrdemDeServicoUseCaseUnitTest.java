@@ -4,6 +4,7 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
+import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.EnviarOrcamentoOrdemDeServicoUseCase;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
@@ -31,6 +32,9 @@ class EnviarOrcamentoOrdemDeServicoUseCaseUnitTest {
 
     @Mock
     private OrdemDeServicoGateway ordemDeServicoGateway;
+
+    @Mock
+    private LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway;
 
     @Mock
     private NotificacaoGateway notificacaoGateway;
@@ -71,12 +75,19 @@ class EnviarOrcamentoOrdemDeServicoUseCaseUnitTest {
 
         enviarOrcamentoOrdemDeServicoUseCase.enviar(ORDEM_ID);
 
-        var captor = ArgumentCaptor.forClass(OrdemDeServico.class);
-        Mockito.verify(ordemDeServicoGateway).atualizar(captor.capture());
-        var os = captor.getValue();
+        var osCaptor = ArgumentCaptor.forClass(OrdemDeServico.class);
+        Mockito.verify(ordemDeServicoGateway).atualizar(osCaptor.capture());
+        var os = osCaptor.getValue();
         assertEquals(StatusOrdemDeServico.AGUARDANDO_APROVACAO, os.getStatus());
         assertNotNull(os.getDataEnvioOrcamento());
-        Mockito.verify(notificacaoGateway).enviarOrcamento(CLIENTE_ID, VALOR_ORCAMENTO);
+
+        var linkCaptor = ArgumentCaptor.forClass(LinkAprovacaoOrcamento.class);
+        Mockito.verify(linkAprovacaoOrcamentoGateway).salvar(linkCaptor.capture());
+        var link = linkCaptor.getValue();
+        assertEquals(ORDEM_ID, link.getOrdemDeServicoId());
+        assertNotNull(link.getToken());
+
+        Mockito.verify(notificacaoGateway).enviarOrcamento(CLIENTE_ID, VALOR_ORCAMENTO, link.getToken());
     }
 
     @Test
@@ -87,6 +98,7 @@ class EnviarOrcamentoOrdemDeServicoUseCaseUnitTest {
                 () -> enviarOrcamentoOrdemDeServicoUseCase.enviar(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(linkAprovacaoOrcamentoGateway);
         Mockito.verifyNoInteractions(notificacaoGateway);
     }
 
@@ -120,13 +132,26 @@ class EnviarOrcamentoOrdemDeServicoUseCaseUnitTest {
                 () -> enviarOrcamentoOrdemDeServicoUseCase.enviar(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(linkAprovacaoOrcamentoGateway);
         Mockito.verifyNoInteractions(notificacaoGateway);
     }
 
     @Test
-    void shouldNotSendNotificacaoWhenAtualizarFails() {
+    void shouldNotSalvarLinkNemEnviarNotificacaoWhenAtualizarFails() {
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemDiagnosticoConcluido()));
         Mockito.doThrow(new RuntimeException("db error")).when(ordemDeServicoGateway).atualizar(Mockito.any());
+
+        assertThrows(RuntimeException.class,
+                () -> enviarOrcamentoOrdemDeServicoUseCase.enviar(ORDEM_ID));
+
+        Mockito.verifyNoInteractions(linkAprovacaoOrcamentoGateway);
+        Mockito.verifyNoInteractions(notificacaoGateway);
+    }
+
+    @Test
+    void shouldNotEnviarNotificacaoWhenSalvarLinkFails() {
+        Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemDiagnosticoConcluido()));
+        Mockito.doThrow(new RuntimeException("db error")).when(linkAprovacaoOrcamentoGateway).salvar(Mockito.any());
 
         assertThrows(RuntimeException.class,
                 () -> enviarOrcamentoOrdemDeServicoUseCase.enviar(ORDEM_ID));

@@ -35,8 +35,10 @@ public class OrdemDeServicoController {
     private final VincularInsumoOrdemDeServicoUseCase vincularInsumoOrdemDeServicoUseCase;
     private final DesvincularInsumoOrdemDeServicoUseCase desvincularInsumoOrdemDeServicoUseCase;
     private final EnviarOrcamentoOrdemDeServicoUseCase enviarOrcamentoOrdemDeServicoUseCase;
-    private final OrcamentoRecusadoOrdemDeServicoUseCase orcamentoRecusadoOrdemDeServicoUseCase;
-    private final OrcamentoAprovadoOrdemDeServicoUseCase orcamentoAprovadoOrdemDeServicoUseCase;
+    private final OrcamentoRecusadoViaAtendenteUseCase orcamentoRecusadoViaAtendenteUseCase;
+    private final OrcamentoRecusadoViaTokenUseCase orcamentoRecusadoViaTokenUseCase;
+    private final OrcamentoAprovadoViaAtendenteUseCase orcamentoAprovadoViaAtendenteUseCase;
+    private final OrcamentoAprovadoViaTokenUseCase orcamentoAprovadoViaTokenUseCase;
     private final IniciarServicoOrdemDeServicoUseCase iniciarServicoOrdemDeServicoUseCase;
     private final FinalizarServicoOrdemDeServicoUseCase finalizarServicoOrdemDeServicoUseCase;
     private final EntregarOrdemDeServicoUseCase entregarOrdemDeServicoUseCase;
@@ -200,7 +202,9 @@ public class OrdemDeServicoController {
     }
 
     @Operation(summary = "Enviar orçamento da Ordem de Serviço",
-            description = "Envia o orçamento ao cliente e avança o status para AGUARDANDO_APROVACAO. Somente permitido quando a ordem estiver no status DIAGNOSTICO_CONCLUIDO.")
+            description = "Envia o orçamento ao cliente e avança o status para AGUARDANDO_APROVACAO. " +
+                    "Gera um link de aprovação com validade de 3 dias que é enviado ao cliente via notificação. " +
+                    "Somente permitido quando a ordem estiver no status DIAGNOSTICO_CONCLUIDO.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Orçamento enviado com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
@@ -215,7 +219,7 @@ public class OrdemDeServicoController {
     }
 
     @Operation(summary = "Recusar orçamento da Ordem de Serviço",
-            description = "Registra a recusa do cliente e cancela a ordem de serviço, avançando o status para CANCELADA. Somente permitido quando a ordem estiver no status AGUARDANDO_APROVACAO. " +
+            description = "O atendente registra a recusa do cliente e cancela a ordem de serviço, avançando o status para CANCELADA. Somente permitido quando a ordem estiver no status AGUARDANDO_APROVACAO. " +
                     "As quantidades de peças e insumos são devolvidas ao estoque, mas o vinculo na ordem de serviço continua para rastreabilidade")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Orçamento recusado com sucesso"),
@@ -226,7 +230,23 @@ public class OrdemDeServicoController {
     })
     @PostMapping("/orcamento/recusar/{ordemServicoId}")
     public ResponseEntity<Void> recusar(@PathVariable Long ordemServicoId) {
-        orcamentoRecusadoOrdemDeServicoUseCase.recursar(ordemServicoId);
+        orcamentoRecusadoViaAtendenteUseCase.recusar(ordemServicoId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @Operation(summary = "Recusar orçamento via link público",
+            description = "Endpoint público (sem autenticação) acionado pelo cliente a partir do link recebido por notificação. " +
+                    "Cancela a ordem de serviço avançando o status para CANCELADA e devolve peças e insumos ao estoque. " +
+                    "O link expira em 3 dias após o envio do orçamento e só pode ser utilizado uma vez.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Orçamento recusado com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Link não encontrado"),
+            @ApiResponse(responseCode = "410", description = "Link expirado ou já utilizado"),
+            @ApiResponse(responseCode = "422", description = "Status inválido para a operação — ordem de serviço não está em AGUARDANDO_APROVACAO")
+    })
+    @PostMapping("/orcamento/externo/recusar/{token}")
+    public ResponseEntity<Void> recusarExterno(@PathVariable String token) {
+        orcamentoRecusadoViaTokenUseCase.recusar(token);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
@@ -241,7 +261,23 @@ public class OrdemDeServicoController {
     })
     @PostMapping("/orcamento/aprovar/{ordemServicoId}")
     public ResponseEntity<Void> aprovar(@PathVariable Long ordemServicoId) {
-        orcamentoAprovadoOrdemDeServicoUseCase.aprovar(ordemServicoId);
+        orcamentoAprovadoViaAtendenteUseCase.aprovar(ordemServicoId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @Operation(summary = "Aprovar orçamento via link público",
+            description = "Endpoint público (sem autenticação) acionado pelo cliente a partir do link recebido por notificação. " +
+                    "Registra a aprovação do orçamento e libera a execução dos serviços, avançando o status para EM_EXECUCAO. " +
+                    "O link expira em 3 dias após o envio do orçamento e só pode ser utilizado uma vez.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Orçamento aprovado com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Link não encontrado"),
+            @ApiResponse(responseCode = "410", description = "Link expirado ou já utilizado"),
+            @ApiResponse(responseCode = "422", description = "Status inválido para a operação — ordem de serviço não está em AGUARDANDO_APROVACAO")
+    })
+    @PostMapping("/orcamento/externo/aprovar/{token}")
+    public ResponseEntity<Void> aprovarExterno(@PathVariable String token) {
+        orcamentoAprovadoViaTokenUseCase.aprovar(token);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
