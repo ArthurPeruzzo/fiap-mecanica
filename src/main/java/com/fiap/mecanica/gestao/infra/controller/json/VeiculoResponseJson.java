@@ -1,6 +1,5 @@
 package com.fiap.mecanica.gestao.infra.controller.json;
 
-import com.fiap.mecanica.gestao.core.domain.Veiculo;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(name = "VeiculoResponseJson", description = "Dados do veículo")
@@ -21,13 +20,4 @@ public record VeiculoResponseJson(
         @Schema(description = "Ano de fabricação", example = "2020")
         Integer ano
 ) {
-    public static VeiculoResponseJson from(Veiculo veiculo) {
-        return new VeiculoResponseJson(
-                veiculo.getId(),
-                veiculo.getClienteId(),
-                veiculo.getPlaca().getValorFormatado(),
-                veiculo.getModelo(),
-                veiculo.getAno()
-        );
-    }
 }

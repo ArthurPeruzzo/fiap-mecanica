@@ -1,21 +1,15 @@
 package com.fiap.mecanica.gestao.infra.controller;
 
+import com.fiap.mecanica.gestao.core.domain.Cliente;
 import com.fiap.mecanica.gestao.core.domain.Veiculo;
-import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
-import com.fiap.mecanica.gestao.core.exception.VeiculoJaExisteException;
-import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
-import com.fiap.mecanica.gestao.core.usecase.AtualizarVeiculoUseCase;
-import com.fiap.mecanica.gestao.core.usecase.CriarVeiculoUseCase;
-import com.fiap.mecanica.gestao.core.usecase.DeletarVeiculoUseCase;
-import com.fiap.mecanica.gestao.core.usecase.ListarVeiculosUseCase;
+import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
+import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.page.Pagina;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mockito;
-
-import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -25,28 +19,25 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import java.util.List;
+import java.util.Optional;
+
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ActiveProfiles("controller-test")
 @ImportAutoConfiguration(NoSecurityConfiguration.class)
-@WebMvcTest(controllers = VeiculoController.class)
+@WebMvcTest(controllers = VeiculoHttpController.class)
 class VeiculoControllerContractTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
-    private CriarVeiculoUseCase criarVeiculoUseCase;
+    private VeiculoGateway veiculoGateway;
 
     @MockitoBean
-    private AtualizarVeiculoUseCase atualizarVeiculoUseCase;
-
-    @MockitoBean
-    private DeletarVeiculoUseCase deletarVeiculoUseCase;
-
-    @MockitoBean
-    private ListarVeiculosUseCase listarVeiculosUseCase;
+    private ClienteGateway clienteGateway;
 
     @ParameterizedTest
     @CsvSource({
@@ -61,7 +52,7 @@ class VeiculoControllerContractTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$." + field).value(expectedMessage));
 
-        Mockito.verifyNoInteractions(criarVeiculoUseCase);
+        Mockito.verifyNoInteractions(veiculoGateway, clienteGateway);
     }
 
     @ParameterizedTest
@@ -83,7 +74,7 @@ class VeiculoControllerContractTest {
                 .andExpect(jsonPath("$.placa").value(
                         "A placa informada é inválida. Formatos aceitos: ABC1234 (antiga) ou ABC1D23 (Mercosul), com ou sem hífen"));
 
-        Mockito.verifyNoInteractions(criarVeiculoUseCase);
+        Mockito.verifyNoInteractions(veiculoGateway, clienteGateway);
     }
 
     @ParameterizedTest
@@ -93,6 +84,10 @@ class VeiculoControllerContractTest {
             "ABC-1234, Gol,  2020"
     })
     void shouldReturn201WhenValidPlaca(String placa, String modelo, int ano) throws Exception {
+        var cliente = Cliente.reconstituir(1L, "Pedro", null, "12345678909");
+        Mockito.when(clienteGateway.buscarPorId(1L)).thenReturn(Optional.of(cliente));
+        Mockito.when(veiculoGateway.existePorPlaca(Mockito.any())).thenReturn(false);
+
         String json = String.format(
                 "{\"clienteId\":1,\"placa\":\"%s\",\"modelo\":\"%s\",\"ano\":%d}", placa, modelo, ano);
 
@@ -101,13 +96,12 @@ class VeiculoControllerContractTest {
                         .content(json))
                 .andExpect(status().isCreated());
 
-        Mockito.verify(criarVeiculoUseCase, Mockito.atLeastOnce()).criar(Mockito.any());
+        Mockito.verify(veiculoGateway, Mockito.atLeastOnce()).criar(Mockito.any());
     }
 
     @Test
     void shouldReturn404WhenClienteNotFound() throws Exception {
-        Mockito.doThrow(new ClienteNaoEncontradoException())
-                .when(criarVeiculoUseCase).criar(Mockito.any());
+        Mockito.when(clienteGateway.buscarPorId(99L)).thenReturn(Optional.empty());
 
         mockMvc.perform(MockMvcRequestBuilders.post("/veiculo")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -118,8 +112,9 @@ class VeiculoControllerContractTest {
 
     @Test
     void shouldReturn409WhenPlacaAlreadyExists() throws Exception {
-        Mockito.doThrow(new VeiculoJaExisteException())
-                .when(criarVeiculoUseCase).criar(Mockito.any());
+        var cliente = Cliente.reconstituir(1L, "Pedro", null, "12345678909");
+        Mockito.when(clienteGateway.buscarPorId(1L)).thenReturn(Optional.of(cliente));
+        Mockito.when(veiculoGateway.existePorPlaca("ABC1234")).thenReturn(true);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/veiculo")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -140,7 +135,7 @@ class VeiculoControllerContractTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$." + field).value(expectedMessage));
 
-        Mockito.verifyNoInteractions(atualizarVeiculoUseCase);
+        Mockito.verifyNoInteractions(veiculoGateway);
     }
 
     @Test
@@ -152,23 +147,26 @@ class VeiculoControllerContractTest {
                 .andExpect(jsonPath("$.placa").value(
                         "A placa informada é inválida. Formatos aceitos: ABC1234 (antiga) ou ABC1D23 (Mercosul), com ou sem hífen"));
 
-        Mockito.verifyNoInteractions(atualizarVeiculoUseCase);
+        Mockito.verifyNoInteractions(veiculoGateway);
     }
 
     @Test
     void shouldReturn204WhenValidUpdateRequest() throws Exception {
+        var veiculo = Veiculo.reconstituir(1L, 1L, "ABC1234", "Gol", 2020);
+        Mockito.when(veiculoGateway.buscarPorId(1L)).thenReturn(Optional.of(veiculo));
+        Mockito.when(veiculoGateway.existePorPlacaExcluindoId("ABC1D23", 1L)).thenReturn(false);
+
         mockMvc.perform(MockMvcRequestBuilders.put("/veiculo/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"placa\":\"ABC1D23\",\"modelo\":\"Onix\",\"ano\":2023}"))
                 .andExpect(status().isNoContent());
 
-        Mockito.verify(atualizarVeiculoUseCase).atualizar(Mockito.any());
+        Mockito.verify(veiculoGateway).atualizar(Mockito.any());
     }
 
     @Test
     void shouldReturn404WhenVeiculoNotFoundOnUpdate() throws Exception {
-        Mockito.doThrow(new VeiculoNaoEncontradoException())
-                .when(atualizarVeiculoUseCase).atualizar(Mockito.any());
+        Mockito.when(veiculoGateway.buscarPorId(99L)).thenReturn(Optional.empty());
 
         mockMvc.perform(MockMvcRequestBuilders.put("/veiculo/99")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -179,8 +177,9 @@ class VeiculoControllerContractTest {
 
     @Test
     void shouldReturn409WhenPlacaAlreadyExistsOnUpdate() throws Exception {
-        Mockito.doThrow(new VeiculoJaExisteException())
-                .when(atualizarVeiculoUseCase).atualizar(Mockito.any());
+        var veiculo = Veiculo.reconstituir(1L, 1L, "ABC1234", "Gol", 2020);
+        Mockito.when(veiculoGateway.buscarPorId(1L)).thenReturn(Optional.of(veiculo));
+        Mockito.when(veiculoGateway.existePorPlacaExcluindoId("ABC1234", 1L)).thenReturn(true);
 
         mockMvc.perform(MockMvcRequestBuilders.put("/veiculo/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -191,16 +190,18 @@ class VeiculoControllerContractTest {
 
     @Test
     void shouldReturn204WhenDeletarVeiculoSuccessfully() throws Exception {
+        var veiculo = Veiculo.reconstituir(1L, 1L, "ABC1234", "Gol", 2020);
+        Mockito.when(veiculoGateway.buscarPorId(1L)).thenReturn(Optional.of(veiculo));
+
         mockMvc.perform(MockMvcRequestBuilders.delete("/veiculo/1"))
                 .andExpect(status().isNoContent());
 
-        Mockito.verify(deletarVeiculoUseCase).deletar(1L);
+        Mockito.verify(veiculoGateway).deletar(1L);
     }
 
     @Test
     void shouldReturn404WhenVeiculoNotFoundOnDelete() throws Exception {
-        Mockito.doThrow(new VeiculoNaoEncontradoException())
-                .when(deletarVeiculoUseCase).deletar(99L);
+        Mockito.when(veiculoGateway.buscarPorId(99L)).thenReturn(Optional.empty());
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/veiculo/99"))
                 .andExpect(status().isNotFound())
@@ -209,7 +210,7 @@ class VeiculoControllerContractTest {
 
     @Test
     void shouldReturn200WithEmptyPageWhenNoVeiculos() throws Exception {
-        Mockito.when(listarVeiculosUseCase.listar(Mockito.any()))
+        Mockito.when(veiculoGateway.listar(0, 10))
                 .thenReturn(new Pagina<>(List.of(), 0, 10, 0L, 0));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/veiculo")
@@ -222,13 +223,13 @@ class VeiculoControllerContractTest {
                 .andExpect(jsonPath("$.page").value(0))
                 .andExpect(jsonPath("$.size").value(10));
 
-        Mockito.verify(listarVeiculosUseCase).listar(Mockito.any());
+        Mockito.verify(veiculoGateway).listar(0, 10);
     }
 
     @Test
     void shouldReturn200WithVeiculosMappedToResponseJson() throws Exception {
         var veiculo = Veiculo.reconstituir(1L, 2L, "ABC1234", "Gol", 2020);
-        Mockito.when(listarVeiculosUseCase.listar(Mockito.any()))
+        Mockito.when(veiculoGateway.listar(0, 10))
                 .thenReturn(new Pagina<>(List.of(veiculo), 0, 10, 1L, 1));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/veiculo")
@@ -242,17 +243,17 @@ class VeiculoControllerContractTest {
                 .andExpect(jsonPath("$.content[0].ano").value(2020))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        Mockito.verify(listarVeiculosUseCase).listar(Mockito.any());
+        Mockito.verify(veiculoGateway).listar(0, 10);
     }
 
     @Test
     void shouldReturn200WithDefaultPaginationWhenParamsOmitted() throws Exception {
-        Mockito.when(listarVeiculosUseCase.listar(Mockito.any()))
+        Mockito.when(veiculoGateway.listar(0, 10))
                 .thenReturn(new Pagina<>(List.of(), 0, 10, 0L, 0));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/veiculo"))
                 .andExpect(status().isOk());
 
-        Mockito.verify(listarVeiculosUseCase).listar(Mockito.any());
+        Mockito.verify(veiculoGateway).listar(0, 10);
     }
 }
