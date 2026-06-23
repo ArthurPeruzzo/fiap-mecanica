@@ -11,6 +11,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontra
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.OrcamentoRecusadoViaAtendenteUseCase;
+import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -41,6 +42,9 @@ class OrcamentoRecusadoViaAtendenteUseCaseUnitTest {
 
     @Mock
     private InsumoGateway insumoGateway;
+
+    @Mock
+    private NotificacaoGateway notificacaoGateway;
 
     private static final Long ORDEM_ID = 1L;
     private static final Long CLIENTE_ID = 10L;

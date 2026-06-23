@@ -7,6 +7,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.LinkAprovacaoOrcamentoNao
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -15,8 +16,9 @@ public class OrcamentoAprovadoViaTokenUseCase extends OrcamentoAprovadoOrdemDeSe
     private final LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway;
 
     public OrcamentoAprovadoViaTokenUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
+                                            NotificacaoGateway notificacaoGateway,
                                             LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway) {
-        super(ordemDeServicoGateway);
+        super(ordemDeServicoGateway, notificacaoGateway);
         this.linkAprovacaoOrcamentoGateway = linkAprovacaoOrcamentoGateway;
     }
 

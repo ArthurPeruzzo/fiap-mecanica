@@ -5,6 +5,8 @@ import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.EntregarOrdemDeServicoUseCase;
+import com.fiap.mecanica.shared.notificacao.core.domain.Mensagem;
+import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -29,6 +31,9 @@ class EntregarOrdemDeServicoUseCaseUnitTest {
 
     @Mock
     private OrdemDeServicoGateway ordemDeServicoGateway;
+
+    @Mock
+    private NotificacaoGateway notificacaoGateway;
 
     private static final Long ORDEM_ID = 1L;
     private static final Long CLIENTE_ID = 2L;
@@ -68,6 +73,7 @@ class EntregarOrdemDeServicoUseCaseUnitTest {
 
         var captor = ArgumentCaptor.forClass(OrdemDeServico.class);
         Mockito.verify(ordemDeServicoGateway).atualizar(captor.capture());
+        Mockito.verify(notificacaoGateway).enviar(Mockito.any(Mensagem.class));
         var os = captor.getValue();
         assertEquals(StatusOrdemDeServico.ENTREGUE, os.getStatus());
         assertNotNull(os.getDataEntrega());

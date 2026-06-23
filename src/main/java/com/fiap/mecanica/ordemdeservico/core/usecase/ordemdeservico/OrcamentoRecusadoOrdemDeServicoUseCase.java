@@ -7,7 +7,10 @@ import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
 import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
 import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.mensagem.MensagemOrdemCanceladaFactory;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.shared.notificacao.core.domain.MensagemParams;
+import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,13 +21,16 @@ public abstract class OrcamentoRecusadoOrdemDeServicoUseCase {
 	protected final OrdemDeServicoGateway ordemDeServicoGateway;
 	private final PecaGateway pecaGateway;
 	private final InsumoGateway insumoGateway;
+	private final NotificacaoGateway notificacaoGateway;
 
 	protected OrcamentoRecusadoOrdemDeServicoUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
 													  PecaGateway pecaGateway,
-													  InsumoGateway insumoGateway) {
+													  InsumoGateway insumoGateway,
+													  NotificacaoGateway notificacaoGateway) {
 		this.ordemDeServicoGateway = ordemDeServicoGateway;
 		this.pecaGateway = pecaGateway;
 		this.insumoGateway = insumoGateway;
+		this.notificacaoGateway = notificacaoGateway;
 	}
 
 	protected void recusar(OrdemDeServico ordemDeServico) {
@@ -32,6 +38,11 @@ public abstract class OrcamentoRecusadoOrdemDeServicoUseCase {
 		devolverQuantidadesDePecaAoEstoque(ordemDeServico);
 		devolverQuantidadesDeInsumoAoEstoque(ordemDeServico);
 		ordemDeServicoGateway.atualizar(ordemDeServico);
+		var params = MensagemParams.builder()
+				.clienteId(ordemDeServico.getClienteId())
+				.ordemId(ordemDeServico.getId())
+				.build();
+		notificacaoGateway.enviar(new MensagemOrdemCanceladaFactory().criar(params));
 	}
 
 	private void devolverQuantidadesDePecaAoEstoque(OrdemDeServico ordemDeServico) {
