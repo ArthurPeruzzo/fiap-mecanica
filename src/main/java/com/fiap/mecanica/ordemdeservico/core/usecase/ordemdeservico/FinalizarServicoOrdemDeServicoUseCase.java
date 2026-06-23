@@ -2,11 +2,13 @@ package com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.mensagem.MensagemOrdemFinalizadaFactory;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
+import com.fiap.mecanica.shared.notificacao.core.domain.MensagemParams;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -41,7 +43,11 @@ public class FinalizarServicoOrdemDeServicoUseCase {
 
 		if (StatusOrdemDeServico.FINALIZADA.equals(ordemDeServico.getStatus())) {
 			ordemDeServicoGateway.atualizar(ordemDeServico);
-			notificacaoGateway.notificarServicoFinalizado(ordemDeServico.getClienteId());
+			var params = MensagemParams.builder()
+					.clienteId(ordemDeServico.getClienteId())
+					.ordemId(ordemDeServicoId)
+					.build();
+			notificacaoGateway.enviar(new MensagemOrdemFinalizadaFactory().criar(params));
 		}
 	}
 }

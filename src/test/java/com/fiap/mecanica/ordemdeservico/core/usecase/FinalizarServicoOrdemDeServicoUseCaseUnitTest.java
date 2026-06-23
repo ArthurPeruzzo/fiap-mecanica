@@ -7,6 +7,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.*;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.FinalizarServicoOrdemDeServicoUseCase;
+import com.fiap.mecanica.shared.notificacao.core.domain.Mensagem;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -144,7 +145,7 @@ class FinalizarServicoOrdemDeServicoUseCaseUnitTest {
         );
         Mockito.verify(ordemDeServicoGateway).atualizar(Mockito.argThat(
                 os -> StatusOrdemDeServico.FINALIZADA.equals(os.getStatus())));
-        Mockito.verify(notificacaoGateway).notificarServicoFinalizado(CLIENTE_ID);
+        Mockito.verify(notificacaoGateway).enviar(Mockito.any(Mensagem.class));
     }
 
     @Test

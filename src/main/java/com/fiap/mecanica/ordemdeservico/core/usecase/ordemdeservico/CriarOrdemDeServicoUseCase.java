@@ -16,6 +16,7 @@ import com.fiap.mecanica.gestao.core.gateway.AtendenteGateway;
 import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
 import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.mensagem.MensagemOrdemDeServicoRecebidaFactory;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
@@ -26,6 +27,8 @@ import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoExcep
 import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
+import com.fiap.mecanica.shared.notificacao.core.domain.MensagemParams;
+import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -47,6 +50,7 @@ public class CriarOrdemDeServicoUseCase {
 	private final ServicoGateway servicoGateway;
 	private final PecaGateway pecaGateway;
 	private final InsumoGateway insumoGateway;
+	private final NotificacaoGateway notificacaoGateway;
 
 	public Long criar(CriarOrdemDeServicoDto dto) {
 		Atendente atendente = buscaAtendentePorUsuarioId();
@@ -61,6 +65,8 @@ public class CriarOrdemDeServicoUseCase {
 		vincularServicos(ordemDeServico, dto.servicosIds());
 		vincularPecas(ordemDeServico, dto.pecas());
 		vincularInsumos(ordemDeServico, dto.insumos());
+
+		notificarCliente(ordemDeServico);
 
 		return ordemDeServico.getId();
 	}
@@ -150,4 +156,13 @@ public class CriarOrdemDeServicoUseCase {
 			ordemDeServicoGateway.vincularOuSomarInsumo(ordemDeServico.getId(), insumo.getId(), dto.quantidade(), insumo.getPreco());
 		});
 	}
+
+	private void notificarCliente(OrdemDeServico ordemDeServico) {
+		var params = MensagemParams.builder()
+				.clienteId(ordemDeServico.getClienteId())
+				.ordemId(ordemDeServico.getId())
+				.build();
+		notificacaoGateway.enviar(new MensagemOrdemDeServicoRecebidaFactory().criar(params));
+	}
+
 }

@@ -9,6 +9,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalida
 import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.OrcamentoAprovadoViaTokenUseCase;
+import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -34,6 +35,9 @@ class OrcamentoAprovadoViaTokenUseCaseUnitTest {
 
     @Mock
     private OrdemDeServicoGateway ordemDeServicoGateway;
+
+    @Mock
+    private NotificacaoGateway notificacaoGateway;
 
     @Mock
     private LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway;

@@ -8,6 +8,8 @@ import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGatew
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.EnviarOrcamentoOrdemDeServicoUseCase;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
+import com.fiap.mecanica.shared.notificacao.core.domain.Mensagem;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -15,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -43,6 +46,14 @@ class EnviarOrcamentoOrdemDeServicoUseCaseUnitTest {
     private static final Long CLIENTE_ID = 10L;
     private static final BigDecimal VALOR_ORCAMENTO = new BigDecimal("350.00");
     private static final String DESCRICAO = "Barulho ao frear";
+    private static final String URL_APROVAR = "http://localhost:8080/ordem-servico/orcamento/externo/aprovar/";
+    private static final String URL_RECUSAR = "http://localhost:8080/ordem-servico/orcamento/externo/recusar/";
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(enviarOrcamentoOrdemDeServicoUseCase, "urlAprovarOrcamento", URL_APROVAR);
+        ReflectionTestUtils.setField(enviarOrcamentoOrdemDeServicoUseCase, "urlRecusarOrcamento", URL_RECUSAR);
+    }
 
     private OrdemDeServico ordemDiagnosticoConcluido() {
         return OrdemDeServico.builder()
@@ -87,7 +98,14 @@ class EnviarOrcamentoOrdemDeServicoUseCaseUnitTest {
         assertEquals(ORDEM_ID, link.getOrdemDeServicoId());
         assertNotNull(link.getToken());
 
-        Mockito.verify(notificacaoGateway).enviarOrcamento(CLIENTE_ID, VALOR_ORCAMENTO, link.getToken());
+        var mensagemCaptor = ArgumentCaptor.forClass(Mensagem.class);
+        Mockito.verify(notificacaoGateway).enviar(mensagemCaptor.capture());
+        var mensagem = mensagemCaptor.getValue();
+        assertEquals(CLIENTE_ID, mensagem.getClienteId());
+        assertTrue(mensagem.getConteudo().contains(VALOR_ORCAMENTO.toString()));
+        assertTrue(mensagem.getConteudo().contains(link.getToken()));
+        assertTrue(mensagem.getConteudo().contains(URL_APROVAR));
+        assertTrue(mensagem.getConteudo().contains(URL_RECUSAR));
     }
 
     @Test
