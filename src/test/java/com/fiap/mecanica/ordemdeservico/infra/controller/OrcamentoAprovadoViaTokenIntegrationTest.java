@@ -26,7 +26,7 @@ class OrcamentoAprovadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
         String token = obterTokenLinkDeOrdemAguardandoAprovacao(ordemId);
 
         RestAssured.given()
-                .when().post("/ordem-servico/orcamento/externo/aprovar/" + token)
+                .when().get("/ordem-servico/orcamento/externo/aprovar/" + token)
                 .then().statusCode(204);
 
         OrdemDeServicoEntity ordem = ordemDeServicoRepository.findById(ordemId).orElseThrow();
@@ -41,7 +41,7 @@ class OrcamentoAprovadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
     @Test
     void shouldRetornar404QuandoTokenNaoExiste() {
         RestAssured.given()
-                .when().post("/ordem-servico/orcamento/externo/aprovar/" + UUID.randomUUID())
+                .when().get("/ordem-servico/orcamento/externo/aprovar/" + UUID.randomUUID())
                 .then().statusCode(404);
     }
 
@@ -53,11 +53,11 @@ class OrcamentoAprovadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
         String token = obterTokenLinkDeOrdemAguardandoAprovacao(ordemId);
 
         RestAssured.given()
-                .when().post("/ordem-servico/orcamento/externo/aprovar/" + token)
+                .when().get("/ordem-servico/orcamento/externo/aprovar/" + token)
                 .then().statusCode(204);
 
         RestAssured.given()
-                .when().post("/ordem-servico/orcamento/externo/aprovar/" + token)
+                .when().get("/ordem-servico/orcamento/externo/aprovar/" + token)
                 .then().statusCode(410);
     }
 
@@ -73,7 +73,7 @@ class OrcamentoAprovadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
                 LocalDateTime.now().minusDays(1), token);
 
         RestAssured.given()
-                .when().post("/ordem-servico/orcamento/externo/aprovar/" + token)
+                .when().get("/ordem-servico/orcamento/externo/aprovar/" + token)
                 .then().statusCode(410);
     }
 }

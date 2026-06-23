@@ -27,7 +27,7 @@ class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
         String token = obterTokenLinkDeOrdemAguardandoAprovacao(ordemId);
 
         RestAssured.given()
-                .when().post("/ordem-servico/orcamento/externo/recusar/" + token)
+                .when().get("/ordem-servico/orcamento/externo/recusar/" + token)
                 .then().statusCode(204);
 
         OrdemDeServicoEntity ordem = ordemDeServicoRepository.findById(ordemId).orElseThrow();
@@ -75,7 +75,7 @@ class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
 
         String token = obterTokenLinkDeOrdemAguardandoAprovacao(ordemId);
         RestAssured.given()
-                .when().post("/ordem-servico/orcamento/externo/recusar/" + token)
+                .when().get("/ordem-servico/orcamento/externo/recusar/" + token)
                 .then().statusCode(204);
 
         PecaEntity pecaDepois = pecaRepository.findById(pecaId).orElseThrow();
@@ -85,7 +85,7 @@ class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
     @Test
     void shouldRetornar404QuandoTokenNaoExiste() {
         RestAssured.given()
-                .when().post("/ordem-servico/orcamento/externo/recusar/" + UUID.randomUUID())
+                .when().get("/ordem-servico/orcamento/externo/recusar/" + UUID.randomUUID())
                 .then().statusCode(404);
     }
 
@@ -97,11 +97,11 @@ class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
         String token = obterTokenLinkDeOrdemAguardandoAprovacao(ordemId);
 
         RestAssured.given()
-                .when().post("/ordem-servico/orcamento/externo/recusar/" + token)
+                .when().get("/ordem-servico/orcamento/externo/recusar/" + token)
                 .then().statusCode(204);
 
         RestAssured.given()
-                .when().post("/ordem-servico/orcamento/externo/recusar/" + token)
+                .when().get("/ordem-servico/orcamento/externo/recusar/" + token)
                 .then().statusCode(410);
     }
 
@@ -117,7 +117,7 @@ class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
                 LocalDateTime.now().minusDays(1), token);
 
         RestAssured.given()
-                .when().post("/ordem-servico/orcamento/externo/recusar/" + token)
+                .when().get("/ordem-servico/orcamento/externo/recusar/" + token)
                 .then().statusCode(410);
     }
 }

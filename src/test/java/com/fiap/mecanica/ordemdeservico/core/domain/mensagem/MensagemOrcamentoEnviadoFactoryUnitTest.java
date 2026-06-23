@@ -34,8 +34,8 @@ class MensagemOrcamentoEnviadoFactoryUnitTest {
         Mensagem mensagem = factory.criar(params);
 
         String conteudoEsperado = "Orçamento de R$ " + VALOR_TOTAL + " enviado." +
-                " Para aprovar acesse: " + URL_APROVAR + "/" + TOKEN +
-                " | Para recusar acesse: " + URL_RECUSAR + "/" + TOKEN;
+                " Para aprovar acesse: " + URL_APROVAR + TOKEN +
+                " | Para recusar acesse: " + URL_RECUSAR + TOKEN;
 
         assertAll(
                 () -> assertEquals(CLIENTE_ID, mensagem.getClienteId()),

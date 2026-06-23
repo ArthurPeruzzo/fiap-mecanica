@@ -65,6 +65,8 @@ Login via `POST /authenticate/login`. Migration `V14` seeds sample data (clients
 | `DB_USERNAME` | `root` | DB user |
 | `DB_PASSWORD` | `root` | DB password |
 | `JWT_SECRET` | — | Base64URL-encoded secret (min 32 bytes decoded). Required in production. |
+| `url.aprovar.orcamento` | `http://localhost:8080/ordem-servico/orcamento/externo/aprovar/` | Base URL appended with the token for the client approval link |
+| `url.recusar.orcamento` | `http://localhost:8080/ordem-servico/orcamento/externo/recusar/` | Base URL appended with the token for the client rejection link |
 
 Flyway migrations: `src/main/resources/db/migration/V{version}__{description}.sql`
 
@@ -107,20 +109,27 @@ com.fiap.mecanica
     ├── core/
     │   ├── domain/
     │   │   ├── ordemdeservico/ # OrdemDeServico + state machine, ServicoVinculado, PecaVinculada,
-    │   │   │                   # InsumoVinculado records, Orcamento record
+    │   │   │                   # InsumoVinculado records, Orcamento record, LinkAprovacaoOrcamento
+    │   │   │   └── mensagem/   # MensagemOrdemDeServicoRecebidaFactory, MensagemOrcamentoEnviadoFactory,
+    │   │   │                   # MensagemOrcamentoAprovadoFactory, MensagemOrdemCanceladaFactory,
+    │   │   │                   # MensagemOrdemFinalizadaFactory, MensagemOrdemEntregueFactory
     │   │   └── servico/        # Servico
     │   ├── dto/            # CriarOrdemDeServicoDto, OrdemDeServicoListagemDto,
     │   │               # ServicoVinculadoDto, PecaVinculadaDto, InsumoVinculadoDto,
     │   │               # Criar/Atualizar/ListarServicoDto
-    │   ├── gateway/        # OrdemDeServicoGateway, ServicoGateway
+    │   ├── gateway/        # OrdemDeServicoGateway, ServicoGateway, LinkAprovacaoOrcamentoGateway
     │   ├── usecase/
     │   │   ├── ordemdeservico/ # CriarOrdemDeServico, IniciarDiagnostico, ConcluirDiagnostico,
     │   │   │                   # VincularServico, DesvincularServico,
     │   │   │                   # VincularPeca, DesvincularPeca, VincularInsumo, DesvincularInsumo,
     │   │   │                   # EnviarOrcamentoOrdemDeServico,
-    │   │   │                   # OrcamentoAprovadoOrdemDeServico, OrcamentoRecusadoOrdemDeServico,
+    │   │   │                   # OrcamentoAprovadoOrdemDeServico (abstract base),
+    │   │   │                   #   OrcamentoAprovadoViaAtendenteUseCase, OrcamentoAprovadoViaTokenUseCase,
+    │   │   │                   # OrcamentoRecusadoOrdemDeServico (abstract base),
+    │   │   │                   #   OrcamentoRecusadoViaAtendenteUseCase, OrcamentoRecusadoViaTokenUseCase,
     │   │   │                   # IniciarServicoOrdemDeServico, FinalizarServicoOrdemDeServico,
-    │   │   │                   # EntregarOrdemDeServico, ListarOrdemDeServico
+    │   │   │                   # EntregarOrdemDeServico, ListarOrdemDeServico,
+    │   │   │                   # ConsultarStatusOrdemDeServico
     │   │   └── servico/        # Criar/Atualizar/Deletar/ListarServico
     │   └── exception/      # OrdemDeServicoNaoEncontrada, TransicaoDeStatusInvalida,
     │                       # VinculoServico/Peca/InsumoNaoAutorizado,
@@ -141,17 +150,19 @@ com.fiap.mecanica
             ├── database/   # OrdemDeServicoDatabaseGateway
             ├── entity/     # OrdemDeServicoEntity, ServicoEntity,
             │               # OrdemDeServicoServicoEntity (join: ordem_servico_servico — stores preco, StatusServico, timestamps),
-            │               # OrdemDeServicoPecaEntity, OrdemDeServicoInsumoEntity
+            │               # OrdemDeServicoPecaEntity, OrdemDeServicoInsumoEntity,
+            │               # LinkAprovacaoOrcamentoEntity
             └── repository/ # OrdemDeServicoRepository, ServicoRepository,
                             # OrdemDeServicoServicoRepository,
-                            # OrdemDeServicoPecaRepository, OrdemDeServicoInsumoRepository
+                            # OrdemDeServicoPecaRepository, OrdemDeServicoInsumoRepository,
+                            # LinkAprovacaoOrcamentoRepository
 ```
 
 `shared/seguranca/` follows the same core/infra split:
 - `core/`: `User`, `Email`, `Role`, `RoleEnum`, `Password`/`PasswordHash` value objects, `UserGateway`, `TokenGateway`, `AuthenticateUserUseCase`, domain exceptions
 - `infra/`: `SecurityConfiguration`, `UserAuthenticationFilter`, `JwtTokenService`, `AuthenticateController`, JPA entities/repositories
 
-`shared/notificacao/` has a single gateway interface `NotificacaoGateway.enviarOrcamento(Long clienteId, BigDecimal valorTotal)`. The only implementation is `NotificacaoMockGateway`, which logs via SLF4J.
+`shared/notificacao/core/domain/` contains: `Mensagem` (record: `clienteId`, `conteudo`), abstract `MensagemFactory` (`criar(MensagemParams params)`), and `MensagemParams` (builder: `clienteId`, `ordemId`, `valorTotal`, `token`, `urlAprovar`, `urlRecusar`). `NotificacaoGateway` exposes a single method `enviar(Mensagem mensagem)`; the only implementation is `NotificacaoMockGateway`, which logs via SLF4J. Concrete factories live in `ordemdeservico/core/domain/ordemdeservico/mensagem/` and extend `MensagemFactory` — one per notification event (OS recebida, orçamento enviado, orçamento aprovado, OS cancelada, OS finalizada, OS entregue). Usage pattern: `notificacaoGateway.enviar(new MensagemXxxFactory().criar(params))`.
 
 ### Key architectural rules
 
@@ -171,7 +182,7 @@ com.fiap.mecanica
 - **Database gateway error handling:** wrap all repository calls in try/catch and rethrow as `ErroAcessoBaseDeDadosException` for infrastructure failures.
 - **Duplicate check on update:** use `existsBy<Field>AndIdNot(value, id)` Spring Data derived queries to exclude the current entity from the uniqueness check.
 - **JPA cascade delete:** `ClienteEntity` owns `@OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL, orphanRemoval = true) List<VeiculoEntity> veiculos`. When saving a vehicle, pass a minimal reference: `ClienteEntity.builder().id(clienteId).build()`.
-- **Roles** are seeded by Flyway (`V1__create_security_struct.sql`): `ROLE_ATENDENTE`, `ROLE_MECANICO`, `ROLE_ADMINISTRADOR`. The `SecurityConfiguration` role constants must match `RoleEnum`. `ROLE_ADMINISTRADOR` controls `/cliente/**`, `/veiculo/**`, `/peca/**`, `/insumo/**`, `/servico/**`, and `GET /ordem-servico/detalhamento`. `ROLE_ATENDENTE` controls `POST /ordem-servico`, `POST /ordem-servico/orcamento/**`, and `PATCH /ordem-servico/*/entregar`. `ROLE_MECANICO` controls all `PATCH /ordem-servico/*/diagnostico*`, vincular/desvincular serviço/peça/insumo, and iniciar/finalizar serviço endpoints. Any unmatched request is denied (`anyRequest().denyAll()`).
+- **Roles** are seeded by Flyway (`V1__create_security_struct.sql`): `ROLE_ATENDENTE`, `ROLE_MECANICO`, `ROLE_ADMINISTRADOR`. The `SecurityConfiguration` role constants must match `RoleEnum`. `ROLE_ADMINISTRADOR` controls `/cliente/**`, `/veiculo/**`, `/peca/**`, `/insumo/**`, `/servico/**`, and `GET /ordem-servico/detalhamento`. `ROLE_ATENDENTE` controls `POST /ordem-servico`, `POST /ordem-servico/orcamento/**`, and `PATCH /ordem-servico/*/entregar`. `ROLE_MECANICO` controls all `PATCH /ordem-servico/*/diagnostico*`, vincular/desvincular serviço/peça/insumo, and iniciar/finalizar serviço endpoints. `GET /ordem-servico/{id}/status` requires any authenticated role (`hasAnyRole(ATENDENTE, MECANICO, ADMINISTRADOR)`). `GET /ordem-servico/orcamento/externo/**` is in `ENDPOINTS_SEM_AUTENTICACAO` (public, no auth). Any other unmatched request is denied (`anyRequest().denyAll()`).
 
 ### OrdemDeServico state machine
 
@@ -247,11 +258,23 @@ The join tables `ordem_servico_peca` and `ordem_servico_insumo` each have a `UNI
 **Use case flow for enviarOrcamento** (`POST /ordem-servico/orcamento/envio/{id}`, requires `ROLE_ATENDENTE`):
 1. Load `OrdemDeServico` → call `gravarEnvioOrcamento()` which delegates to `state.enviarOrcamento(this)` (only succeeds from `DIAGNOSTICO_CONCLUIDO`).
 2. `ordemDeServicoGateway.atualizar(ordemDeServico)` to persist `dataEnvioOrcamento` and new status.
-3. `notificacaoGateway.enviarOrcamento(clienteId, orcamento.valorTotal())` to notify the client.
+3. Create `LinkAprovacaoOrcamento(ordemServicoId)` — generates a UUID token, sets expiry 3 days out — and persist via `linkAprovacaoOrcamentoGateway.salvar(link)`.
+4. Build `MensagemParams` (clienteId, ordemId, valorTotal, token, urlAprovar, urlRecusar) and call `notificacaoGateway.enviar(new MensagemOrcamentoEnviadoFactory().criar(params))`.
 
-**Use case flow for aprovar/recusar orçamento** (`POST /ordem-servico/orcamento/aprovar|recusar/{id}`, requires `ROLE_ATENDENTE`):
-1. Load `OrdemDeServico` → call `aprovar()` or `cancelar()` on domain (only from `AGUARDANDO_APROVACAO`).
+**`LinkAprovacaoOrcamento`** domain object: `estaValido()` returns true when `dataUtilizacao == null` and now is before `dataExpiracao`. `marcarComoUtilizado()` sets `dataUtilizacao = now()`. Tokens are single-use and expire after 3 days.
+
+**Use case flow for aprovar/recusar orçamento via atendente** (`POST /ordem-servico/orcamento/aprovar|recusar/{id}`, requires `ROLE_ATENDENTE`):
+1. Load `OrdemDeServico` by id → call `aprovar()` or `cancelar()` on domain (only from `AGUARDANDO_APROVACAO`).
 2. `ordemDeServicoGateway.atualizar(ordemDeServico)` to persist the new status and date.
+3. `notificacaoGateway.enviar(new MensagemOrcamentoAprovadoFactory()|MensagemOrdemCanceladaFactory().criar(params))`.
+
+**Use case flow for aprovar/recusar orçamento via token** (`GET /ordem-servico/orcamento/externo/aprovar|recusar/{token}`, public — no auth):
+1. Load `LinkAprovacaoOrcamento` by token → validate `estaValido()` (throws `LinkAprovacaoOrcamentoInvalidoException` if expired/used).
+2. Load `OrdemDeServico` by `link.ordemDeServicoId` → call `aprovar()` or `cancelar()`.
+3. `ordemDeServicoGateway.atualizar(...)` and `link.marcarComoUtilizado()` + `linkAprovacaoOrcamentoGateway.atualizar(link)`.
+4. Notify client via `notificacaoGateway.enviar(...)`.
+
+Both flows share a common abstract base (`OrcamentoAprovadoOrdemDeServicoUseCase`, `OrcamentoRecusadoOrdemDeServicoUseCase`) that handles domain mutation, persistence, and notification. The atendente and token subclasses only differ in how they resolve the `OrdemDeServico` (by id vs. by link token).
 
 **Use case flow for iniciar/finalizar serviço** (`PATCH /ordem-servico/{id}/servicos/{servicoId}/iniciar|finalizar`, requires `ROLE_MECANICO`):
 1. Resolve `mecanicoId` from token via `TokenGateway.getUserId()`.
@@ -261,6 +284,8 @@ The join tables `ordem_servico_peca` and `ordem_servico_insumo` each have a `UNI
 **Use case flow for entregar** (`PATCH /ordem-servico/{id}/entregar`, requires `ROLE_ATENDENTE`):
 1. Load `OrdemDeServico` → call `entregar()` (only from `FINALIZADA`).
 2. `ordemDeServicoGateway.atualizar(ordemDeServico)`.
+
+**`GET /ordem-servico/{id}/status`** (requires any authenticated role): delegates to `ConsultarStatusOrdemDeServicoUseCase`, which returns a `ConsultarStatusOrdemDeServicoDto(id, status)` — a lightweight status check without loading the full order graph.
 
 ### Estoque domain
 
@@ -305,6 +330,6 @@ Standard field-level constraints: `@NotBlank`, `@NotNull`, `@CPF`, `@CNPJ` (Hibe
 
 **Contract tests** must declare a `@MockitoBean` for every use case injected into the controller under test, even those not exercised in the test class — Spring context will fail to start otherwise.
 
-**`ordemdeservico` integration test pattern:** instead of extending `AbstractContainer` directly, each feature area extends `AbstractOrdemDeServicoIntegrationTest` (in `ordemdeservico/infra/controller/`), which itself extends `AbstractContainer`. The abstract class holds all `@Autowired` repositories, `@LocalServerPort`, the `@BeforeEach` port setup, and shared helper methods (`obterToken(RoleEnum, email)`, `obterTokenAtendente`, `obterTokenMecanico`, `obterTokenOutroMecanico`, `criarClienteERetornarId`, `criarVeiculoERetornarId`, `criarOrdemERetornarId`, `criarOrdemEmDiagnosticoERetornarId`, `criarOrdemAguardandoAprovacaoERetornarId`, `criarServicoERetornarId`, `criarPecaERetornarId`, `criarInsumoERetornarId`). Use `obterToken(RoleEnum.ROLE_ADMINISTRADOR, "admin@test.com")` for admin-role tests. Each concrete test class covers one feature area (criação, diagnóstico, serviço, peça, insumo, envio de orçamento, aprovação, execução, entrega, detalhamento). DB-query helpers specific to a single class (e.g. `contarVinculosPecaNoBanco`) stay in that class, not in the abstract base.
+**`ordemdeservico` integration test pattern:** instead of extending `AbstractContainer` directly, each feature area extends `AbstractOrdemDeServicoIntegrationTest` (in `ordemdeservico/infra/controller/`), which itself extends `AbstractContainer`. The abstract class holds all `@Autowired` repositories (including `linkAprovacaoOrcamentoRepository`), `@LocalServerPort`, the `@BeforeEach` port setup, and shared helper methods (`obterToken(RoleEnum, email)`, `obterTokenAtendente`, `obterTokenMecanico`, `obterTokenOutroMecanico`, `criarClienteERetornarId`, `criarVeiculoERetornarId`, `criarOrdemERetornarId`, `criarOrdemEmDiagnosticoERetornarId`, `criarOrdemAguardandoAprovacaoERetornarId`, `criarServicoERetornarId`, `criarPecaERetornarId`, `criarInsumoERetornarId`). Use `obterToken(RoleEnum.ROLE_ADMINISTRADOR, "admin@test.com")` for admin-role tests. Each concrete test class covers one feature area (criação, diagnóstico, serviço, peça, insumo, envio de orçamento, aprovação, execução, entrega, detalhamento). DB-query helpers specific to a single class (e.g. `contarVinculosPecaNoBanco`) stay in that class, not in the abstract base.
 
 > **REST Assured + Java 25 note:** REST Assured (Groovy-based) may throw `NullPointerException` in `applyProxySettings` on Java 25. If this occurs, add `--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED` to the `maven-surefire-plugin` `<argLine>`.
