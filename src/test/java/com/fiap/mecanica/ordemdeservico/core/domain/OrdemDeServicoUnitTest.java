@@ -682,7 +682,7 @@ class OrdemDeServicoUnitTest {
                 .dataEntrega(null)
                 .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO))
                 .build();
-        assertThrows(VinculoPecaNaoAutorizadaException.class, () -> os.vincularPeca(20L, 3, new BigDecimal(10)));
+        assertThrows(VinculoPecaNaoAutorizadaException.class, () -> os.vincularPeca(20L, 3, BigDecimal.TEN));
     }
 
     // --- desvincularPeca ---

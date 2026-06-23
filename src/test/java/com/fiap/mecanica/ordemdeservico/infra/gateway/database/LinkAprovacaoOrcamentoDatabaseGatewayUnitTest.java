@@ -62,9 +62,9 @@ class LinkAprovacaoOrcamentoDatabaseGatewayUnitTest {
     @Test
     void salvar_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
         Mockito.when(repository.save(Mockito.any())).thenThrow(new RuntimeException("db error"));
-
+        LinkAprovacaoOrcamento linkAprovacaoOrcamento = new LinkAprovacaoOrcamento(ORDEM_ID);
         assertThrows(ErroAcessoBaseDeDadosException.class,
-                () -> gateway.salvar(new LinkAprovacaoOrcamento(ORDEM_ID)));
+                () -> gateway.salvar(linkAprovacaoOrcamento));
     }
 
     @Test
