@@ -3,10 +3,7 @@ package com.fiap.mecanica.ordemdeservico.infra.controller;
 import com.fiap.mecanica.ordemdeservico.core.dto.AtualizarServicoDto;
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarServicoDto;
 import com.fiap.mecanica.ordemdeservico.core.dto.ListarServicosDto;
-import com.fiap.mecanica.ordemdeservico.core.usecase.servico.AtualizarServicoUseCase;
-import com.fiap.mecanica.ordemdeservico.core.usecase.servico.CriarServicoUseCase;
-import com.fiap.mecanica.ordemdeservico.core.usecase.servico.DeletarServicoUseCase;
-import com.fiap.mecanica.ordemdeservico.core.usecase.servico.ListarServicosUseCase;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.ServicoRequestJson;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.ServicoResponseJson;
 import com.fiap.mecanica.shared.page.PageResponse;
@@ -15,7 +12,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,15 +25,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/servico")
 @Tag(name = "Serviço")
-public class ServicoController {
+public class ServicoHttpController {
 
-    private final CriarServicoUseCase criarServicoUseCase;
-    private final AtualizarServicoUseCase atualizarServicoUseCase;
-    private final DeletarServicoUseCase deletarServicoUseCase;
-    private final ListarServicosUseCase listarServicosUseCase;
+    private final ServicoCleanController cleanController;
+
+    public ServicoHttpController(ServicoGateway servicoGateway) {
+        this.cleanController = new ServicoCleanController(servicoGateway);
+    }
 
     @Operation(summary = "Criar um serviço", description = "Cria um novo serviço oferecido pela mecânica")
     @ApiResponses(value = {
@@ -48,7 +44,7 @@ public class ServicoController {
     })
     @PostMapping
     public ResponseEntity<Void> criar(@RequestBody @Valid ServicoRequestJson request) {
-        criarServicoUseCase.criar(new CriarServicoDto(request.nome(), request.descricao(), request.preco()));
+        cleanController.criar(new CriarServicoDto(request.nome(), request.descricao(), request.preco()));
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
@@ -62,8 +58,7 @@ public class ServicoController {
     public ResponseEntity<PageResponse<ServicoResponseJson>> listar(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        var pagina = listarServicosUseCase.listar(new ListarServicosDto(page, size));
-        return ResponseEntity.ok(PageResponse.from(pagina.map(ServicoResponseJson::from)));
+        return ResponseEntity.ok(PageResponse.from(cleanController.listar(new ListarServicosDto(page, size))));
     }
 
     @Operation(summary = "Atualizar um serviço", description = "Atualiza os dados de um serviço existente")
@@ -76,7 +71,7 @@ public class ServicoController {
     })
     @PutMapping("/{id}")
     public ResponseEntity<Void> atualizar(@PathVariable Long id, @RequestBody @Valid ServicoRequestJson request) {
-        atualizarServicoUseCase.atualizar(new AtualizarServicoDto(id, request.nome(), request.descricao(), request.preco()));
+        cleanController.atualizar(new AtualizarServicoDto(id, request.nome(), request.descricao(), request.preco()));
         return ResponseEntity.noContent().build();
     }
 
@@ -89,7 +84,7 @@ public class ServicoController {
     })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
-        deletarServicoUseCase.deletar(id);
+        cleanController.deletar(id);
         return ResponseEntity.noContent().build();
     }
 }

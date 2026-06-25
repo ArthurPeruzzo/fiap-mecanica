@@ -1,19 +1,19 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase.servico;
 
-import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
 import com.fiap.mecanica.ordemdeservico.core.dto.ListarServicosDto;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
-import com.fiap.mecanica.shared.page.Pagina;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-@Service
-@RequiredArgsConstructor
 public class ListarServicosUseCase {
 
     private final ServicoGateway servicoGateway;
+    private final ListarServicosOutputPort outputPort;
 
-    public Pagina<Servico> listar(ListarServicosDto dto) {
-        return servicoGateway.listar(dto.page(), dto.size());
+    public ListarServicosUseCase(ServicoGateway servicoGateway, ListarServicosOutputPort outputPort) {
+        this.servicoGateway = servicoGateway;
+        this.outputPort = outputPort;
+    }
+
+    public void listar(ListarServicosDto dto) {
+        outputPort.apresentar(servicoGateway.listar(dto.page(), dto.size()));
     }
 }

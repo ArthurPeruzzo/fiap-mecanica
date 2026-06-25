@@ -6,15 +6,16 @@ import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.exception.VeiculoJaExisteException;
 import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
 import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-@Service
-@RequiredArgsConstructor
 public class CriarVeiculoUseCase {
 
     private final VeiculoGateway veiculoGateway;
     private final ClienteGateway clienteGateway;
+
+    public CriarVeiculoUseCase(VeiculoGateway veiculoGateway, ClienteGateway clienteGateway) {
+        this.veiculoGateway = veiculoGateway;
+        this.clienteGateway = clienteGateway;
+    }
 
     public void criar(CriarVeiculoDto dto) {
         clienteGateway.buscarPorId(dto.clienteId())
