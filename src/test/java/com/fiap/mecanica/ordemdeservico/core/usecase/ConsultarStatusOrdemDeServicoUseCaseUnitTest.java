@@ -3,14 +3,17 @@ package com.fiap.mecanica.ordemdeservico.core.usecase;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServicoStateFactory;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.dto.ConsultarStatusOrdemDeServicoDto;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.ConsultarStatusOrdemDeServicoOutputPort;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.ConsultarStatusOrdemDeServicoUseCase;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -22,11 +25,19 @@ import static org.junit.jupiter.api.Assertions.*;
 @ExtendWith(MockitoExtension.class)
 class ConsultarStatusOrdemDeServicoUseCaseUnitTest {
 
-    @InjectMocks
     private ConsultarStatusOrdemDeServicoUseCase consultarStatusOrdemDeServicoUseCase;
 
     @Mock
     private OrdemDeServicoGateway ordemDeServicoGateway;
+
+    @Mock
+    private ConsultarStatusOrdemDeServicoOutputPort outputPort;
+
+    @BeforeEach
+    void setUp() {
+        consultarStatusOrdemDeServicoUseCase = new ConsultarStatusOrdemDeServicoUseCase(
+                ordemDeServicoGateway, outputPort);
+    }
 
     private static final Long ORDEM_ID = 1L;
 
@@ -44,14 +55,16 @@ class ConsultarStatusOrdemDeServicoUseCaseUnitTest {
 
     @ParameterizedTest
     @EnumSource(StatusOrdemDeServico.class)
-    void shouldReturnCorrectStatusForAllPossibleStatuses(StatusOrdemDeServico status) {
+    void shouldCallOutputPortWithCorrectStatusForAllPossibleStatuses(StatusOrdemDeServico status) {
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID))
                 .thenReturn(Optional.of(ordemComStatus(status)));
 
-        var dto = consultarStatusOrdemDeServicoUseCase.consultar(ORDEM_ID);
+        consultarStatusOrdemDeServicoUseCase.consultar(ORDEM_ID);
 
-        assertEquals(ORDEM_ID, dto.id());
-        assertEquals(status.name(), dto.status());
+        var captor = ArgumentCaptor.forClass(ConsultarStatusOrdemDeServicoDto.class);
+        Mockito.verify(outputPort).apresentar(captor.capture());
+        assertEquals(ORDEM_ID, captor.getValue().id());
+        assertEquals(status.name(), captor.getValue().status());
     }
 
     @Test

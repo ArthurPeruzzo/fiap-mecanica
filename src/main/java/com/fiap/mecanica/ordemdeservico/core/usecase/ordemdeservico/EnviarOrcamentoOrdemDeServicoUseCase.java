@@ -8,23 +8,26 @@ import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGatew
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.shared.notificacao.core.domain.MensagemParams;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 
-@Service
-@RequiredArgsConstructor
 public class EnviarOrcamentoOrdemDeServicoUseCase {
-
-    @Value("${url.recusar.orcamento}")
-    private String urlRecusarOrcamento;
-
-    @Value("${url.aprovar.orcamento}")
-    private String urlAprovarOrcamento;
 
     private final OrdemDeServicoGateway ordemDeServicoGateway;
     private final LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway;
     private final NotificacaoGateway notificacaoGateway;
+    private final String urlAprovarOrcamento;
+    private final String urlRecusarOrcamento;
+
+    public EnviarOrcamentoOrdemDeServicoUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
+                                                 LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway,
+                                                 NotificacaoGateway notificacaoGateway,
+                                                 String urlAprovarOrcamento,
+                                                 String urlRecusarOrcamento) {
+        this.ordemDeServicoGateway = ordemDeServicoGateway;
+        this.linkAprovacaoOrcamentoGateway = linkAprovacaoOrcamentoGateway;
+        this.notificacaoGateway = notificacaoGateway;
+        this.urlAprovarOrcamento = urlAprovarOrcamento;
+        this.urlRecusarOrcamento = urlRecusarOrcamento;
+    }
 
     public void enviar(Long ordemServicoId) {
         OrdemDeServico ordemDeServico = ordemDeServicoGateway.buscarPorId(ordemServicoId)

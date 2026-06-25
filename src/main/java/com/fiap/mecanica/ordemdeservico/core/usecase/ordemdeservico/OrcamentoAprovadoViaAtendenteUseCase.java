@@ -4,9 +4,7 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServic
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
-import org.springframework.stereotype.Service;
 
-@Service
 public class OrcamentoAprovadoViaAtendenteUseCase extends OrcamentoAprovadoOrdemDeServicoUseCase {
 
     public OrcamentoAprovadoViaAtendenteUseCase(OrdemDeServicoGateway ordemDeServicoGateway,

@@ -1,7 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller.json;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fiap.mecanica.ordemdeservico.core.dto.OrdemDeServicoListagemDto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Getter;
@@ -88,29 +87,4 @@ public class OrdemDeServicoResponseJson {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "dd/MM/yyyy HH:mm:ss", locale = "pt-BR", timezone = "America/Sao_Paulo")
     private LocalDateTime dataEntrega;
 
-    public static OrdemDeServicoResponseJson from(OrdemDeServicoListagemDto os) {
-        return OrdemDeServicoResponseJson.builder()
-                .id(os.getId())
-                .nomeCliente(os.getNomeCliente())
-                .documentoCliente(os.getDocumentoCliente())
-                .veiculo(os.getVeiculo())
-                .nomeAtendente(os.getNomeAtendente())
-                .nomeMecanico(os.getNomeMecanico())
-                .status(os.getStatus())
-                .descricao(os.getDescricao())
-                .dataCriacao(os.getDataCriacao())
-                .dataInicioDiagnostico(os.getDataInicioDiagnostico())
-                .dataConclusaoDiagnostico(os.getDataConclusaoDiagnostico())
-                .servicos(os.getServicos().stream().map(ServicoVinculadoResponseJson::from).toList())
-                .pecas(os.getPecas().stream().map(PecaVinculadaResponseJson::from).toList())
-                .insumos(os.getInsumos().stream().map(InsumoVinculadoResponseJson::from).toList())
-                .valorTotal(os.getValorTotal())
-                .tempoMedioExecucaoServicos(TempoMedioExecucaoResponseJson.from(os.getTempoMedioExecucaoServicos()))
-                .dataEnvioOrcamento(os.getDataEnvioOrcamento())
-                .dataCancelamento(os.getDataCancelamento())
-                .dataAprovacao(os.getDataAprovacao())
-                .dataFinalizacao(os.getDataFinalizacao())
-                .dataEntrega(os.getDataEntrega())
-                .build();
-    }
 }

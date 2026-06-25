@@ -30,16 +30,12 @@ import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.shared.notificacao.core.domain.MensagemParams;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-@Service
-@RequiredArgsConstructor
 public class CriarOrdemDeServicoUseCase {
 
 	private final AtendenteGateway atendenteGateway;
@@ -51,8 +47,31 @@ public class CriarOrdemDeServicoUseCase {
 	private final PecaGateway pecaGateway;
 	private final InsumoGateway insumoGateway;
 	private final NotificacaoGateway notificacaoGateway;
+	private final CriarOrdemDeServicoOutputPort outputPort;
 
-	public Long criar(CriarOrdemDeServicoDto dto) {
+	public CriarOrdemDeServicoUseCase(AtendenteGateway atendenteGateway,
+									   TokenGateway tokenGateway,
+									   OrdemDeServicoGateway ordemDeServicoGateway,
+									   VeiculoGateway veiculoGateway,
+									   ClienteGateway clienteGateway,
+									   ServicoGateway servicoGateway,
+									   PecaGateway pecaGateway,
+									   InsumoGateway insumoGateway,
+									   NotificacaoGateway notificacaoGateway,
+									   CriarOrdemDeServicoOutputPort outputPort) {
+		this.atendenteGateway = atendenteGateway;
+		this.tokenGateway = tokenGateway;
+		this.ordemDeServicoGateway = ordemDeServicoGateway;
+		this.veiculoGateway = veiculoGateway;
+		this.clienteGateway = clienteGateway;
+		this.servicoGateway = servicoGateway;
+		this.pecaGateway = pecaGateway;
+		this.insumoGateway = insumoGateway;
+		this.notificacaoGateway = notificacaoGateway;
+		this.outputPort = outputPort;
+	}
+
+	public void criar(CriarOrdemDeServicoDto dto) {
 		Atendente atendente = buscaAtendentePorUsuarioId();
 		Veiculo veiculo = buscaVeiculoPorId(dto.veiculoId());
 		Cliente cliente = buscaClientePorId(dto.clienteId());
@@ -68,7 +87,7 @@ public class CriarOrdemDeServicoUseCase {
 
 		notificarCliente(ordemDeServico);
 
-		return ordemDeServico.getId();
+		outputPort.apresentar(ordemDeServico.getId());
 	}
 
 	private Atendente buscaAtendentePorUsuarioId() {
@@ -164,5 +183,4 @@ public class CriarOrdemDeServicoUseCase {
 				.build();
 		notificacaoGateway.enviar(new MensagemOrdemDeServicoRecebidaFactory().criar(params));
 	}
-
 }

@@ -6,14 +6,17 @@ import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-@Service
-@RequiredArgsConstructor
 public class DesvincularPecaOrdemDeServicoUseCase {
+
 	private final OrdemDeServicoGateway ordemDeServicoGateway;
 	private final PecaGateway pecaGateway;
+
+	public DesvincularPecaOrdemDeServicoUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
+												 PecaGateway pecaGateway) {
+		this.ordemDeServicoGateway = ordemDeServicoGateway;
+		this.pecaGateway = pecaGateway;
+	}
 
 	public void desvincular(Long ordemServicoId, Long pecaId, Integer quantidade) {
 		OrdemDeServico ordemDeServico = ordemDeServicoGateway.buscarPorId(ordemServicoId)
@@ -26,6 +29,5 @@ public class DesvincularPecaOrdemDeServicoUseCase {
 
 		pecaGateway.atualizar(peca);
 		ordemDeServicoGateway.desvincularOuSubtrairPeca(ordemServicoId, pecaId, quantidade);
-
 	}
 }

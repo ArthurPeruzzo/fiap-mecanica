@@ -7,16 +7,20 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServic
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-@Service
-@RequiredArgsConstructor
 public class IniciarDiagnosticoOrdemDeServicoUseCase {
 
     private final MecanicoGateway mecanicoGateway;
     private final TokenGateway tokenGateway;
     private final OrdemDeServicoGateway ordemDeServicoGateway;
+
+    public IniciarDiagnosticoOrdemDeServicoUseCase(MecanicoGateway mecanicoGateway,
+                                                    TokenGateway tokenGateway,
+                                                    OrdemDeServicoGateway ordemDeServicoGateway) {
+        this.mecanicoGateway = mecanicoGateway;
+        this.tokenGateway = tokenGateway;
+        this.ordemDeServicoGateway = ordemDeServicoGateway;
+    }
 
     public void iniciarDiagnostico(Long ordemServicoId) {
         Mecanico mecanico = buscaMecanicoPorUsuarioId();

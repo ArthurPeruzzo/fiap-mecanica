@@ -1,49 +1,59 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
+import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
+import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
+import com.fiap.mecanica.gestao.core.gateway.AtendenteGateway;
+import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
+import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
+import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
 import com.fiap.mecanica.ordemdeservico.core.dto.InsumoVinculadoCriarDto;
-import com.fiap.mecanica.ordemdeservico.core.dto.OrdemDeServicoListagemDto;
 import com.fiap.mecanica.ordemdeservico.core.dto.PecaVinculadaCriarDto;
-import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
-import com.fiap.mecanica.ordemdeservico.infra.controller.json.StatusOrdemDeServicoResponseJson;
+import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.*;
+import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.shared.page.PageResponse;
-import com.fiap.mecanica.shared.page.Pagina;
+import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/ordem-servico")
 @Tag(name = "Ordem de Serviço")
-public class OrdemDeServicoController {
+public class OrdemDeServicoHttpController {
 
-    private final CriarOrdemDeServicoUseCase criarOrdemDeServicoUseCase;
-    private final IniciarDiagnosticoOrdemDeServicoUseCase iniciarDiagnosticoOrdemDeServicoUseCase;
-    private final ConcluirDiagnosticoOrdemDeServicoUseCase concluirDiagnosticoOrdemDeServicoUseCase;
-    private final VincularServicoOrdemDeServicoUseCase vincularServicoOrdemDeServicoUseCase;
-    private final DesvincularServicoOrdemDeServicoUseCase desvincularServicoOrdemDeServicoUseCase;
-    private final VincularPecaOrdemDeServicoUseCase vincularPecaOrdemDeServicoUseCase;
-    private final DesvincularPecaOrdemDeServicoUseCase desvincularPecaOrdemDeServicoUseCase;
-    private final VincularInsumoOrdemDeServicoUseCase vincularInsumoOrdemDeServicoUseCase;
-    private final DesvincularInsumoOrdemDeServicoUseCase desvincularInsumoOrdemDeServicoUseCase;
-    private final EnviarOrcamentoOrdemDeServicoUseCase enviarOrcamentoOrdemDeServicoUseCase;
-    private final OrcamentoRecusadoViaAtendenteUseCase orcamentoRecusadoViaAtendenteUseCase;
-    private final OrcamentoRecusadoViaTokenUseCase orcamentoRecusadoViaTokenUseCase;
-    private final OrcamentoAprovadoViaAtendenteUseCase orcamentoAprovadoViaAtendenteUseCase;
-    private final OrcamentoAprovadoViaTokenUseCase orcamentoAprovadoViaTokenUseCase;
-    private final IniciarServicoOrdemDeServicoUseCase iniciarServicoOrdemDeServicoUseCase;
-    private final FinalizarServicoOrdemDeServicoUseCase finalizarServicoOrdemDeServicoUseCase;
-    private final EntregarOrdemDeServicoUseCase entregarOrdemDeServicoUseCase;
-    private final ListarOrdemDeServicoUseCase listarOrdemDeServicoUseCase;
-    private final ConsultarStatusOrdemDeServicoUseCase consultarStatusOrdemDeServicoUseCase;
+    private final OrdemDeServicoCleanController cleanController;
+
+    public OrdemDeServicoHttpController(OrdemDeServicoGateway ordemDeServicoGateway,
+                                         AtendenteGateway atendenteGateway,
+                                         TokenGateway tokenGateway,
+                                         VeiculoGateway veiculoGateway,
+                                         ClienteGateway clienteGateway,
+                                         MecanicoGateway mecanicoGateway,
+                                         ServicoGateway servicoGateway,
+                                         PecaGateway pecaGateway,
+                                         InsumoGateway insumoGateway,
+                                         NotificacaoGateway notificacaoGateway,
+                                         LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway,
+                                         @Value("${url.aprovar.orcamento}") String urlAprovarOrcamento,
+                                         @Value("${url.recusar.orcamento}") String urlRecusarOrcamento) {
+        this.cleanController = new OrdemDeServicoCleanController(
+                ordemDeServicoGateway, atendenteGateway, tokenGateway,
+                veiculoGateway, clienteGateway, mecanicoGateway,
+                servicoGateway, pecaGateway, insumoGateway,
+                notificacaoGateway, linkAprovacaoOrcamentoGateway,
+                urlAprovarOrcamento, urlRecusarOrcamento
+        );
+    }
 
     @Operation(summary = "Criar Ordem de Serviço",
             description = "Cria uma nova Ordem de Serviço com status RECEBIDA. A descrição registra o relato do cliente. O atendente é identificado pelo token JWT. " +
@@ -63,7 +73,7 @@ public class OrdemDeServicoController {
         var insumos = request.insumos() == null ? null :
                 request.insumos().stream().map(i -> new InsumoVinculadoCriarDto(i.id(), i.quantidade())).toList();
 
-        Long ordemDeServicoId = criarOrdemDeServicoUseCase.criar(new CriarOrdemDeServicoDto(
+        Long ordemDeServicoId = cleanController.criar(new CriarOrdemDeServicoDto(
                 request.clienteId(), request.veiculoId(), request.servicosIds(), pecas, insumos, request.descricao()
         ));
         return ResponseEntity.status(HttpStatus.CREATED).body(ordemDeServicoId);
@@ -81,7 +91,7 @@ public class OrdemDeServicoController {
     })
     @PatchMapping("/{ordemServicoId}/diagnostico")
     public ResponseEntity<Void> iniciarDiagnostico(@PathVariable Long ordemServicoId) {
-        iniciarDiagnosticoOrdemDeServicoUseCase.iniciarDiagnostico(ordemServicoId);
+        cleanController.iniciarDiagnostico(ordemServicoId);
         return ResponseEntity.noContent().build();
     }
 
@@ -96,7 +106,7 @@ public class OrdemDeServicoController {
     })
     @PatchMapping("/{ordemServicoId}/diagnostico/conclusao")
     public ResponseEntity<Void> concluirDiagnostico(@PathVariable Long ordemServicoId) {
-        concluirDiagnosticoOrdemDeServicoUseCase.concluirDiagnostico(ordemServicoId);
+        cleanController.concluirDiagnostico(ordemServicoId);
         return ResponseEntity.noContent().build();
     }
 
@@ -111,7 +121,7 @@ public class OrdemDeServicoController {
     })
     @PutMapping("/{ordemServicoId}/servicos/{servicoId}")
     public ResponseEntity<Void> vincularServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
-        vincularServicoOrdemDeServicoUseCase.vincular(ordemServicoId, servicoId);
+        cleanController.vincularServico(ordemServicoId, servicoId);
         return ResponseEntity.noContent().build();
     }
 
@@ -126,7 +136,7 @@ public class OrdemDeServicoController {
     })
     @DeleteMapping("/{ordemServicoId}/servicos/{servicoId}")
     public ResponseEntity<Void> desvincularServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
-        desvincularServicoOrdemDeServicoUseCase.desvincular(ordemServicoId, servicoId);
+        cleanController.desvincularServico(ordemServicoId, servicoId);
         return ResponseEntity.noContent().build();
     }
 
@@ -143,7 +153,7 @@ public class OrdemDeServicoController {
     @PutMapping("/{ordemServicoId}/pecas/{pecaId}")
     public ResponseEntity<Void> vincularPeca(@PathVariable Long ordemServicoId, @PathVariable Long pecaId,
                                              @RequestBody @Valid VincularPecaRequestJson request) {
-        vincularPecaOrdemDeServicoUseCase.vincular(ordemServicoId, pecaId, request.quantidade());
+        cleanController.vincularPeca(ordemServicoId, pecaId, request.quantidade());
         return ResponseEntity.noContent().build();
     }
 
@@ -160,8 +170,8 @@ public class OrdemDeServicoController {
     })
     @DeleteMapping("/{ordemServicoId}/pecas/{pecaId}")
     public ResponseEntity<Void> desvincularPeca(@PathVariable Long ordemServicoId, @PathVariable Long pecaId,
-                                             @RequestBody @Valid DesvincularPecaRequestJson request) {
-        desvincularPecaOrdemDeServicoUseCase.desvincular(ordemServicoId, pecaId, request.quantidade());
+                                                @RequestBody @Valid DesvincularPecaRequestJson request) {
+        cleanController.desvincularPeca(ordemServicoId, pecaId, request.quantidade());
         return ResponseEntity.noContent().build();
     }
 
@@ -179,7 +189,7 @@ public class OrdemDeServicoController {
     @PutMapping("/{ordemServicoId}/insumos/{insumoId}")
     public ResponseEntity<Void> vincularInsumo(@PathVariable Long ordemServicoId, @PathVariable Long insumoId,
                                                @RequestBody @Valid VincularInsumoRequestJson request) {
-        vincularInsumoOrdemDeServicoUseCase.vincular(ordemServicoId, insumoId, request.quantidade());
+        cleanController.vincularInsumo(ordemServicoId, insumoId, request.quantidade());
         return ResponseEntity.noContent().build();
     }
 
@@ -196,8 +206,8 @@ public class OrdemDeServicoController {
     })
     @DeleteMapping("/{ordemServicoId}/insumos/{insumoId}")
     public ResponseEntity<Void> desvincularInsumo(@PathVariable Long ordemServicoId, @PathVariable Long insumoId,
-                                                @RequestBody @Valid DesvincularInsumoRequestJson request) {
-        desvincularInsumoOrdemDeServicoUseCase.desvincular(ordemServicoId, insumoId, request.quantidade());
+                                                   @RequestBody @Valid DesvincularInsumoRequestJson request) {
+        cleanController.desvincularInsumo(ordemServicoId, insumoId, request.quantidade());
         return ResponseEntity.noContent().build();
     }
 
@@ -214,7 +224,7 @@ public class OrdemDeServicoController {
     })
     @PostMapping("/orcamento/envio/{ordemServicoId}")
     public ResponseEntity<Void> enviarOrcamento(@PathVariable Long ordemServicoId) {
-        enviarOrcamentoOrdemDeServicoUseCase.enviar(ordemServicoId);
+        cleanController.enviarOrcamento(ordemServicoId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
@@ -230,7 +240,7 @@ public class OrdemDeServicoController {
     })
     @PostMapping("/orcamento/recusar/{ordemServicoId}")
     public ResponseEntity<Void> recusar(@PathVariable Long ordemServicoId) {
-        orcamentoRecusadoViaAtendenteUseCase.recusar(ordemServicoId);
+        cleanController.recusarOrcamento(ordemServicoId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
@@ -246,7 +256,7 @@ public class OrdemDeServicoController {
     })
     @GetMapping("/orcamento/externo/recusar/{token}")
     public ResponseEntity<Void> recusarExterno(@PathVariable String token) {
-        orcamentoRecusadoViaTokenUseCase.recusar(token);
+        cleanController.recusarOrcamentoViaToken(token);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
@@ -261,7 +271,7 @@ public class OrdemDeServicoController {
     })
     @PostMapping("/orcamento/aprovar/{ordemServicoId}")
     public ResponseEntity<Void> aprovar(@PathVariable Long ordemServicoId) {
-        orcamentoAprovadoViaAtendenteUseCase.aprovar(ordemServicoId);
+        cleanController.aprovarOrcamento(ordemServicoId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
@@ -277,7 +287,7 @@ public class OrdemDeServicoController {
     })
     @GetMapping("/orcamento/externo/aprovar/{token}")
     public ResponseEntity<Void> aprovarExterno(@PathVariable String token) {
-        orcamentoAprovadoViaTokenUseCase.aprovar(token);
+        cleanController.aprovarOrcamentoViaToken(token);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
@@ -292,7 +302,7 @@ public class OrdemDeServicoController {
     })
     @PatchMapping("/{ordemServicoId}/servicos/{servicoId}/iniciar")
     public ResponseEntity<Void> iniciarServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
-        iniciarServicoOrdemDeServicoUseCase.iniciar(ordemServicoId, servicoId);
+        cleanController.iniciarServico(ordemServicoId, servicoId);
         return ResponseEntity.noContent().build();
     }
 
@@ -307,7 +317,7 @@ public class OrdemDeServicoController {
     })
     @PatchMapping("/{ordemServicoId}/servicos/{servicoId}/finalizar")
     public ResponseEntity<Void> finalizarServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
-        finalizarServicoOrdemDeServicoUseCase.finalizar(ordemServicoId, servicoId);
+        cleanController.finalizarServico(ordemServicoId, servicoId);
         return ResponseEntity.noContent().build();
     }
 
@@ -322,7 +332,7 @@ public class OrdemDeServicoController {
     })
     @PatchMapping("/{ordemServicoId}/entregar")
     public ResponseEntity<Void> entregar(@PathVariable Long ordemServicoId) {
-        entregarOrdemDeServicoUseCase.entregar(ordemServicoId);
+        cleanController.entregar(ordemServicoId);
         return ResponseEntity.noContent().build();
     }
 
@@ -337,9 +347,8 @@ public class OrdemDeServicoController {
     })
     @GetMapping("/detalhamento")
     public ResponseEntity<PageResponse<OrdemDeServicoResponseJson>> detalhamento(@RequestParam(defaultValue = "0") int page,
-                                                                                 @RequestParam(defaultValue = "10") int size) {
-        Pagina<OrdemDeServicoListagemDto> pagina = listarOrdemDeServicoUseCase.listar(page, size);
-        return ResponseEntity.ok(PageResponse.from(pagina.map(OrdemDeServicoResponseJson::from)));
+                                                                                  @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(cleanController.listar(page, size));
     }
 
     @Operation(summary = "Consultar status da Ordem de Serviço",
@@ -352,7 +361,6 @@ public class OrdemDeServicoController {
     })
     @GetMapping("/{ordemServicoId}/status")
     public ResponseEntity<StatusOrdemDeServicoResponseJson> consultarStatus(@PathVariable Long ordemServicoId) {
-        return ResponseEntity.ok(StatusOrdemDeServicoResponseJson.from(
-                consultarStatusOrdemDeServicoUseCase.consultar(ordemServicoId)));
+        return ResponseEntity.ok(cleanController.consultarStatus(ordemServicoId));
     }
 }

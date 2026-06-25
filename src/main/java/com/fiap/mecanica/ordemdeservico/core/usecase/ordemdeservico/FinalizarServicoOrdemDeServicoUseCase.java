@@ -10,15 +10,20 @@ import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.shared.notificacao.core.domain.MensagemParams;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-@Service
-@RequiredArgsConstructor
 public class FinalizarServicoOrdemDeServicoUseCase {
+
 	private final OrdemDeServicoGateway ordemDeServicoGateway;
 	private final ServicoGateway servicoGateway;
 	private final NotificacaoGateway notificacaoGateway;
+
+	public FinalizarServicoOrdemDeServicoUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
+												  ServicoGateway servicoGateway,
+												  NotificacaoGateway notificacaoGateway) {
+		this.ordemDeServicoGateway = ordemDeServicoGateway;
+		this.servicoGateway = servicoGateway;
+		this.notificacaoGateway = notificacaoGateway;
+	}
 
 	public void finalizar(Long ordemDeServicoId, Long servicoId) {
 		OrdemDeServico ordemDeServico = ordemDeServicoGateway.buscarPorId(ordemDeServicoId)

@@ -14,12 +14,7 @@ import com.fiap.mecanica.ordemdeservico.core.dto.OrdemDeServicoListagemDto;
 import com.fiap.mecanica.ordemdeservico.core.dto.PecaVinculadaDto;
 import com.fiap.mecanica.ordemdeservico.core.dto.ServicoVinculadoDto;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
-import com.fiap.mecanica.shared.page.Pagina;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-@Service
-@RequiredArgsConstructor
 public class ListarOrdemDeServicoUseCase {
 
 	private final OrdemDeServicoGateway ordemDeServicoGateway;
@@ -27,9 +22,24 @@ public class ListarOrdemDeServicoUseCase {
 	private final VeiculoGateway veiculoGateway;
 	private final AtendenteGateway atendenteGateway;
 	private final MecanicoGateway mecanicoGateway;
+	private final ListarOrdemDeServicoOutputPort outputPort;
 
-	public Pagina<OrdemDeServicoListagemDto> listar(int page, int size) {
-		return ordemDeServicoGateway.listar(page, size).map(this::mapear);
+	public ListarOrdemDeServicoUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
+									    ClienteGateway clienteGateway,
+									    VeiculoGateway veiculoGateway,
+									    AtendenteGateway atendenteGateway,
+									    MecanicoGateway mecanicoGateway,
+									    ListarOrdemDeServicoOutputPort outputPort) {
+		this.ordemDeServicoGateway = ordemDeServicoGateway;
+		this.clienteGateway = clienteGateway;
+		this.veiculoGateway = veiculoGateway;
+		this.atendenteGateway = atendenteGateway;
+		this.mecanicoGateway = mecanicoGateway;
+		this.outputPort = outputPort;
+	}
+
+	public void listar(int page, int size) {
+		outputPort.apresentar(ordemDeServicoGateway.listar(page, size).map(this::mapear));
 	}
 
 	private OrdemDeServicoListagemDto mapear(OrdemDeServico os) {
