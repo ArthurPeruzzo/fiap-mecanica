@@ -1,11 +1,7 @@
 package com.fiap.mecanica.estoque.infra.controller;
 
 import com.fiap.mecanica.estoque.core.domain.Peca;
-import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
-import com.fiap.mecanica.estoque.core.usecase.AtualizarPecaUseCase;
-import com.fiap.mecanica.estoque.core.usecase.CriarPecaUseCase;
-import com.fiap.mecanica.estoque.core.usecase.DeletarPecaUseCase;
-import com.fiap.mecanica.estoque.core.usecase.ListarPecasUseCase;
+import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.page.Pagina;
 import org.junit.jupiter.api.Test;
@@ -23,29 +19,21 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ActiveProfiles("controller-test")
 @ImportAutoConfiguration(NoSecurityConfiguration.class)
-@WebMvcTest(controllers = PecaController.class)
+@WebMvcTest(controllers = PecaHttpController.class)
 class PecaControllerContractTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
-    private CriarPecaUseCase criarPecaUseCase;
-
-    @MockitoBean
-    private AtualizarPecaUseCase atualizarPecaUseCase;
-
-    @MockitoBean
-    private DeletarPecaUseCase deletarPecaUseCase;
-
-    @MockitoBean
-    private ListarPecasUseCase listarPecasUseCase;
+    private PecaGateway pecaGateway;
 
     private static final String VALID_BODY =
             "{\"nome\":\"Filtro de óleo\",\"descricao\":\"Filtro 1.0\",\"preco\":29.90,\"quantidadeEstoque\":10}";
@@ -64,7 +52,7 @@ class PecaControllerContractTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$." + field).value(expectedMessage));
 
-        Mockito.verifyNoInteractions(criarPecaUseCase);
+        Mockito.verifyNoInteractions(pecaGateway);
     }
 
     @Test
@@ -92,13 +80,12 @@ class PecaControllerContractTest {
                         .content(VALID_BODY))
                 .andExpect(status().isCreated());
 
-        Mockito.verify(criarPecaUseCase).criar(Mockito.any());
+        Mockito.verify(pecaGateway).criar(Mockito.any());
     }
 
     @Test
     void shouldReturn200WithEmptyPageWhenNoPecas() throws Exception {
-        Mockito.when(listarPecasUseCase.listar(Mockito.any()))
-                .thenReturn(new Pagina<>(List.of(), 0, 10, 0L, 0));
+        Mockito.when(pecaGateway.listar(0, 10)).thenReturn(new Pagina<>(List.of(), 0, 10, 0L, 0));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/peca")
                         .param("page", "0").param("size", "10"))
@@ -112,8 +99,7 @@ class PecaControllerContractTest {
     @Test
     void shouldReturn200WithPecasMappedToResponseJson() throws Exception {
         var peca = Peca.reconstituir(1L, "Filtro", "Desc", new BigDecimal("29.90"), 10);
-        Mockito.when(listarPecasUseCase.listar(Mockito.any()))
-                .thenReturn(new Pagina<>(List.of(peca), 0, 10, 1L, 1));
+        Mockito.when(pecaGateway.listar(0, 10)).thenReturn(new Pagina<>(List.of(peca), 0, 10, 1L, 1));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/peca")
                         .param("page", "0").param("size", "10"))
@@ -127,17 +113,20 @@ class PecaControllerContractTest {
 
     @Test
     void shouldReturn204WhenValidUpdate() throws Exception {
+        var peca = Peca.reconstituir(1L, "Filtro", "Desc", new BigDecimal("29.90"), 10);
+        Mockito.when(pecaGateway.buscarPorId(1L)).thenReturn(Optional.of(peca));
+
         mockMvc.perform(MockMvcRequestBuilders.put("/peca/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_BODY))
                 .andExpect(status().isNoContent());
 
-        Mockito.verify(atualizarPecaUseCase).atualizar(Mockito.any());
+        Mockito.verify(pecaGateway).atualizar(Mockito.any());
     }
 
     @Test
     void shouldReturn404WhenPecaNotFoundOnUpdate() throws Exception {
-        Mockito.doThrow(new PecaNaoEncontradaException()).when(atualizarPecaUseCase).atualizar(Mockito.any());
+        Mockito.when(pecaGateway.buscarPorId(99L)).thenReturn(Optional.empty());
 
         mockMvc.perform(MockMvcRequestBuilders.put("/peca/99")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -158,20 +147,23 @@ class PecaControllerContractTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$." + field).value(expectedMessage));
 
-        Mockito.verifyNoInteractions(atualizarPecaUseCase);
+        Mockito.verifyNoInteractions(pecaGateway);
     }
 
     @Test
     void shouldReturn204WhenDeletarPecaSuccessfully() throws Exception {
+        var peca = Peca.reconstituir(1L, "Filtro", "Desc", new BigDecimal("29.90"), 10);
+        Mockito.when(pecaGateway.buscarPorId(1L)).thenReturn(Optional.of(peca));
+
         mockMvc.perform(MockMvcRequestBuilders.delete("/peca/1"))
                 .andExpect(status().isNoContent());
 
-        Mockito.verify(deletarPecaUseCase).deletar(1L);
+        Mockito.verify(pecaGateway).deletar(1L);
     }
 
     @Test
     void shouldReturn404WhenPecaNotFoundOnDelete() throws Exception {
-        Mockito.doThrow(new PecaNaoEncontradaException()).when(deletarPecaUseCase).deletar(99L);
+        Mockito.when(pecaGateway.buscarPorId(99L)).thenReturn(Optional.empty());
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/peca/99"))
                 .andExpect(status().isNotFound())

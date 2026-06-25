@@ -1,11 +1,7 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
-import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
-import com.fiap.mecanica.ordemdeservico.core.usecase.servico.AtualizarServicoUseCase;
-import com.fiap.mecanica.ordemdeservico.core.usecase.servico.CriarServicoUseCase;
-import com.fiap.mecanica.ordemdeservico.core.usecase.servico.DeletarServicoUseCase;
-import com.fiap.mecanica.ordemdeservico.core.usecase.servico.ListarServicosUseCase;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.page.Pagina;
 import org.junit.jupiter.api.Test;
@@ -23,29 +19,21 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ActiveProfiles("controller-test")
 @ImportAutoConfiguration(NoSecurityConfiguration.class)
-@WebMvcTest(controllers = ServicoController.class)
+@WebMvcTest(controllers = ServicoHttpController.class)
 class ServicoControllerContractTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
-    private CriarServicoUseCase criarServicoUseCase;
-
-    @MockitoBean
-    private AtualizarServicoUseCase atualizarServicoUseCase;
-
-    @MockitoBean
-    private DeletarServicoUseCase deletarServicoUseCase;
-
-    @MockitoBean
-    private ListarServicosUseCase listarServicosUseCase;
+    private ServicoGateway servicoGateway;
 
     private static final String VALID_BODY =
             "{\"nome\":\"Troca de óleo\",\"descricao\":\"Troca com filtro incluso\",\"preco\":150.00}";
@@ -63,7 +51,7 @@ class ServicoControllerContractTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$." + field).value(expectedMessage));
 
-        Mockito.verifyNoInteractions(criarServicoUseCase);
+        Mockito.verifyNoInteractions(servicoGateway);
     }
 
     @Test
@@ -82,13 +70,12 @@ class ServicoControllerContractTest {
                         .content(VALID_BODY))
                 .andExpect(status().isCreated());
 
-        Mockito.verify(criarServicoUseCase).criar(Mockito.any());
+        Mockito.verify(servicoGateway).criar(Mockito.any());
     }
 
     @Test
     void shouldReturn200WithEmptyPageWhenNoServicos() throws Exception {
-        Mockito.when(listarServicosUseCase.listar(Mockito.any()))
-                .thenReturn(new Pagina<>(List.of(), 0, 10, 0L, 0));
+        Mockito.when(servicoGateway.listar(0, 10)).thenReturn(new Pagina<>(List.of(), 0, 10, 0L, 0));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/servico")
                         .param("page", "0").param("size", "10"))
@@ -102,8 +89,7 @@ class ServicoControllerContractTest {
     @Test
     void shouldReturn200WithServicosMappedToResponseJson() throws Exception {
         var servico = Servico.reconstituir(1L, "Troca de óleo", "Desc", new BigDecimal("150.00"));
-        Mockito.when(listarServicosUseCase.listar(Mockito.any()))
-                .thenReturn(new Pagina<>(List.of(servico), 0, 10, 1L, 1));
+        Mockito.when(servicoGateway.listar(0, 10)).thenReturn(new Pagina<>(List.of(servico), 0, 10, 1L, 1));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/servico")
                         .param("page", "0").param("size", "10"))
@@ -116,17 +102,20 @@ class ServicoControllerContractTest {
 
     @Test
     void shouldReturn204WhenValidUpdate() throws Exception {
+        var servico = Servico.reconstituir(1L, "Troca de óleo", "Desc", new BigDecimal("150.00"));
+        Mockito.when(servicoGateway.buscarPorId(1L)).thenReturn(Optional.of(servico));
+
         mockMvc.perform(MockMvcRequestBuilders.put("/servico/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_BODY))
                 .andExpect(status().isNoContent());
 
-        Mockito.verify(atualizarServicoUseCase).atualizar(Mockito.any());
+        Mockito.verify(servicoGateway).atualizar(Mockito.any());
     }
 
     @Test
     void shouldReturn404WhenServicoNotFoundOnUpdate() throws Exception {
-        Mockito.doThrow(new ServicoNaoEncontradoException()).when(atualizarServicoUseCase).atualizar(Mockito.any());
+        Mockito.when(servicoGateway.buscarPorId(99L)).thenReturn(Optional.empty());
 
         mockMvc.perform(MockMvcRequestBuilders.put("/servico/99")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -147,20 +136,23 @@ class ServicoControllerContractTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$." + field).value(expectedMessage));
 
-        Mockito.verifyNoInteractions(atualizarServicoUseCase);
+        Mockito.verifyNoInteractions(servicoGateway);
     }
 
     @Test
     void shouldReturn204WhenDeleteServicoSuccessfully() throws Exception {
+        var servico = Servico.reconstituir(1L, "Troca de óleo", "Desc", new BigDecimal("150.00"));
+        Mockito.when(servicoGateway.buscarPorId(1L)).thenReturn(Optional.of(servico));
+
         mockMvc.perform(MockMvcRequestBuilders.delete("/servico/1"))
                 .andExpect(status().isNoContent());
 
-        Mockito.verify(deletarServicoUseCase).deletar(1L);
+        Mockito.verify(servicoGateway).deletar(1L);
     }
 
     @Test
     void shouldReturn404WhenServicoNotFoundOnDelete() throws Exception {
-        Mockito.doThrow(new ServicoNaoEncontradoException()).when(deletarServicoUseCase).deletar(99L);
+        Mockito.when(servicoGateway.buscarPorId(99L)).thenReturn(Optional.empty());
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/servico/99"))
                 .andExpect(status().isNotFound())

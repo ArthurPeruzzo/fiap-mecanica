@@ -2,11 +2,7 @@ package com.fiap.mecanica.estoque.infra.controller;
 
 import com.fiap.mecanica.estoque.core.domain.Insumo;
 import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
-import com.fiap.mecanica.estoque.core.exception.InsumoNaoEncontradoException;
-import com.fiap.mecanica.estoque.core.usecase.AtualizarInsumoUseCase;
-import com.fiap.mecanica.estoque.core.usecase.CriarInsumoUseCase;
-import com.fiap.mecanica.estoque.core.usecase.DeletarInsumoUseCase;
-import com.fiap.mecanica.estoque.core.usecase.ListarInsumosUseCase;
+import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.page.Pagina;
 import org.junit.jupiter.api.Test;
@@ -24,29 +20,21 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ActiveProfiles("controller-test")
 @ImportAutoConfiguration(NoSecurityConfiguration.class)
-@WebMvcTest(controllers = InsumoController.class)
+@WebMvcTest(controllers = InsumoHttpController.class)
 class InsumoControllerContractTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
-    private CriarInsumoUseCase criarInsumoUseCase;
-
-    @MockitoBean
-    private AtualizarInsumoUseCase atualizarInsumoUseCase;
-
-    @MockitoBean
-    private DeletarInsumoUseCase deletarInsumoUseCase;
-
-    @MockitoBean
-    private ListarInsumosUseCase listarInsumosUseCase;
+    private InsumoGateway insumoGateway;
 
     private static final String VALID_BODY =
             "{\"nome\":\"Óleo de motor\",\"descricao\":\"Óleo 5W30\",\"preco\":45.90,\"quantidadeEstoque\":10,\"unidadeMedida\":\"LITRO\"}";
@@ -66,7 +54,7 @@ class InsumoControllerContractTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$." + field).value(expectedMessage));
 
-        Mockito.verifyNoInteractions(criarInsumoUseCase);
+        Mockito.verifyNoInteractions(insumoGateway);
     }
 
     @Test
@@ -76,13 +64,12 @@ class InsumoControllerContractTest {
                         .content(VALID_BODY))
                 .andExpect(status().isCreated());
 
-        Mockito.verify(criarInsumoUseCase).criar(Mockito.any());
+        Mockito.verify(insumoGateway).criar(Mockito.any());
     }
 
     @Test
     void shouldReturn200WithEmptyPageWhenNoInsumos() throws Exception {
-        Mockito.when(listarInsumosUseCase.listar(Mockito.any()))
-                .thenReturn(new Pagina<>(List.of(), 0, 10, 0L, 0));
+        Mockito.when(insumoGateway.listar(0, 10)).thenReturn(new Pagina<>(List.of(), 0, 10, 0L, 0));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/insumo")
                         .param("page", "0").param("size", "10"))
@@ -96,8 +83,7 @@ class InsumoControllerContractTest {
     @Test
     void shouldReturn200WithInsumosMappedToResponseJson() throws Exception {
         var insumo = Insumo.reconstituir(1L, "Óleo", "5W30", new BigDecimal("45.90"), UnidadeMedida.LITRO, 10);
-        Mockito.when(listarInsumosUseCase.listar(Mockito.any()))
-                .thenReturn(new Pagina<>(List.of(insumo), 0, 10, 1L, 1));
+        Mockito.when(insumoGateway.listar(0, 10)).thenReturn(new Pagina<>(List.of(insumo), 0, 10, 1L, 1));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/insumo")
                         .param("page", "0").param("size", "10"))
@@ -111,17 +97,20 @@ class InsumoControllerContractTest {
 
     @Test
     void shouldReturn204WhenValidUpdate() throws Exception {
+        var insumo = Insumo.reconstituir(1L, "Óleo", "5W30", new BigDecimal("45.90"), UnidadeMedida.LITRO, 10);
+        Mockito.when(insumoGateway.buscarPorId(1L)).thenReturn(Optional.of(insumo));
+
         mockMvc.perform(MockMvcRequestBuilders.put("/insumo/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_BODY))
                 .andExpect(status().isNoContent());
 
-        Mockito.verify(atualizarInsumoUseCase).atualizar(Mockito.any());
+        Mockito.verify(insumoGateway).atualizar(Mockito.any());
     }
 
     @Test
     void shouldReturn404WhenInsumoNotFoundOnUpdate() throws Exception {
-        Mockito.doThrow(new InsumoNaoEncontradoException()).when(atualizarInsumoUseCase).atualizar(Mockito.any());
+        Mockito.when(insumoGateway.buscarPorId(99L)).thenReturn(Optional.empty());
 
         mockMvc.perform(MockMvcRequestBuilders.put("/insumo/99")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -138,20 +127,23 @@ class InsumoControllerContractTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.unidadeMedida").value("A unidade de medida deve ser preenchida"));
 
-        Mockito.verifyNoInteractions(atualizarInsumoUseCase);
+        Mockito.verifyNoInteractions(insumoGateway);
     }
 
     @Test
     void shouldReturn204WhenDeletarInsumoSuccessfully() throws Exception {
+        var insumo = Insumo.reconstituir(1L, "Óleo", "5W30", new BigDecimal("45.90"), UnidadeMedida.LITRO, 10);
+        Mockito.when(insumoGateway.buscarPorId(1L)).thenReturn(Optional.of(insumo));
+
         mockMvc.perform(MockMvcRequestBuilders.delete("/insumo/1"))
                 .andExpect(status().isNoContent());
 
-        Mockito.verify(deletarInsumoUseCase).deletar(1L);
+        Mockito.verify(insumoGateway).deletar(1L);
     }
 
     @Test
     void shouldReturn404WhenInsumoNotFoundOnDelete() throws Exception {
-        Mockito.doThrow(new InsumoNaoEncontradoException()).when(deletarInsumoUseCase).deletar(99L);
+        Mockito.when(insumoGateway.buscarPorId(99L)).thenReturn(Optional.empty());
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/insumo/99"))
                 .andExpect(status().isNotFound())
