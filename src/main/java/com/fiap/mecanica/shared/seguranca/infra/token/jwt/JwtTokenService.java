@@ -5,9 +5,9 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
-import com.fiap.mecanica.shared.seguranca.infra.token.dto.TokenParams;
 import com.fiap.mecanica.shared.seguranca.core.domain.RoleEnum;
+import com.fiap.mecanica.shared.seguranca.core.domain.User;
+import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,19 +37,18 @@ public class JwtTokenService implements TokenGateway {
     }
 
     @Override
-    public String generateToken(TokenParams params) {
+    public String generateToken(User user) {
         try {
-            String userId = String.valueOf(params.userId());
             String token = JWT.create()
                     .withIssuer(jwtIssuer)
                     .withIssuedAt(creationDate())
                     .withExpiresAt(expirationDate())
-                    .withSubject(userId)
-                    .withClaim(EMAIL, params.email())
-                    .withArrayClaim(ROLES, params.roles().toArray(new String[0]))
+                    .withSubject(String.valueOf(user.getId()))
+                    .withClaim(EMAIL, user.getEmail().value())
+                    .withArrayClaim(ROLES, user.getRolesFormattedAsString().toArray(new String[0]))
                     .sign(algorithm);
             return "Bearer " + token;
-        } catch (JWTCreationException exception){
+        } catch (JWTCreationException exception) {
             throw new JWTCreationException("Erro ao gerar token.", exception);
         }
     }
@@ -109,5 +108,4 @@ public class JwtTokenService implements TokenGateway {
     private void falhaAoVerificarJwtLog(String message) {
         log.warn("Falha ao verificar JWT: {}", message);
     }
-
 }
