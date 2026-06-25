@@ -91,8 +91,9 @@ com.fiap.mecanica
 │   │   ├── usecase/        # Criar/Atualizar/Deletar/Listar for Cliente and Veiculo
 │   │   └── exception/      # ClienteJaExiste/NaoEncontrado, VeiculoJaExiste/NaoEncontrado
 │   └── infra/
-│       ├── controller/     # ClienteController, VeiculoController
+│       ├── controller/     # Cliente{Clean|Http}Controller, Veiculo{Clean|Http}Controller
 │       │                   # validation/: @DocumentoValido (class-level), @PlacaValida (field-level)
+│       │                   # presenter/: ListarClientes, ListarVeiculos presenters
 │       └── gateway/
 │           ├── database/   # ClienteDatabaseGateway, VeiculoDatabaseGateway, etc.
 │           ├── entity/     # ClienteEntity (@OneToMany veiculos), VeiculoEntity (@ManyToOne cliente), etc.
@@ -104,7 +105,9 @@ com.fiap.mecanica
 │   │   ├── gateway/        # PecaGateway, InsumoGateway
 │   │   ├── usecase/        # Criar/Atualizar/Deletar/Listar for Peca and Insumo
 │   │   └── exception/      # PecaNaoEncontrada, InsumoNaoEncontrado, EstoqueInsuficiente
-│   └── infra/              # PecaController, InsumoController, entities, repositories
+│   └── infra/              # Peca{Clean|Http}Controller, Insumo{Clean|Http}Controller,
+│                           # presenter/: ListarPecas, ListarInsumos presenters,
+│                           # entities, repositories
 └── ordemdeservico/         # Business module: service orders and services
     ├── core/
     │   ├── domain/
@@ -142,10 +145,16 @@ com.fiap.mecanica
     │                       # MecanicoNaoResponsavelPelaOrdemDeServico,
     │                       # VeiculoNaoPertenceAoCliente, etc.
     └── infra/
-        ├── controller/     # OrdemDeServicoController, ServicoController
+        ├── controller/     # Five Clean+Http pairs: OrdemDeServico (CRUD/listar/status/entregar),
+        │                   # DiagnosticoOrdemDeServico (iniciar/concluir diagnóstico),
+        │                   # ExecucaoServico (iniciar/finalizar serviço), Servico (CRUD serviços),
+        │                   # VinculoOrdemDeServico (vincular/desvincular serviço/peça/insumo),
+        │                   # Orcamento (enviar, aprovar/recusar via atendente ou token)
         │                   # json/: request JSONs including VincularPecaRequestJson,
         │                   #        DesvincularPecaRequestJson, VincularInsumoRequestJson,
         │                   #        DesvincularInsumoRequestJson (all carry Integer quantidade)
+        │                   # presenter/: CriarOrdemDeServico, ListarOrdemDeServico,
+        │                   #             ConsultarStatusOrdemDeServico, ListarServicos presenters
         └── gateway/
             ├── database/   # OrdemDeServicoDatabaseGateway
             ├── entity/     # OrdemDeServicoEntity, ServicoEntity,
@@ -164,10 +173,28 @@ com.fiap.mecanica
 
 `shared/notificacao/core/domain/` contains: `Mensagem` (record: `clienteId`, `conteudo`), abstract `MensagemFactory` (`criar(MensagemParams params)`), and `MensagemParams` (builder: `clienteId`, `ordemId`, `valorTotal`, `token`, `urlAprovar`, `urlRecusar`). `NotificacaoGateway` exposes a single method `enviar(Mensagem mensagem)`; the only implementation is `NotificacaoMockGateway`, which logs via SLF4J. Concrete factories live in `ordemdeservico/core/domain/ordemdeservico/mensagem/` and extend `MensagemFactory` — one per notification event (OS recebida, orçamento enviado, orçamento aprovado, OS cancelada, OS finalizada, OS entregue). Usage pattern: `notificacaoGateway.enviar(new MensagemXxxFactory().criar(params))`.
 
+### Controller layer: CleanController + HttpController pair
+
+Every feature area has **two** controller classes:
+
+- **`XxxCleanController`** — plain Java, no Spring annotations. Instantiates use cases via `new`, receives all required gateways via its own constructor. Orchestrates use case calls and manages presenters. Not a Spring bean.
+- **`XxxHttpController`** — `@RestController` Spring bean. Handles HTTP mapping, request/response JSON, validation annotations, and OpenAPI (`@Tag`, `@Operation`). Instantiates the `CleanController` in its own constructor by passing through gateway dependencies injected by Spring.
+
+The `ordemdeservico` module is split into five controller pairs: `OrdemDeServico`, `DiagnosticoOrdemDeServico`, `ExecucaoServico`, `VinculoOrdemDeServico`, and `Orcamento`.
+
+### Presenter / OutputPort pattern
+
+Use cases that produce output use the **output port** (presenter) pattern instead of returning values directly:
+
+1. **`ListarXxxOutputPort`** interface (in `core/usecase/`) declares `apresentar(Pagina<Domain>)` or similar.
+2. **`XxxPresenter`** class (in `infra/controller/presenter/`) implements the interface, stores a view model, and maps domain objects to response JSONs.
+3. The presenter is instantiated inside the `CleanController` method, passed to the use case constructor, and then queried for the view model after execution.
+
+Use cases that don't produce output (create/update/delete) return `void` — no presenter needed.
+
 ### Key architectural rules
 
-- **`core/` use cases têm `@Service` como concessão consciente.** Todos os use cases em `*/core/usecase/` usam `@Service` para integração com o container Spring. Isso viola a regra estrita de que `core/` não pode depender do framework, mas foi mantido por simplicidade. Não adicionar outras anotações Spring em `core/` — essa concessão é limitada a `@Service` nos use cases.
-- **`core/` has zero Spring/JPA dependencies** (exceto `@Service` nos use cases — ver concessão acima). Domain objects are plain Java. JPA entities live exclusively in `infra/gateway/entity/`.
+- **`core/` has zero Spring/JPA dependencies.** Use cases are plain Java — no `@Service` or any other Spring annotation. They are instantiated with `new` inside `CleanController` methods, not managed by Spring. Domain objects are plain Java. JPA entities live exclusively in `infra/gateway/entity/`.
 - **Dependency inversion via gateway interfaces.** All interfaces are defined in `core/gateway/`; implementations live in `infra/gateway/database/`.
 - **Use cases** depend only on domain objects and gateway interfaces — never on Spring beans or JPA directly.
 - **Cross-module gateway access is allowed.** `ordemdeservico` use cases depend on `gestao` gateways (e.g. `CriarOrdemDeServicoUseCase` uses `AtendenteGateway`, `ClienteGateway`, `VeiculoGateway`). This is intentional — `core/` modules may import from other modules' `core/` packages. For listing/read use cases that need human-readable fields from related modules (names, plate, etc.), enrich via cross-module gateways inside the use case and return a dedicated DTO (e.g. `ListarOrdemDeServicoUseCase` → `OrdemDeServicoListagemDto`). Never expose raw IDs in response JSON when the display name is available.
