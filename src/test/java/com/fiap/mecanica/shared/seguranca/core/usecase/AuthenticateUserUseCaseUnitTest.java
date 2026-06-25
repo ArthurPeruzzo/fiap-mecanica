@@ -7,157 +7,82 @@ import com.fiap.mecanica.shared.seguranca.core.domain.User;
 import com.fiap.mecanica.shared.seguranca.core.domain.password.PasswordHash;
 import com.fiap.mecanica.shared.seguranca.core.exception.BadCredentialsAuthenticateException;
 import com.fiap.mecanica.shared.seguranca.core.exception.UnexpectedErrorAuthenticateException;
+import com.fiap.mecanica.shared.seguranca.core.gateway.AutenticacaoGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
-import com.fiap.mecanica.shared.seguranca.infra.controller.dto.LoginInputDto;
-import com.fiap.mecanica.shared.seguranca.infra.token.dto.TokenParams;
-import com.fiap.mecanica.shared.seguranca.infra.userdetails.UserDetailsImpl;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.InternalAuthenticationServiceException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
 class AuthenticateUserUseCaseUnitTest {
 
-    @InjectMocks
-    private AuthenticateUserUseCase useCase;
     @Mock
-    private AuthenticationManager authenticationManager;
+    private AutenticacaoGateway autenticacaoGateway;
+
     @Mock
     private TokenGateway tokenGateway;
 
-    @Test
-    void shouldThrowInternalAuthenticationServiceExceptionWhenAuthenticateFails() {
-        LoginInputDto loginInputDto = new LoginInputDto("any-email", "any-password");
+    @Mock
+    private AutenticarOutputPort outputPort;
 
-        Mockito.when(authenticationManager.authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class)))
-                .thenThrow(InternalAuthenticationServiceException.class);
+    private AuthenticateUserUseCase useCase;
+
+    @BeforeEach
+    void setUp() {
+        useCase = new AuthenticateUserUseCase(autenticacaoGateway, tokenGateway, outputPort);
+    }
+
+    @Test
+    void shouldPropagateExceptionWhenGatewayThrowsBadCredentials() {
+        Mockito.when(autenticacaoGateway.autenticar(Mockito.anyString(), Mockito.anyString()))
+                .thenThrow(new BadCredentialsAuthenticateException());
 
         var exception = Assertions.assertThrows(BadCredentialsAuthenticateException.class,
-                () -> useCase.authenticate(loginInputDto));
+                () -> useCase.authenticate("any@email.com", "wrong-password"));
 
-        Mockito.verify(authenticationManager).authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class));
-        Mockito.verifyNoMoreInteractions(authenticationManager);
-
-        Mockito.verifyNoInteractions(tokenGateway);
+        Mockito.verify(autenticacaoGateway).autenticar("any@email.com", "wrong-password");
+        Mockito.verifyNoInteractions(tokenGateway, outputPort);
 
         Assertions.assertEquals(401, exception.getStatusCode());
         Assertions.assertEquals("Usuário ou senha incorretos", exception.getMessage());
     }
 
     @Test
-    void shouldThrowBadCredentialsAuthenticateExceptionWhenAuthenticateFails() {
-        LoginInputDto loginInputDto = new LoginInputDto("any-email", "any-password");
-
-        Mockito.when(authenticationManager.authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class)))
-                .thenThrow(BadCredentialsException.class);
-
-        var exception = Assertions.assertThrows(BadCredentialsAuthenticateException.class,
-                () -> useCase.authenticate(loginInputDto));
-
-        Mockito.verify(authenticationManager).authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class));
-        Mockito.verifyNoMoreInteractions(authenticationManager);
-
-        Mockito.verifyNoInteractions(tokenGateway);
-
-        Assertions.assertEquals(401, exception.getStatusCode());
-        Assertions.assertEquals("Usuário ou senha incorretos", exception.getMessage());
-    }
-
-    @Test
-    void shouldThrowUnexpectedErrorWhenAuthenticateFails() {
-        LoginInputDto loginInputDto = new LoginInputDto("any-email", "any-password");
-
-        Mockito.when(authenticationManager.authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class)))
-                .thenThrow(RuntimeException.class);
+    void shouldPropagateExceptionWhenGatewayThrowsUnexpectedError() {
+        Mockito.when(autenticacaoGateway.autenticar(Mockito.anyString(), Mockito.anyString()))
+                .thenThrow(new UnexpectedErrorAuthenticateException());
 
         var exception = Assertions.assertThrows(UnexpectedErrorAuthenticateException.class,
-                () -> useCase.authenticate(loginInputDto));
+                () -> useCase.authenticate("any@email.com", "any-password"));
 
-        Mockito.verify(authenticationManager).authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class));
-        Mockito.verifyNoMoreInteractions(authenticationManager);
-
-        Mockito.verifyNoInteractions(tokenGateway);
+        Mockito.verify(autenticacaoGateway).autenticar("any@email.com", "any-password");
+        Mockito.verifyNoInteractions(tokenGateway, outputPort);
 
         Assertions.assertEquals(500, exception.getStatusCode());
         Assertions.assertEquals("Não foi possível realizar a autenticação", exception.getMessage());
     }
 
     @Test
-    void shouldThrowUnexpectedErrorWhenPrincipalIsNotUserDetailsImpl() {
-        LoginInputDto loginInputDto = new LoginInputDto("any-email", "any-password");
-        Authentication authenticationMock = Mockito.mock(Authentication.class);
+    void shouldCallOutputPortWithTokenWhenAuthenticationSucceeds() {
+        var user = new User(1L, new Email("user@email.com"), new PasswordHash("hash"),
+                List.of(new Role(1L, RoleEnum.ROLE_ATENDENTE)));
+        String expectedToken = "Bearer any-token";
 
-        Mockito.when(authenticationManager.authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class)))
-                .thenReturn(authenticationMock);
+        Mockito.when(autenticacaoGateway.autenticar("user@email.com", "correct-password"))
+                .thenReturn(user);
+        Mockito.when(tokenGateway.generateToken(user))
+                .thenReturn(expectedToken);
 
-        Mockito.when(authenticationMock.getPrincipal()).thenReturn("principal-inesperado");
+        useCase.authenticate("user@email.com", "correct-password");
 
-        var exception = Assertions.assertThrows(UnexpectedErrorAuthenticateException.class,
-                () -> useCase.authenticate(loginInputDto));
-
-        Mockito.verifyNoInteractions(tokenGateway);
-
-        Assertions.assertEquals(500, exception.getStatusCode());
-        Assertions.assertEquals("Não foi possível realizar a autenticação", exception.getMessage());
+        Mockito.verify(autenticacaoGateway).autenticar("user@email.com", "correct-password");
+        Mockito.verify(tokenGateway).generateToken(user);
+        Mockito.verify(outputPort).apresentar(expectedToken);
     }
-
-    @Test
-    void shouldThrowUnexpectedErrorWhenPrincipalIsNull() {
-        LoginInputDto loginInputDto = new LoginInputDto("any-email", "any-password");
-        Authentication authenticationMock = Mockito.mock(Authentication.class);
-
-        Mockito.when(authenticationManager.authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class)))
-                .thenReturn(authenticationMock);
-
-        Mockito.when(authenticationMock.getPrincipal()).thenReturn(null);
-
-        var exception = Assertions.assertThrows(UnexpectedErrorAuthenticateException.class,
-                () -> useCase.authenticate(loginInputDto));
-
-        Mockito.verifyNoInteractions(tokenGateway);
-
-        Assertions.assertEquals(500, exception.getStatusCode());
-        Assertions.assertEquals("Não foi possível realizar a autenticação", exception.getMessage());
-    }
-
-    @Test
-    void shouldAuthenticateSuccessFully() {
-        LoginInputDto loginInputDto = new LoginInputDto("any-email", "any-password");
-        Authentication authenticationMock = Mockito.mock(Authentication.class);
-        String token = "any-token";
-        List<Role> roles = List.of(new Role(1L, RoleEnum.ROLE_ATENDENTE));
-
-        User user = new User(1L, new Email("default@email.com"), new PasswordHash("any-hash"), roles);
-        UserDetailsImpl userDetails = new UserDetailsImpl(user);
-
-        Mockito.when(authenticationManager.authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class)))
-                .thenReturn(authenticationMock);
-
-        Mockito.when(authenticationMock.getPrincipal()).thenReturn(userDetails);
-
-        Mockito.when(tokenGateway.generateToken(Mockito.any(TokenParams.class))).thenReturn(token);
-
-        String tokenResult = Assertions.assertDoesNotThrow(() -> useCase.authenticate(loginInputDto));
-
-        Assertions.assertEquals(token, tokenResult);
-
-        Mockito.verify(authenticationManager).authenticate(Mockito.any(UsernamePasswordAuthenticationToken.class));
-        Mockito.verifyNoMoreInteractions(authenticationManager);
-
-        Mockito.verify(authenticationMock).getPrincipal();
-        Mockito.verify(tokenGateway).generateToken(Mockito.any(TokenParams.class));
-    }
-
-
 }

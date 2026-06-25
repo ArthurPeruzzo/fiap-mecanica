@@ -3,8 +3,11 @@ package com.fiap.mecanica.shared.seguranca.infra.token.jwt;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.fiap.mecanica.shared.seguranca.core.domain.Email;
+import com.fiap.mecanica.shared.seguranca.core.domain.Role;
 import com.fiap.mecanica.shared.seguranca.core.domain.RoleEnum;
-import com.fiap.mecanica.shared.seguranca.infra.token.dto.TokenParams;
+import com.fiap.mecanica.shared.seguranca.core.domain.User;
+import com.fiap.mecanica.shared.seguranca.core.domain.password.PasswordHash;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,24 +42,35 @@ class JwtTokenServiceUnitTest {
         jwtTokenService = new JwtTokenService(ALGORITHM, ISSUER, httpServletRequest);
     }
 
+    private User buildUser(Long id, String email, RoleEnum... roleEnums) {
+        List<Role> roles = java.util.Arrays.stream(roleEnums)
+                .map(r -> new Role(1L, r))
+                .toList();
+        return new User(id, new Email(email), new PasswordHash("hash"), roles);
+    }
+
+    private String generateRawToken(User user) {
+        return jwtTokenService.generateToken(user).replace("Bearer ", "");
+    }
+
     // -------------------------------------------------------------------------
     // generateToken
     // -------------------------------------------------------------------------
 
     @Test
     void generateToken_shouldReturnBearerPrefixedToken() {
-        TokenParams params = new TokenParams(1L, "user@test.com", List.of("ROLE_ATENDENTE"));
+        var user = buildUser(1L, "user@test.com", RoleEnum.ROLE_ATENDENTE);
 
-        String token = jwtTokenService.generateToken(params);
+        String token = jwtTokenService.generateToken(user);
 
         assertTrue(token.startsWith("Bearer "));
     }
 
     @Test
     void generateToken_shouldProduceTokenWithCorrectClaims() {
-        TokenParams params = new TokenParams(1L, "user@test.com", List.of("ROLE_ATENDENTE"));
+        var user = buildUser(1L, "user@test.com", RoleEnum.ROLE_ATENDENTE);
 
-        String token = jwtTokenService.generateToken(params);
+        String token = jwtTokenService.generateToken(user);
         String rawToken = token.replace("Bearer ", "");
         DecodedJWT decoded = jwtTokenService.decodeToken(rawToken);
 
@@ -72,7 +86,8 @@ class JwtTokenServiceUnitTest {
 
     @Test
     void getEmail_shouldReturnEmailFromValidToken() {
-        String rawToken = generateRawToken(1L, "user@test.com", List.of("ROLE_ATENDENTE"));
+        var user = buildUser(1L, "user@test.com", RoleEnum.ROLE_ATENDENTE);
+        String rawToken = generateRawToken(user);
         Mockito.when(httpServletRequest.getHeader("Authorization")).thenReturn("Bearer " + rawToken);
 
         String email = jwtTokenService.getEmail();
@@ -93,7 +108,8 @@ class JwtTokenServiceUnitTest {
 
     @Test
     void getUserId_shouldReturnUserIdFromValidToken() {
-        String rawToken = generateRawToken(42L, "user@test.com", List.of("ROLE_MECANICO"));
+        var user = buildUser(42L, "user@test.com", RoleEnum.ROLE_MECANICO);
+        String rawToken = generateRawToken(user);
         Mockito.when(httpServletRequest.getHeader("Authorization")).thenReturn("Bearer " + rawToken);
 
         Long userId = jwtTokenService.getUserId();
@@ -114,7 +130,8 @@ class JwtTokenServiceUnitTest {
 
     @Test
     void getRoles_shouldReturnRolesFromValidToken() {
-        String rawToken = generateRawToken(1L, "user@test.com", List.of("ROLE_ATENDENTE", "ROLE_MECANICO"));
+        var user = buildUser(1L, "user@test.com", RoleEnum.ROLE_ATENDENTE, RoleEnum.ROLE_MECANICO);
+        String rawToken = generateRawToken(user);
         Mockito.when(httpServletRequest.getHeader("Authorization")).thenReturn("Bearer " + rawToken);
 
         List<RoleEnum> roles = jwtTokenService.getRoles();
@@ -137,7 +154,8 @@ class JwtTokenServiceUnitTest {
 
     @Test
     void decodeToken_shouldReturnDecodedJWTForValidToken() {
-        String rawToken = generateRawToken(1L, "user@test.com", List.of("ROLE_ATENDENTE"));
+        var user = buildUser(1L, "user@test.com", RoleEnum.ROLE_ATENDENTE);
+        String rawToken = generateRawToken(user);
 
         DecodedJWT decoded = jwtTokenService.decodeToken(rawToken);
 
@@ -159,19 +177,10 @@ class JwtTokenServiceUnitTest {
                 )
         );
         JwtTokenService otherService = new JwtTokenService(otherAlgorithm, ISSUER, httpServletRequest);
-        TokenParams params = new TokenParams(1L, "user@test.com", List.of("ROLE_ATENDENTE"));
-        String tokenFromOtherKey = otherService.generateToken(params).replace("Bearer ", "");
+        var user = buildUser(1L, "user@test.com", RoleEnum.ROLE_ATENDENTE);
+        String tokenFromOtherKey = otherService.generateToken(user).replace("Bearer ", "");
 
         assertThrows(JWTVerificationException.class,
                 () -> jwtTokenService.decodeToken(tokenFromOtherKey));
-    }
-
-    // -------------------------------------------------------------------------
-    // Helper
-    // -------------------------------------------------------------------------
-
-    private String generateRawToken(Long userId, String email, List<String> roles) {
-        TokenParams params = new TokenParams(userId, email, roles);
-        return jwtTokenService.generateToken(params).replace("Bearer ", "");
     }
 }
