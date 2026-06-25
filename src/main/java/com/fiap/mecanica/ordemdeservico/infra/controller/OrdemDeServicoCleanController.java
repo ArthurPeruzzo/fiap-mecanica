@@ -62,26 +62,6 @@ public class OrdemDeServicoCleanController {
         return presenter.getViewModel();
     }
 
-    public void iniciarDiagnostico(Long ordemServicoId) {
-        new IniciarDiagnosticoOrdemDeServicoUseCase(mecanicoGateway, tokenGateway, ordemDeServicoGateway)
-                .iniciarDiagnostico(ordemServicoId);
-    }
-
-    public void concluirDiagnostico(Long ordemServicoId) {
-        new ConcluirDiagnosticoOrdemDeServicoUseCase(mecanicoGateway, tokenGateway, ordemDeServicoGateway)
-                .concluirDiagnostico(ordemServicoId);
-    }
-
-    public void iniciarServico(Long ordemServicoId, Long servicoId) {
-        new IniciarServicoOrdemDeServicoUseCase(ordemDeServicoGateway, servicoGateway)
-                .iniciar(ordemServicoId, servicoId);
-    }
-
-    public void finalizarServico(Long ordemServicoId, Long servicoId) {
-        new FinalizarServicoOrdemDeServicoUseCase(ordemDeServicoGateway, servicoGateway, notificacaoGateway)
-                .finalizar(ordemServicoId, servicoId);
-    }
-
     public void entregar(Long ordemServicoId) {
         new EntregarOrdemDeServicoUseCase(ordemDeServicoGateway, notificacaoGateway)
                 .entregar(ordemServicoId);
