@@ -23,8 +23,6 @@ import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
-import com.fiap.mecanica.ordemdeservico.core.exception.*;
-import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
@@ -42,7 +40,6 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -58,10 +55,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @ActiveProfiles("controller-test")
 @ImportAutoConfiguration(NoSecurityConfiguration.class)
-@TestPropertySource(properties = {
-        "url.aprovar.orcamento=http://test.com/aprovar/",
-        "url.recusar.orcamento=http://test.com/recusar/"
-})
 @WebMvcTest(controllers = OrdemDeServicoHttpController.class)
 class OrdemDeServicoControllerContractTest {
 
@@ -78,7 +71,6 @@ class OrdemDeServicoControllerContractTest {
     @MockitoBean private PecaGateway pecaGateway;
     @MockitoBean private InsumoGateway insumoGateway;
     @MockitoBean private NotificacaoGateway notificacaoGateway;
-    @MockitoBean private LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway;
 
     private static final Long USER_ID = 10L;
     private static final Long MECANICO_ID = 5L;
@@ -87,8 +79,6 @@ class OrdemDeServicoControllerContractTest {
     private static final Long VEICULO_ID = 2L;
 
     private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"}";
-    private static final String VALID_PECA_BODY = "{\"quantidade\":2}";
-    private static final String VALID_INSUMO_BODY = "{\"quantidade\":3}";
 
     // ---- domain helpers ----
 
@@ -134,11 +124,6 @@ class OrdemDeServicoControllerContractTest {
         return buildOrdem(99L, StatusOrdemDeServico.RECEBIDA, List.of(), List.of(), List.of(), null);
     }
 
-    private OrdemDeServico ordemRecebidaComServico() {
-        var sv = new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null);
-        return buildOrdem(null, StatusOrdemDeServico.RECEBIDA, List.of(sv), List.of(), List.of(), null);
-    }
-
     private OrdemDeServico ordemEmDiagnostico() {
         return buildOrdem(MECANICO_ID, StatusOrdemDeServico.EM_DIAGNOSTICO, List.of(), List.of(), List.of(), null);
     }
@@ -153,23 +138,9 @@ class OrdemDeServicoControllerContractTest {
         return buildOrdem(99L, StatusOrdemDeServico.EM_DIAGNOSTICO, List.of(sv), List.of(), List.of(), null);
     }
 
-    private OrdemDeServico ordemEmDiagnosticoComPeca(Integer quantidade) {
-        var pv = new PecaVinculada(5L, quantidade, BigDecimal.TEN);
-        return buildOrdem(MECANICO_ID, StatusOrdemDeServico.EM_DIAGNOSTICO, List.of(), List.of(pv), List.of(), null);
-    }
-
-    private OrdemDeServico ordemEmDiagnosticoComInsumo(Integer quantidade) {
-        var iv = new InsumoVinculado(30L, quantidade, BigDecimal.TEN);
-        return buildOrdem(MECANICO_ID, StatusOrdemDeServico.EM_DIAGNOSTICO, List.of(), List.of(), List.of(iv), null);
-    }
-
     private OrdemDeServico ordemDiagnosticoConcluido() {
         var sv = new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null);
         return buildOrdem(MECANICO_ID, StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, List.of(sv), List.of(), List.of(), new Orcamento(BigDecimal.TEN));
-    }
-
-    private OrdemDeServico ordemAguardandoAprovacao() {
-        return buildOrdem(MECANICO_ID, StatusOrdemDeServico.AGUARDANDO_APROVACAO, List.of(), List.of(), List.of(), new Orcamento(BigDecimal.TEN));
     }
 
     private OrdemDeServico ordemEmExecucaoSemServicos() {
@@ -190,20 +161,6 @@ class OrdemDeServicoControllerContractTest {
         return buildOrdem(MECANICO_ID, StatusOrdemDeServico.FINALIZADA, List.of(), List.of(), List.of(), new Orcamento(BigDecimal.TEN));
     }
 
-    private LinkAprovacaoOrcamento validLink() {
-        return LinkAprovacaoOrcamento.builder()
-                .ordemDeServicoId(1L).token("some-token")
-                .dataExpiracao(LocalDateTime.now().plusDays(3))
-                .build();
-    }
-
-    private LinkAprovacaoOrcamento expiredLink() {
-        return LinkAprovacaoOrcamento.builder()
-                .ordemDeServicoId(1L).token("token-expirado")
-                .dataExpiracao(LocalDateTime.now().minusDays(1))
-                .build();
-    }
-
     // ---- setup ----
 
     @BeforeEach
@@ -219,10 +176,6 @@ class OrdemDeServicoControllerContractTest {
         Mockito.lenient().when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
         Mockito.lenient().when(servicoGateway.buscarPorId(10L))
                 .thenReturn(Optional.of(Servico.reconstituir(10L, "Serviço", "desc", BigDecimal.TEN)));
-        Mockito.lenient().when(pecaGateway.buscarPorId(5L))
-                .thenReturn(Optional.of(Peca.reconstituir(5L, "Peca", "desc", BigDecimal.TEN, 10)));
-        Mockito.lenient().when(insumoGateway.buscarPorId(30L))
-                .thenReturn(Optional.of(Insumo.reconstituir(30L, "Insumo", "desc", BigDecimal.TEN, UnidadeMedida.LITRO, 10)));
     }
 
     // ---- criar ----
@@ -520,494 +473,6 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico/conclusao"))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
-    }
-
-    // ---- vincularServico ----
-
-    @Test
-    void shouldReturn204WhenVincularServicoSuccess() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/servicos/10"))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void shouldReturn404WhenOrdemNotFoundOnVincular() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/99/servicos/10"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
-    }
-
-    @Test
-    void shouldReturn404WhenServicoNotFoundOnVincular() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/servicos/99"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Serviço não encontrado"));
-    }
-
-    @Test
-    void shouldReturn422WhenServicoJaVinculado() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebidaComServico()));
-
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/servicos/10"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Este serviço já está vinculado à ordem de serviço"));
-    }
-
-    @Test
-    void shouldReturn422WhenOrdemNaoEmDiagnosticoERecebidaOnVincular() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmExecucaoSemServicos()));
-
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/servicos/10"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Não é possível adicionar ou remover serviços se a ordem de serviço não está em diagnóstico ou recebida"));
-    }
-
-    // ---- desvincularServico ----
-
-    @Test
-    void shouldReturn204WhenDesvincularServicoSuccess() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebidaComServico()));
-
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/servicos/10"))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void shouldReturn404WhenOrdemNotFoundOnDesvincular() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/99/servicos/10"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
-    }
-
-    @Test
-    void shouldReturn404WhenServicoNotFoundOnDesvincular() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/servicos/99"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Serviço não encontrado"));
-    }
-
-    @Test
-    void shouldReturn422WhenServicoNaoVinculado() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/servicos/10"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Este serviço não está vinculado à ordem de serviço"));
-    }
-
-    @Test
-    void shouldReturn422WhenOrdemNaoEmDiagnosticoOnDesvincular() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmExecucaoSemServicos()));
-
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/servicos/10"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Não é possível adicionar ou remover serviços se a ordem de serviço não está em diagnóstico ou recebida"));
-    }
-
-    // ---- vincularPeca ----
-
-    @Test
-    void shouldReturn204WhenVincularPecaSuccess() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/pecas/5")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_PECA_BODY))
-                .andExpect(status().isNoContent());
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "'{}'                 , quantidade, 'A quantidade deve ser informada'",
-            "'{\"quantidade\":0}' , quantidade, 'A quantidade deve ser no mínimo 1'",
-            "'{\"quantidade\":-1}', quantidade, 'A quantidade deve ser no mínimo 1'"
-    })
-    void shouldReturn400WhenVincularPecaRequestIsInvalid(String requestJson, String field, String expectedMessage) throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/pecas/5")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestJson))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$." + field).value(expectedMessage));
-    }
-
-    @Test
-    void shouldReturn404WhenOrdemNotFoundOnVincularPeca() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/99/pecas/5")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_PECA_BODY))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
-    }
-
-    @Test
-    void shouldReturn404WhenPecaNotFoundOnVincularPeca() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/pecas/99")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_PECA_BODY))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Peça não encontrada"));
-    }
-
-    @Test
-    void shouldReturn422WhenEstoqueInsuficienteOnVincularPeca() throws Exception {
-        Mockito.when(pecaGateway.buscarPorId(5L))
-                .thenReturn(Optional.of(Peca.reconstituir(5L, "Peca", "desc", BigDecimal.TEN, 0)));
-
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/pecas/5")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_PECA_BODY))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Estoque insuficiente para realizar a operação"));
-    }
-
-    @Test
-    void shouldReturn422WhenOrdemNaoEmDiagnosticoOnVincularPeca() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmExecucaoSemServicos()));
-
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/pecas/5")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_PECA_BODY))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Não é possível vincular peças se a ordem de serviço não está em diagnóstico ou recebida"));
-    }
-
-    // ---- desvincularPeca ----
-
-    @Test
-    void shouldReturn204WhenDesvincularPecaSuccess() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnosticoComPeca(5)));
-
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_PECA_BODY))
-                .andExpect(status().isNoContent());
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "'{}'                 , quantidade, 'A quantidade deve ser informada'",
-            "'{\"quantidade\":0}' , quantidade, 'A quantidade deve ser no mínimo 1'",
-            "'{\"quantidade\":-1}', quantidade, 'A quantidade deve ser no mínimo 1'"
-    })
-    void shouldReturn400WhenDesvincularPecaRequestIsInvalid(String requestJson, String field, String expectedMessage) throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestJson))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$." + field).value(expectedMessage));
-    }
-
-    @Test
-    void shouldReturn404WhenOrdemNotFoundOnDesvincularPeca() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/99/pecas/5")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_PECA_BODY))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
-    }
-
-    @Test
-    void shouldReturn404WhenPecaNotFoundOnDesvincularPeca() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/99")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_PECA_BODY))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Peça não encontrada"));
-    }
-
-    @Test
-    void shouldReturn422WhenOrdemNaoEmDiagnosticoOnDesvincularPeca() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_PECA_BODY))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Não é possível desvincular peças se a ordem de serviço não está em diagnóstico"));
-    }
-
-    @Test
-    void shouldReturn422WhenPecaNaoVinculadaOnDesvincularPeca() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnostico()));
-
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_PECA_BODY))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Peça não está vinculada à ordem de serviço"));
-    }
-
-    @Test
-    void shouldReturn422WhenQuantidadeDesvincularInvalidaOnDesvincularPeca() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnosticoComPeca(1)));
-
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_PECA_BODY))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Quantidade a desvincular é maior que a quantidade vinculada"));
-    }
-
-    // ---- vincularInsumo ----
-
-    @Test
-    void shouldReturn204WhenVincularInsumoSuccess() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/insumos/30")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_INSUMO_BODY))
-                .andExpect(status().isNoContent());
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "'{}'                 , quantidade, 'A quantidade deve ser informada'",
-            "'{\"quantidade\":0}' , quantidade, 'A quantidade deve ser no mínimo 1'",
-            "'{\"quantidade\":-1}', quantidade, 'A quantidade deve ser no mínimo 1'"
-    })
-    void shouldReturn400WhenVincularInsumoRequestIsInvalid(String requestJson, String field, String expectedMessage) throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/insumos/30")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestJson))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$." + field).value(expectedMessage));
-    }
-
-    @Test
-    void shouldReturn404WhenOrdemNotFoundOnVincularInsumo() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/99/insumos/30")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_INSUMO_BODY))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
-    }
-
-    @Test
-    void shouldReturn404WhenInsumoNotFoundOnVincularInsumo() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/insumos/99")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_INSUMO_BODY))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Insumo não encontrado"));
-    }
-
-    @Test
-    void shouldReturn422WhenEstoqueInsuficienteOnVincularInsumo() throws Exception {
-        Mockito.when(insumoGateway.buscarPorId(30L))
-                .thenReturn(Optional.of(Insumo.reconstituir(30L, "Insumo", "desc", BigDecimal.TEN, UnidadeMedida.LITRO, 0)));
-
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/insumos/30")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_INSUMO_BODY))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Estoque insuficiente para realizar a operação"));
-    }
-
-    @Test
-    void shouldReturn422WhenOrdemNaoEmDiagnosticoOnVincularInsumo() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmExecucaoSemServicos()));
-
-        mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/insumos/30")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_INSUMO_BODY))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Não é possível vincular insumos se a ordem de serviço não está em diagnóstico ou recebida"));
-    }
-
-    // ---- desvincularInsumo ----
-
-    @Test
-    void shouldReturn204WhenDesvincularInsumoSuccess() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnosticoComInsumo(5)));
-
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_INSUMO_BODY))
-                .andExpect(status().isNoContent());
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "'{}'                 , quantidade, 'A quantidade deve ser informada'",
-            "'{\"quantidade\":0}' , quantidade, 'A quantidade deve ser no mínimo 1'",
-            "'{\"quantidade\":-1}', quantidade, 'A quantidade deve ser no mínimo 1'"
-    })
-    void shouldReturn400WhenDesvincularInsumoRequestIsInvalid(String requestJson, String field, String expectedMessage) throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestJson))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$." + field).value(expectedMessage));
-    }
-
-    @Test
-    void shouldReturn404WhenOrdemNotFoundOnDesvincularInsumo() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/99/insumos/30")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_INSUMO_BODY))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
-    }
-
-    @Test
-    void shouldReturn404WhenInsumoNotFoundOnDesvincularInsumo() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/99")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_INSUMO_BODY))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Insumo não encontrado"));
-    }
-
-    @Test
-    void shouldReturn422WhenOrdemNaoEmDiagnosticoOnDesvincularInsumo() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_INSUMO_BODY))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Não é possível desvincular insumos se a ordem de serviço não está em diagnóstico"));
-    }
-
-    @Test
-    void shouldReturn422WhenInsumoNaoVinculadoOnDesvincularInsumo() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnostico()));
-
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_INSUMO_BODY))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Insumo não está vinculado à ordem de serviço"));
-    }
-
-    @Test
-    void shouldReturn422WhenQuantidadeDesvincularInvalidaOnDesvincularInsumo() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnosticoComInsumo(1)));
-
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_INSUMO_BODY))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Quantidade a desvincular é maior que a quantidade vinculada"));
-    }
-
-    // ---- enviarOrcamento ----
-
-    @Test
-    void shouldReturn204WhenEnviarOrcamentoSuccess() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemDiagnosticoConcluido()));
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/envio/1"))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void shouldReturn404WhenOrdemNotFoundOnEnviarOrcamento() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/envio/99"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
-    }
-
-    @Test
-    void shouldReturn422WhenTransicaoInvalidaOnEnviarOrcamento() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/envio/1"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
-    }
-
-    // ---- recusarOrcamento (atendente) ----
-
-    @Test
-    void shouldReturn204WhenRecusarOrcamentoSuccess() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemAguardandoAprovacao()));
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/recusar/1"))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void shouldReturn404WhenOrdemNotFoundOnRecusar() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/recusar/99"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
-    }
-
-    @Test
-    void shouldReturn422WhenTransicaoInvalidaOnRecusar() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/recusar/1"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
-    }
-
-    // ---- aprovarOrcamento (atendente) ----
-
-    @Test
-    void shouldReturn204WhenAprovarOrcamentoSuccess() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemAguardandoAprovacao()));
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/aprovar/1"))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void shouldReturn404WhenOrdemNotFoundOnAprovar() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/aprovar/99"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
-    }
-
-    @Test
-    void shouldReturn422WhenTransicaoInvalidaOnAprovar() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/aprovar/1"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
-    }
-
-    // ---- recusar / aprovar via token ----
-
-    @Test
-    void shouldReturn204WhenRecusarExternoSuccessfully() throws Exception {
-        Mockito.when(linkAprovacaoOrcamentoGateway.buscarPorToken("some-token"))
-                .thenReturn(Optional.of(validLink()));
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemAguardandoAprovacao()));
-
-        mockMvc.perform(MockMvcRequestBuilders.get("/ordem-servico/orcamento/externo/recusar/some-token"))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void shouldReturn404WhenTokenNaoEncontrado() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/ordem-servico/orcamento/externo/recusar/token-inexistente"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Link de aprovação de orçamento não encontrado"));
-    }
-
-    @Test
-    void shouldReturn410WhenTokenInvalido() throws Exception {
-        Mockito.when(linkAprovacaoOrcamentoGateway.buscarPorToken("token-expirado"))
-                .thenReturn(Optional.of(expiredLink()));
-
-        mockMvc.perform(MockMvcRequestBuilders.get("/ordem-servico/orcamento/externo/recusar/token-expirado"))
-                .andExpect(status().isGone())
-                .andExpect(jsonPath("$.message").value("Link de aprovação de orçamento expirado ou já utilizado"));
-    }
-
-    @Test
-    void shouldReturn204WhenAprovarExternoSuccessfully() throws Exception {
-        Mockito.when(linkAprovacaoOrcamentoGateway.buscarPorToken("some-token"))
-                .thenReturn(Optional.of(validLink()));
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemAguardandoAprovacao()));
-
-        mockMvc.perform(MockMvcRequestBuilders.get("/ordem-servico/orcamento/externo/aprovar/some-token"))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void shouldReturn404WhenAprovarExternoTokenNaoEncontrado() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.get("/ordem-servico/orcamento/externo/aprovar/token-inexistente"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Link de aprovação de orçamento não encontrado"));
-    }
-
-    @Test
-    void shouldReturn410WhenAprovarExternoTokenInvalido() throws Exception {
-        Mockito.when(linkAprovacaoOrcamentoGateway.buscarPorToken("token-expirado"))
-                .thenReturn(Optional.of(expiredLink()));
-
-        mockMvc.perform(MockMvcRequestBuilders.get("/ordem-servico/orcamento/externo/aprovar/token-expirado"))
-                .andExpect(status().isGone())
-                .andExpect(jsonPath("$.message").value("Link de aprovação de orçamento expirado ou já utilizado"));
     }
 
     // ---- iniciarServico ----
