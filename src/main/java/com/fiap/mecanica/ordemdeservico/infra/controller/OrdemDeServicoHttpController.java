@@ -100,7 +100,7 @@ public class OrdemDeServicoHttpController {
     @GetMapping("/detalhamento")
     public ResponseEntity<PageResponse<OrdemDeServicoResponseJson>> detalhamento(@RequestParam(defaultValue = "0") int page,
                                                                                   @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(cleanController.listar(page, size));
+        return ResponseEntity.ok(PageResponse.from(cleanController.listar(page, size)));
     }
 
     @Operation(summary = "Consultar status da Ordem de Serviço",
