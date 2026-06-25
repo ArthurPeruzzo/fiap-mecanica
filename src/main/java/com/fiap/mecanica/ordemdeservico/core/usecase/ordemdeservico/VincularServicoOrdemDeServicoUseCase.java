@@ -6,15 +6,17 @@ import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoExcep
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-@Service
-@RequiredArgsConstructor
 public class VincularServicoOrdemDeServicoUseCase {
 
     private final OrdemDeServicoGateway ordemDeServicoGateway;
     private final ServicoGateway servicoGateway;
+
+    public VincularServicoOrdemDeServicoUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
+                                                 ServicoGateway servicoGateway) {
+        this.ordemDeServicoGateway = ordemDeServicoGateway;
+        this.servicoGateway = servicoGateway;
+    }
 
     public void vincular(Long ordemServicoId, Long servicoId) {
         OrdemDeServico ordemDeServico = ordemDeServicoGateway.buscarPorId(ordemServicoId)

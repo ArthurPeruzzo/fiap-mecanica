@@ -29,14 +29,15 @@ import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoExcep
 import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.CriarOrdemDeServicoOutputPort;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.CriarOrdemDeServicoUseCase;
 import com.fiap.mecanica.shared.notificacao.core.domain.Mensagem;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -50,7 +51,6 @@ import static org.junit.jupiter.api.Assertions.*;
 @ExtendWith(MockitoExtension.class)
 class CriarOrdemDeServicoUseCaseUnitTest {
 
-    @InjectMocks
     private CriarOrdemDeServicoUseCase criarOrdemDeServicoUseCase;
 
     @Mock
@@ -79,6 +79,17 @@ class CriarOrdemDeServicoUseCaseUnitTest {
 
     @Mock
     private NotificacaoGateway notificacaoGateway;
+
+    @Mock
+    private CriarOrdemDeServicoOutputPort outputPort;
+
+    @BeforeEach
+    void setUp() {
+        criarOrdemDeServicoUseCase = new CriarOrdemDeServicoUseCase(
+                atendenteGateway, tokenGateway, ordemDeServicoGateway,
+                veiculoGateway, clienteGateway, servicoGateway, pecaGateway,
+                insumoGateway, notificacaoGateway, outputPort);
+    }
 
     private static final Long USER_ID = 10L;
     private static final Long ATENDENTE_ID = 3L;
@@ -219,9 +230,9 @@ class CriarOrdemDeServicoUseCaseUnitTest {
         stubClienteEVeiculo();
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(99L);
 
-        var id = criarOrdemDeServicoUseCase.criar(dtoPadrao());
+        criarOrdemDeServicoUseCase.criar(dtoPadrao());
 
-        assertEquals(99L, id);
+        Mockito.verify(outputPort).apresentar(99L);
     }
 
     @Test

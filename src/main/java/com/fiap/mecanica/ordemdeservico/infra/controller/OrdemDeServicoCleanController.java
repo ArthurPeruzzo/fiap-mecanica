@@ -1,0 +1,167 @@
+package com.fiap.mecanica.ordemdeservico.infra.controller;
+
+import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
+import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
+import com.fiap.mecanica.gestao.core.gateway.AtendenteGateway;
+import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
+import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
+import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
+import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
+import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
+import com.fiap.mecanica.ordemdeservico.infra.controller.json.OrdemDeServicoResponseJson;
+import com.fiap.mecanica.ordemdeservico.infra.controller.json.StatusOrdemDeServicoResponseJson;
+import com.fiap.mecanica.ordemdeservico.infra.controller.presenter.ConsultarStatusOrdemDeServicoPresenter;
+import com.fiap.mecanica.ordemdeservico.infra.controller.presenter.CriarOrdemDeServicoPresenter;
+import com.fiap.mecanica.ordemdeservico.infra.controller.presenter.ListarOrdemDeServicoPresenter;
+import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
+import com.fiap.mecanica.shared.page.PageResponse;
+import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
+
+public class OrdemDeServicoCleanController {
+
+    private final OrdemDeServicoGateway ordemDeServicoGateway;
+    private final AtendenteGateway atendenteGateway;
+    private final TokenGateway tokenGateway;
+    private final VeiculoGateway veiculoGateway;
+    private final ClienteGateway clienteGateway;
+    private final MecanicoGateway mecanicoGateway;
+    private final ServicoGateway servicoGateway;
+    private final PecaGateway pecaGateway;
+    private final InsumoGateway insumoGateway;
+    private final NotificacaoGateway notificacaoGateway;
+    private final LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway;
+    private final String urlAprovarOrcamento;
+    private final String urlRecusarOrcamento;
+
+    public OrdemDeServicoCleanController(OrdemDeServicoGateway ordemDeServicoGateway,
+                                          AtendenteGateway atendenteGateway,
+                                          TokenGateway tokenGateway,
+                                          VeiculoGateway veiculoGateway,
+                                          ClienteGateway clienteGateway,
+                                          MecanicoGateway mecanicoGateway,
+                                          ServicoGateway servicoGateway,
+                                          PecaGateway pecaGateway,
+                                          InsumoGateway insumoGateway,
+                                          NotificacaoGateway notificacaoGateway,
+                                          LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway,
+                                          String urlAprovarOrcamento,
+                                          String urlRecusarOrcamento) {
+        this.ordemDeServicoGateway = ordemDeServicoGateway;
+        this.atendenteGateway = atendenteGateway;
+        this.tokenGateway = tokenGateway;
+        this.veiculoGateway = veiculoGateway;
+        this.clienteGateway = clienteGateway;
+        this.mecanicoGateway = mecanicoGateway;
+        this.servicoGateway = servicoGateway;
+        this.pecaGateway = pecaGateway;
+        this.insumoGateway = insumoGateway;
+        this.notificacaoGateway = notificacaoGateway;
+        this.linkAprovacaoOrcamentoGateway = linkAprovacaoOrcamentoGateway;
+        this.urlAprovarOrcamento = urlAprovarOrcamento;
+        this.urlRecusarOrcamento = urlRecusarOrcamento;
+    }
+
+    public Long criar(CriarOrdemDeServicoDto dto) {
+        var presenter = new CriarOrdemDeServicoPresenter();
+        new CriarOrdemDeServicoUseCase(atendenteGateway, tokenGateway, ordemDeServicoGateway,
+                veiculoGateway, clienteGateway, servicoGateway, pecaGateway, insumoGateway,
+                notificacaoGateway, presenter).criar(dto);
+        return presenter.getViewModel();
+    }
+
+    public void iniciarDiagnostico(Long ordemServicoId) {
+        new IniciarDiagnosticoOrdemDeServicoUseCase(mecanicoGateway, tokenGateway, ordemDeServicoGateway)
+                .iniciarDiagnostico(ordemServicoId);
+    }
+
+    public void concluirDiagnostico(Long ordemServicoId) {
+        new ConcluirDiagnosticoOrdemDeServicoUseCase(mecanicoGateway, tokenGateway, ordemDeServicoGateway)
+                .concluirDiagnostico(ordemServicoId);
+    }
+
+    public void vincularServico(Long ordemServicoId, Long servicoId) {
+        new VincularServicoOrdemDeServicoUseCase(ordemDeServicoGateway, servicoGateway)
+                .vincular(ordemServicoId, servicoId);
+    }
+
+    public void desvincularServico(Long ordemServicoId, Long servicoId) {
+        new DesvincularServicoOrdemDeServicoUseCase(ordemDeServicoGateway, servicoGateway)
+                .desvincular(ordemServicoId, servicoId);
+    }
+
+    public void vincularPeca(Long ordemServicoId, Long pecaId, Integer quantidade) {
+        new VincularPecaOrdemDeServicoUseCase(ordemDeServicoGateway, pecaGateway)
+                .vincular(ordemServicoId, pecaId, quantidade);
+    }
+
+    public void desvincularPeca(Long ordemServicoId, Long pecaId, Integer quantidade) {
+        new DesvincularPecaOrdemDeServicoUseCase(ordemDeServicoGateway, pecaGateway)
+                .desvincular(ordemServicoId, pecaId, quantidade);
+    }
+
+    public void vincularInsumo(Long ordemServicoId, Long insumoId, Integer quantidade) {
+        new VincularInsumoOrdemDeServicoUseCase(ordemDeServicoGateway, insumoGateway)
+                .vincular(ordemServicoId, insumoId, quantidade);
+    }
+
+    public void desvincularInsumo(Long ordemServicoId, Long insumoId, Integer quantidade) {
+        new DesvincularInsumoOrdemDeServicoUseCase(ordemDeServicoGateway, insumoGateway)
+                .desvincular(ordemServicoId, insumoId, quantidade);
+    }
+
+    public void enviarOrcamento(Long ordemServicoId) {
+        new EnviarOrcamentoOrdemDeServicoUseCase(ordemDeServicoGateway, linkAprovacaoOrcamentoGateway,
+                notificacaoGateway, urlAprovarOrcamento, urlRecusarOrcamento).enviar(ordemServicoId);
+    }
+
+    public void recusarOrcamento(Long ordemServicoId) {
+        new OrcamentoRecusadoViaAtendenteUseCase(ordemDeServicoGateway, pecaGateway, insumoGateway, notificacaoGateway)
+                .recusar(ordemServicoId);
+    }
+
+    public void recusarOrcamentoViaToken(String token) {
+        new OrcamentoRecusadoViaTokenUseCase(ordemDeServicoGateway, pecaGateway, insumoGateway,
+                notificacaoGateway, linkAprovacaoOrcamentoGateway).recusar(token);
+    }
+
+    public void aprovarOrcamento(Long ordemServicoId) {
+        new OrcamentoAprovadoViaAtendenteUseCase(ordemDeServicoGateway, notificacaoGateway)
+                .aprovar(ordemServicoId);
+    }
+
+    public void aprovarOrcamentoViaToken(String token) {
+        new OrcamentoAprovadoViaTokenUseCase(ordemDeServicoGateway, notificacaoGateway, linkAprovacaoOrcamentoGateway)
+                .aprovar(token);
+    }
+
+    public void iniciarServico(Long ordemServicoId, Long servicoId) {
+        new IniciarServicoOrdemDeServicoUseCase(ordemDeServicoGateway, servicoGateway)
+                .iniciar(ordemServicoId, servicoId);
+    }
+
+    public void finalizarServico(Long ordemServicoId, Long servicoId) {
+        new FinalizarServicoOrdemDeServicoUseCase(ordemDeServicoGateway, servicoGateway, notificacaoGateway)
+                .finalizar(ordemServicoId, servicoId);
+    }
+
+    public void entregar(Long ordemServicoId) {
+        new EntregarOrdemDeServicoUseCase(ordemDeServicoGateway, notificacaoGateway)
+                .entregar(ordemServicoId);
+    }
+
+    public PageResponse<OrdemDeServicoResponseJson> listar(int page, int size) {
+        var presenter = new ListarOrdemDeServicoPresenter();
+        new ListarOrdemDeServicoUseCase(ordemDeServicoGateway, clienteGateway, veiculoGateway,
+                atendenteGateway, mecanicoGateway, presenter).listar(page, size);
+        return PageResponse.from(presenter.getViewModel());
+    }
+
+    public StatusOrdemDeServicoResponseJson consultarStatus(Long ordemServicoId) {
+        var presenter = new ConsultarStatusOrdemDeServicoPresenter();
+        new ConsultarStatusOrdemDeServicoUseCase(ordemDeServicoGateway, presenter).consultar(ordemServicoId);
+        return presenter.getViewModel();
+    }
+}

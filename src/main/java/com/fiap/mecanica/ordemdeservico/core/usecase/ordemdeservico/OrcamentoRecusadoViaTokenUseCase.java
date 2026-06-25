@@ -10,9 +10,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontra
 import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
-import org.springframework.stereotype.Service;
 
-@Service
 public class OrcamentoRecusadoViaTokenUseCase extends OrcamentoRecusadoOrdemDeServicoUseCase {
 
     private final LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway;

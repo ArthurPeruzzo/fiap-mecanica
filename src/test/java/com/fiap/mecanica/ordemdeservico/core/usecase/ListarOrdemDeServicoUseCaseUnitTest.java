@@ -10,13 +10,16 @@ import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
 import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
+import com.fiap.mecanica.ordemdeservico.core.dto.OrdemDeServicoListagemDto;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.ListarOrdemDeServicoOutputPort;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.ListarOrdemDeServicoUseCase;
 import com.fiap.mecanica.shared.page.Pagina;
 import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -32,7 +35,6 @@ import static org.junit.jupiter.api.Assertions.*;
 @ExtendWith(MockitoExtension.class)
 class ListarOrdemDeServicoUseCaseUnitTest {
 
-    @InjectMocks
     private ListarOrdemDeServicoUseCase listarOrdemDeServicoUseCase;
 
     @Mock
@@ -49,6 +51,16 @@ class ListarOrdemDeServicoUseCaseUnitTest {
 
     @Mock
     private MecanicoGateway mecanicoGateway;
+
+    @Mock
+    private ListarOrdemDeServicoOutputPort outputPort;
+
+    @BeforeEach
+    void setUp() {
+        listarOrdemDeServicoUseCase = new ListarOrdemDeServicoUseCase(
+                ordemDeServicoGateway, clienteGateway, veiculoGateway,
+                atendenteGateway, mecanicoGateway, outputPort);
+    }
 
     private static final Long ORDEM_ID = 1L;
     private static final Long CLIENTE_ID = 10L;
@@ -135,14 +147,22 @@ class ListarOrdemDeServicoUseCaseUnitTest {
         Mockito.when(atendenteGateway.findById(ATENDENTE_ID)).thenReturn(Optional.of(atendentePadrao()));
     }
 
+    @SuppressWarnings("unchecked")
+    private Pagina<OrdemDeServicoListagemDto> captureOutputPort() {
+        var captor = ArgumentCaptor.forClass(Pagina.class);
+        Mockito.verify(outputPort).apresentar(captor.capture());
+        return (Pagina<OrdemDeServicoListagemDto>) captor.getValue();
+    }
+
     @Test
     void shouldReturnEnrichedDtoWithAllFieldsWhenMecanicoIsPresent() {
         var pagina = new Pagina<>(List.of(ordemComMecanico()), 0, 10, 1L, 1);
         Mockito.when(ordemDeServicoGateway.listar(0, 10)).thenReturn(pagina);
         stubGatewaysComMecanico();
 
-        var resultado = listarOrdemDeServicoUseCase.listar(0, 10);
+        listarOrdemDeServicoUseCase.listar(0, 10);
 
+        var resultado = captureOutputPort();
         assertEquals(1, resultado.content().size());
         var dto = resultado.content().getFirst();
         assertEquals(ORDEM_ID, dto.getId());
@@ -166,8 +186,9 @@ class ListarOrdemDeServicoUseCaseUnitTest {
         Mockito.when(ordemDeServicoGateway.listar(0, 10)).thenReturn(pagina);
         stubGatewaysSemMecanico();
 
-        var resultado = listarOrdemDeServicoUseCase.listar(0, 10);
+        listarOrdemDeServicoUseCase.listar(0, 10);
 
+        var resultado = captureOutputPort();
         assertNull(resultado.content().getFirst().getNomeMecanico());
         Mockito.verifyNoInteractions(mecanicoGateway);
     }
@@ -177,8 +198,9 @@ class ListarOrdemDeServicoUseCaseUnitTest {
         var pagina = new Pagina<OrdemDeServico>(List.of(), 0, 10, 0L, 0);
         Mockito.when(ordemDeServicoGateway.listar(0, 10)).thenReturn(pagina);
 
-        var resultado = listarOrdemDeServicoUseCase.listar(0, 10);
+        listarOrdemDeServicoUseCase.listar(0, 10);
 
+        var resultado = captureOutputPort();
         assertTrue(resultado.content().isEmpty());
         assertEquals(0L, resultado.totalElements());
         Mockito.verifyNoInteractions(clienteGateway, veiculoGateway, atendenteGateway, mecanicoGateway);

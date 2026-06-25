@@ -6,14 +6,17 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontra
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.shared.notificacao.core.domain.MensagemParams;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-@Service
-@RequiredArgsConstructor
 public class EntregarOrdemDeServicoUseCase {
+
 	private final OrdemDeServicoGateway ordemDeServicoGateway;
 	private final NotificacaoGateway notificacaoGateway;
+
+	public EntregarOrdemDeServicoUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
+										  NotificacaoGateway notificacaoGateway) {
+		this.ordemDeServicoGateway = ordemDeServicoGateway;
+		this.notificacaoGateway = notificacaoGateway;
+	}
 
 	public void entregar(Long ordemServicoId) {
 		OrdemDeServico ordemDeServico = ordemDeServicoGateway.buscarPorId(ordemServicoId)

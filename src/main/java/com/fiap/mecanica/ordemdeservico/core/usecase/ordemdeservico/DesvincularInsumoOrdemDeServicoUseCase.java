@@ -6,14 +6,17 @@ import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-@Service
-@RequiredArgsConstructor
 public class DesvincularInsumoOrdemDeServicoUseCase {
+
 	private final OrdemDeServicoGateway ordemDeServicoGateway;
 	private final InsumoGateway insumoGateway;
+
+	public DesvincularInsumoOrdemDeServicoUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
+												   InsumoGateway insumoGateway) {
+		this.ordemDeServicoGateway = ordemDeServicoGateway;
+		this.insumoGateway = insumoGateway;
+	}
 
 	public void desvincular(Long ordemServicoId, Long insumoId, Integer quantidade) {
 		OrdemDeServico ordemDeServico = ordemDeServicoGateway.buscarPorId(ordemServicoId)
@@ -26,6 +29,5 @@ public class DesvincularInsumoOrdemDeServicoUseCase {
 
 		insumoGateway.atualizar(insumo);
 		ordemDeServicoGateway.desvincularOuSubtrairInsumo(ordemServicoId, insumoId, quantidade);
-
 	}
 }

@@ -1,6 +1,5 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller.json;
 
-import com.fiap.mecanica.ordemdeservico.core.dto.InsumoVinculadoDto;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
@@ -20,7 +19,4 @@ public record InsumoVinculadoResponseJson(
         @Schema(description = "É a multiplicação do preco pela quantidade do insumo", example = "89.90")
         BigDecimal valorTotal
 ) {
-    public static InsumoVinculadoResponseJson from(InsumoVinculadoDto iv) {
-        return new InsumoVinculadoResponseJson(iv.insumoId(), iv.quantidade(), iv.preco(), iv.valorTotal());
-    }
 }

@@ -5,15 +5,17 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontra
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-@Service
-@RequiredArgsConstructor
 public class DesvincularServicoOrdemDeServicoUseCase {
 
     private final OrdemDeServicoGateway ordemDeServicoGateway;
     private final ServicoGateway servicoGateway;
+
+    public DesvincularServicoOrdemDeServicoUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
+                                                    ServicoGateway servicoGateway) {
+        this.ordemDeServicoGateway = ordemDeServicoGateway;
+        this.servicoGateway = servicoGateway;
+    }
 
     public void desvincular(Long ordemServicoId, Long servicoId) {
         OrdemDeServico ordemDeServico = ordemDeServicoGateway.buscarPorId(ordemServicoId)
