@@ -16,7 +16,7 @@ import com.fiap.mecanica.ordemdeservico.infra.controller.presenter.ConsultarStat
 import com.fiap.mecanica.ordemdeservico.infra.controller.presenter.CriarOrdemDeServicoPresenter;
 import com.fiap.mecanica.ordemdeservico.infra.controller.presenter.ListarOrdemDeServicoPresenter;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
-import com.fiap.mecanica.shared.page.PageResponse;
+import com.fiap.mecanica.shared.page.Pagina;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 
 public class OrdemDeServicoCleanController {
@@ -67,11 +67,11 @@ public class OrdemDeServicoCleanController {
                 .entregar(ordemServicoId);
     }
 
-    public PageResponse<OrdemDeServicoResponseJson> listar(int page, int size) {
+    public Pagina<OrdemDeServicoResponseJson> listar(int page, int size) {
         var presenter = new ListarOrdemDeServicoPresenter();
         new ListarOrdemDeServicoUseCase(ordemDeServicoGateway, clienteGateway, veiculoGateway,
                 atendenteGateway, mecanicoGateway, presenter).listar(page, size);
-        return PageResponse.from(presenter.getViewModel());
+        return presenter.getViewModel();
     }
 
     public StatusOrdemDeServicoResponseJson consultarStatus(Long ordemServicoId) {
