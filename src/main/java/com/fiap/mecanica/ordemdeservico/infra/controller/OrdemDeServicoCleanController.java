@@ -72,36 +72,6 @@ public class OrdemDeServicoCleanController {
                 .concluirDiagnostico(ordemServicoId);
     }
 
-    public void vincularServico(Long ordemServicoId, Long servicoId) {
-        new VincularServicoOrdemDeServicoUseCase(ordemDeServicoGateway, servicoGateway)
-                .vincular(ordemServicoId, servicoId);
-    }
-
-    public void desvincularServico(Long ordemServicoId, Long servicoId) {
-        new DesvincularServicoOrdemDeServicoUseCase(ordemDeServicoGateway, servicoGateway)
-                .desvincular(ordemServicoId, servicoId);
-    }
-
-    public void vincularPeca(Long ordemServicoId, Long pecaId, Integer quantidade) {
-        new VincularPecaOrdemDeServicoUseCase(ordemDeServicoGateway, pecaGateway)
-                .vincular(ordemServicoId, pecaId, quantidade);
-    }
-
-    public void desvincularPeca(Long ordemServicoId, Long pecaId, Integer quantidade) {
-        new DesvincularPecaOrdemDeServicoUseCase(ordemDeServicoGateway, pecaGateway)
-                .desvincular(ordemServicoId, pecaId, quantidade);
-    }
-
-    public void vincularInsumo(Long ordemServicoId, Long insumoId, Integer quantidade) {
-        new VincularInsumoOrdemDeServicoUseCase(ordemDeServicoGateway, insumoGateway)
-                .vincular(ordemServicoId, insumoId, quantidade);
-    }
-
-    public void desvincularInsumo(Long ordemServicoId, Long insumoId, Integer quantidade) {
-        new DesvincularInsumoOrdemDeServicoUseCase(ordemDeServicoGateway, insumoGateway)
-                .desvincular(ordemServicoId, insumoId, quantidade);
-    }
-
     public void iniciarServico(Long ordemServicoId, Long servicoId) {
         new IniciarServicoOrdemDeServicoUseCase(ordemDeServicoGateway, servicoGateway)
                 .iniciar(ordemServicoId, servicoId);

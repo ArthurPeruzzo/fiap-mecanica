@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Configuration;
                 @Tag(name = "Insumo", description = "Operações relacionadas aos insumos"),
                 @Tag(name = "Serviço", description = "Operações relacionadas aos serviços"),
                 @Tag(name = "Ordem de Serviço", description = "Operações relacionadas a ordem de serviços"),
+                @Tag(name = "Gestão de Itens", description = "Vincula e desvincula serviços, peças e insumos em ordens de serviço"),
                 @Tag(name = "Orçamento", description = "Operações relacionadas ao orçamento da ordem de serviço"),
         },
         security = {
