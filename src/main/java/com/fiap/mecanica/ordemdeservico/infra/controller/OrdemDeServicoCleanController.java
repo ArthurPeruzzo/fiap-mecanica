@@ -7,7 +7,6 @@ import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
 import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
 import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
-import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
@@ -32,9 +31,6 @@ public class OrdemDeServicoCleanController {
     private final PecaGateway pecaGateway;
     private final InsumoGateway insumoGateway;
     private final NotificacaoGateway notificacaoGateway;
-    private final LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway;
-    private final String urlAprovarOrcamento;
-    private final String urlRecusarOrcamento;
 
     public OrdemDeServicoCleanController(OrdemDeServicoGateway ordemDeServicoGateway,
                                           AtendenteGateway atendenteGateway,
@@ -45,10 +41,7 @@ public class OrdemDeServicoCleanController {
                                           ServicoGateway servicoGateway,
                                           PecaGateway pecaGateway,
                                           InsumoGateway insumoGateway,
-                                          NotificacaoGateway notificacaoGateway,
-                                          LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway,
-                                          String urlAprovarOrcamento,
-                                          String urlRecusarOrcamento) {
+                                          NotificacaoGateway notificacaoGateway) {
         this.ordemDeServicoGateway = ordemDeServicoGateway;
         this.atendenteGateway = atendenteGateway;
         this.tokenGateway = tokenGateway;
@@ -59,9 +52,6 @@ public class OrdemDeServicoCleanController {
         this.pecaGateway = pecaGateway;
         this.insumoGateway = insumoGateway;
         this.notificacaoGateway = notificacaoGateway;
-        this.linkAprovacaoOrcamentoGateway = linkAprovacaoOrcamentoGateway;
-        this.urlAprovarOrcamento = urlAprovarOrcamento;
-        this.urlRecusarOrcamento = urlRecusarOrcamento;
     }
 
     public Long criar(CriarOrdemDeServicoDto dto) {
@@ -110,31 +100,6 @@ public class OrdemDeServicoCleanController {
     public void desvincularInsumo(Long ordemServicoId, Long insumoId, Integer quantidade) {
         new DesvincularInsumoOrdemDeServicoUseCase(ordemDeServicoGateway, insumoGateway)
                 .desvincular(ordemServicoId, insumoId, quantidade);
-    }
-
-    public void enviarOrcamento(Long ordemServicoId) {
-        new EnviarOrcamentoOrdemDeServicoUseCase(ordemDeServicoGateway, linkAprovacaoOrcamentoGateway,
-                notificacaoGateway, urlAprovarOrcamento, urlRecusarOrcamento).enviar(ordemServicoId);
-    }
-
-    public void recusarOrcamento(Long ordemServicoId) {
-        new OrcamentoRecusadoViaAtendenteUseCase(ordemDeServicoGateway, pecaGateway, insumoGateway, notificacaoGateway)
-                .recusar(ordemServicoId);
-    }
-
-    public void recusarOrcamentoViaToken(String token) {
-        new OrcamentoRecusadoViaTokenUseCase(ordemDeServicoGateway, pecaGateway, insumoGateway,
-                notificacaoGateway, linkAprovacaoOrcamentoGateway).recusar(token);
-    }
-
-    public void aprovarOrcamento(Long ordemServicoId) {
-        new OrcamentoAprovadoViaAtendenteUseCase(ordemDeServicoGateway, notificacaoGateway)
-                .aprovar(ordemServicoId);
-    }
-
-    public void aprovarOrcamentoViaToken(String token) {
-        new OrcamentoAprovadoViaTokenUseCase(ordemDeServicoGateway, notificacaoGateway, linkAprovacaoOrcamentoGateway)
-                .aprovar(token);
     }
 
     public void iniciarServico(Long ordemServicoId, Long servicoId) {
