@@ -73,67 +73,6 @@ public class OrdemDeServicoHttpController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ordemDeServicoId);
     }
 
-    @Operation(summary = "Iniciar Diagnóstico",
-            description = "Atribui o mecânico autenticado à ordem de serviço e avança o status para EM_DIAGNOSTICO. " +
-                    "Somente permitido se a ordem estiver no status RECEBIDA e sem mecânico vinculado")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Status atualizado com sucesso"),
-            @ApiResponse(responseCode = "401", description = "Não autenticado"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
-            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou mecânico não encontrado"),
-            @ApiResponse(responseCode = "422", description = "Outro mecânico já é responsável por esta ordem de serviço ou status inválido para a operação")
-    })
-    @PatchMapping("/{ordemServicoId}/diagnostico")
-    public ResponseEntity<Void> iniciarDiagnostico(@PathVariable Long ordemServicoId) {
-        cleanController.iniciarDiagnostico(ordemServicoId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @Operation(summary = "Concluir Diagnóstico",
-            description = "Conclui o diagnóstico, calcula o valor total do orçamento com base nos serviços, peças e insumos vinculados, e avança o status para DIAGNOSTICO_CONCLUIDO. Somente o mecânico responsável pela ordem pode concluir o diagnóstico.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Status atualizado com sucesso"),
-            @ApiResponse(responseCode = "401", description = "Não autenticado"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
-            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou mecânico não encontrado"),
-            @ApiResponse(responseCode = "422", description = "Mecânico não é o responsável, nenhum serviço vinculado ou status inválido para a operação")
-    })
-    @PatchMapping("/{ordemServicoId}/diagnostico/conclusao")
-    public ResponseEntity<Void> concluirDiagnostico(@PathVariable Long ordemServicoId) {
-        cleanController.concluirDiagnostico(ordemServicoId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @Operation(summary = "Iniciar Serviço",
-            description = "Inicia a execução de um serviço vinculado à ordem de serviço. A ordem precisa estar no status EM_EXECUCAO e o serviço ainda não pode ter sido iniciado.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Serviço iniciado com sucesso"),
-            @ApiResponse(responseCode = "401", description = "Não autenticado"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
-            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou serviço não encontrado"),
-            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está em execução, serviço não está vinculado ou já foi iniciado/finalizado")
-    })
-    @PatchMapping("/{ordemServicoId}/servicos/{servicoId}/iniciar")
-    public ResponseEntity<Void> iniciarServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
-        cleanController.iniciarServico(ordemServicoId, servicoId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @Operation(summary = "Finalizar Serviço",
-            description = "Finaliza a execução de um serviço vinculado à ordem de serviço. O serviço precisa ter sido previamente iniciado. Quando todos os serviços da ordem forem finalizados, a ordem avança automaticamente para o status FINALIZADA.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Serviço finalizado com sucesso"),
-            @ApiResponse(responseCode = "401", description = "Não autenticado"),
-            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil MECANICO"),
-            @ApiResponse(responseCode = "404", description = "Ordem de serviço ou serviço não encontrado"),
-            @ApiResponse(responseCode = "422", description = "Ordem de serviço não está em execução, serviço não está vinculado ou ainda não foi iniciado")
-    })
-    @PatchMapping("/{ordemServicoId}/servicos/{servicoId}/finalizar")
-    public ResponseEntity<Void> finalizarServico(@PathVariable Long ordemServicoId, @PathVariable Long servicoId) {
-        cleanController.finalizarServico(ordemServicoId, servicoId);
-        return ResponseEntity.noContent().build();
-    }
-
     @Operation(summary = "Entregar Ordem de Serviço",
             description = "Entrega a Ordem de Serviço. A ordem de serviço só será entregue se o status estiver em 'FINALIZADA'")
     @ApiResponses(value = {

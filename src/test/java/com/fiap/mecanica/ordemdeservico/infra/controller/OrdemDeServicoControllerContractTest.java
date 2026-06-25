@@ -3,26 +3,17 @@ package com.fiap.mecanica.ordemdeservico.infra.controller;
 import com.fiap.mecanica.estoque.core.domain.Insumo;
 import com.fiap.mecanica.estoque.core.domain.Peca;
 import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
-import com.fiap.mecanica.estoque.core.exception.EstoqueInsuficienteException;
-import com.fiap.mecanica.estoque.core.exception.InsumoNaoEncontradoException;
-import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
 import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
 import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.gestao.core.domain.Atendente;
 import com.fiap.mecanica.gestao.core.domain.Cliente;
-import com.fiap.mecanica.gestao.core.domain.Mecanico;
 import com.fiap.mecanica.gestao.core.domain.Veiculo;
-import com.fiap.mecanica.gestao.core.exception.AtendenteNaoEncontradoException;
-import com.fiap.mecanica.gestao.core.exception.ClienteNaoEncontradoException;
-import com.fiap.mecanica.gestao.core.exception.MecanicoNaoEncontradoException;
-import com.fiap.mecanica.gestao.core.exception.VeiculoNaoEncontradoException;
 import com.fiap.mecanica.gestao.core.gateway.AtendenteGateway;
 import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
 import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
 import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
-import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
@@ -73,10 +64,10 @@ class OrdemDeServicoControllerContractTest {
     @MockitoBean private NotificacaoGateway notificacaoGateway;
 
     private static final Long USER_ID = 10L;
-    private static final Long MECANICO_ID = 5L;
     private static final Long ATENDENTE_ID = 3L;
     private static final Long CLIENTE_ID = 1L;
     private static final Long VEICULO_ID = 2L;
+    private static final Long MECANICO_ID = 5L;
 
     private static final String VALID_BODY = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"}";
 
@@ -84,10 +75,6 @@ class OrdemDeServicoControllerContractTest {
 
     private Atendente atendente() {
         return Atendente.builder().id(ATENDENTE_ID).nomeCompleto(new NomeCompleto("João", "Silva")).build();
-    }
-
-    private Mecanico mecanico() {
-        return Mecanico.builder().id(MECANICO_ID).nomeCompleto(new NomeCompleto("Carlos", "Lima")).build();
     }
 
     private Cliente cliente() {
@@ -120,43 +107,6 @@ class OrdemDeServicoControllerContractTest {
         return buildOrdem(null, StatusOrdemDeServico.RECEBIDA, List.of(), List.of(), List.of(), null);
     }
 
-    private OrdemDeServico ordemComMecanicoJaVinculado() {
-        return buildOrdem(99L, StatusOrdemDeServico.RECEBIDA, List.of(), List.of(), List.of(), null);
-    }
-
-    private OrdemDeServico ordemEmDiagnostico() {
-        return buildOrdem(MECANICO_ID, StatusOrdemDeServico.EM_DIAGNOSTICO, List.of(), List.of(), List.of(), null);
-    }
-
-    private OrdemDeServico ordemEmDiagnosticoComServico() {
-        var sv = new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null);
-        return buildOrdem(MECANICO_ID, StatusOrdemDeServico.EM_DIAGNOSTICO, List.of(sv), List.of(), List.of(), null);
-    }
-
-    private OrdemDeServico ordemEmDiagnosticoComServicoOutroMecanico() {
-        var sv = new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null);
-        return buildOrdem(99L, StatusOrdemDeServico.EM_DIAGNOSTICO, List.of(sv), List.of(), List.of(), null);
-    }
-
-    private OrdemDeServico ordemDiagnosticoConcluido() {
-        var sv = new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null);
-        return buildOrdem(MECANICO_ID, StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, List.of(sv), List.of(), List.of(), new Orcamento(BigDecimal.TEN));
-    }
-
-    private OrdemDeServico ordemEmExecucaoSemServicos() {
-        return buildOrdem(MECANICO_ID, StatusOrdemDeServico.EM_EXECUCAO, List.of(), List.of(), List.of(), new Orcamento(BigDecimal.TEN));
-    }
-
-    private OrdemDeServico ordemEmExecucaoComServicoNaoIniciado() {
-        var sv = new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.NAO_INICIADO, null, null);
-        return buildOrdem(MECANICO_ID, StatusOrdemDeServico.EM_EXECUCAO, List.of(sv), List.of(), List.of(), new Orcamento(BigDecimal.TEN));
-    }
-
-    private OrdemDeServico ordemEmExecucaoComServicoEmExecucao() {
-        var sv = new ServicoVinculado(10L, BigDecimal.TEN, StatusServico.EM_EXECUCAO, LocalDateTime.now(), null);
-        return buildOrdem(MECANICO_ID, StatusOrdemDeServico.EM_EXECUCAO, List.of(sv), List.of(), List.of(), new Orcamento(BigDecimal.TEN));
-    }
-
     private OrdemDeServico ordemFinalizada() {
         return buildOrdem(MECANICO_ID, StatusOrdemDeServico.FINALIZADA, List.of(), List.of(), List.of(), new Orcamento(BigDecimal.TEN));
     }
@@ -168,14 +118,11 @@ class OrdemDeServicoControllerContractTest {
         Mockito.lenient().when(tokenGateway.getUserId()).thenReturn(USER_ID);
         Mockito.lenient().when(atendenteGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.of(atendente()));
         Mockito.lenient().when(atendenteGateway.findById(ATENDENTE_ID)).thenReturn(Optional.of(atendente()));
-        Mockito.lenient().when(mecanicoGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.of(mecanico()));
         Mockito.lenient().when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculo()));
         Mockito.lenient().when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(cliente()));
         Mockito.lenient().when(ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(VEICULO_ID)).thenReturn(false);
         Mockito.lenient().when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(1L);
         Mockito.lenient().when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
-        Mockito.lenient().when(servicoGateway.buscarPorId(10L))
-                .thenReturn(Optional.of(Servico.reconstituir(10L, "Serviço", "desc", BigDecimal.TEN)));
     }
 
     // ---- criar ----
@@ -377,200 +324,6 @@ class OrdemDeServicoControllerContractTest {
                         .content(requestJson))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$." + field).value(expectedMessage));
-    }
-
-    // ---- iniciarDiagnostico ----
-
-    @Test
-    void shouldReturn204WhenIniciarDiagnosticoSuccess() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void shouldReturn404WhenOrdemDeServicoNotFoundOnIniciar() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/99/diagnostico"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
-    }
-
-    @Test
-    void shouldReturn404WhenMecanicoNotFoundOnIniciar() throws Exception {
-        Mockito.when(mecanicoGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.empty());
-
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Mecânico não encontrado"));
-    }
-
-    @Test
-    void shouldReturn422WhenOutroMecanicoJaVinculado() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemComMecanicoJaVinculado()));
-
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Já existe um mecanico responsavel pela ordem de serviço"));
-    }
-
-    @Test
-    void shouldReturn422WhenTransicaoInvalidaOnIniciar() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnosticoComServico()));
-
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
-    }
-
-    // ---- concluirDiagnostico ----
-
-    @Test
-    void shouldReturn204WhenConcluirDiagnosticoSuccess() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnosticoComServico()));
-
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico/conclusao"))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void shouldReturn404WhenOrdemDeServicoNotFoundOnConcluir() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/99/diagnostico/conclusao"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
-    }
-
-    @Test
-    void shouldReturn404WhenMecanicoNotFoundOnConcluir() throws Exception {
-        Mockito.when(mecanicoGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.empty());
-
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico/conclusao"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Mecânico não encontrado"));
-    }
-
-    @Test
-    void shouldReturn422WhenMecanicoNaoEhResponsavelOnConcluir() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L))
-                .thenReturn(Optional.of(ordemEmDiagnosticoComServicoOutroMecanico()));
-
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico/conclusao"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Somente o mecânico responsável pelo diagnóstico pode concluí-lo"));
-    }
-
-    @Test
-    void shouldReturn422WhenSemServicosVinculadosOnConcluir() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnostico()));
-
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico/conclusao"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Não é possível concluir o diagnóstico sem ao menos um serviço vinculado"));
-    }
-
-    @Test
-    void shouldReturn422WhenTransicaoInvalidaOnConcluir() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemDiagnosticoConcluido()));
-
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/diagnostico/conclusao"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
-    }
-
-    // ---- iniciarServico ----
-
-    @Test
-    void shouldReturn204WhenIniciarServicoSuccess() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmExecucaoComServicoNaoIniciado()));
-
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/iniciar"))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void shouldReturn404WhenOrdemNotFoundOnIniciarServico() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/99/servicos/10/iniciar"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
-    }
-
-    @Test
-    void shouldReturn404WhenServicoNotFoundOnIniciarServico() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/99/iniciar"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Serviço não encontrado"));
-    }
-
-    @Test
-    void shouldReturn422WhenServicoNaoVinculadoOnIniciarServico() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmExecucaoSemServicos()));
-
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/iniciar"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Este serviço não está vinculado à ordem de serviço"));
-    }
-
-    @Test
-    void shouldReturn422WhenOrdemNaoEmExecucaoOnIniciarServico() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/iniciar"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Não é possível iniciar um serviço se a ordem de serviço não está em execução"));
-    }
-
-    @Test
-    void shouldReturn422WhenServicoJaIniciadoOnIniciarServico() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmExecucaoComServicoEmExecucao()));
-
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/iniciar"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Este serviço já foi iniciado ou finalizado"));
-    }
-
-    // ---- finalizarServico ----
-
-    @Test
-    void shouldReturn204WhenFinalizarServicoSuccess() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmExecucaoComServicoEmExecucao()));
-
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/finalizar"))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    void shouldReturn404WhenOrdemNotFoundOnFinalizar() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/99/servicos/10/finalizar"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
-    }
-
-    @Test
-    void shouldReturn404WhenServicoNotFoundOnFinalizar() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/99/finalizar"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Serviço não encontrado"));
-    }
-
-    @Test
-    void shouldReturn422WhenServicoNaoVinculadoOnFinalizar() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmExecucaoSemServicos()));
-
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/finalizar"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Este serviço não está vinculado à ordem de serviço"));
-    }
-
-    @Test
-    void shouldReturn422WhenOrdemNaoEmExecucaoOnFinalizar() throws Exception {
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/finalizar"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Não é possível finalizar um serviço se a ordem de serviço não está em execução"));
-    }
-
-    @Test
-    void shouldReturn422WhenServicoNaoIniciadoOuFinalizadoOnFinalizar() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmExecucaoComServicoNaoIniciado()));
-
-        mockMvc.perform(MockMvcRequestBuilders.patch("/ordem-servico/1/servicos/10/finalizar"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("Este serviço ainda não foi iniciado ou já foi finalizado"));
     }
 
     // ---- entregar ----
