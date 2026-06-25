@@ -21,7 +21,6 @@ import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.shared.page.Pagina;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -111,24 +110,17 @@ class OrdemDeServicoControllerContractTest {
         return buildOrdem(MECANICO_ID, StatusOrdemDeServico.FINALIZADA, List.of(), List.of(), List.of(), new Orcamento(BigDecimal.TEN));
     }
 
-    // ---- setup ----
-
-    @BeforeEach
-    void setUp() {
-        Mockito.lenient().when(tokenGateway.getUserId()).thenReturn(USER_ID);
-        Mockito.lenient().when(atendenteGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.of(atendente()));
-        Mockito.lenient().when(atendenteGateway.findById(ATENDENTE_ID)).thenReturn(Optional.of(atendente()));
-        Mockito.lenient().when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculo()));
-        Mockito.lenient().when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(cliente()));
-        Mockito.lenient().when(ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(VEICULO_ID)).thenReturn(false);
-        Mockito.lenient().when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(1L);
-        Mockito.lenient().when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
-    }
-
     // ---- criar ----
 
     @Test
     void shouldReturn201WhenValidRequest() throws Exception {
+        Mockito.when(tokenGateway.getUserId()).thenReturn(USER_ID);
+        Mockito.when(atendenteGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.of(atendente()));
+        Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculo()));
+        Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(cliente()));
+        Mockito.when(ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(VEICULO_ID)).thenReturn(false);
+        Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(1L);
+
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_BODY))
@@ -139,6 +131,11 @@ class OrdemDeServicoControllerContractTest {
 
     @Test
     void shouldReturn201WithOrdemIdInBody() throws Exception {
+        Mockito.when(tokenGateway.getUserId()).thenReturn(USER_ID);
+        Mockito.when(atendenteGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.of(atendente()));
+        Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculo()));
+        Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(cliente()));
+        Mockito.when(ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(VEICULO_ID)).thenReturn(false);
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(42L);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
@@ -150,14 +147,21 @@ class OrdemDeServicoControllerContractTest {
 
     @Test
     void shouldReturn201WhenRequestIncludesPecasAndInsumos() throws Exception {
-        String bodyWithLinks = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"," +
-                "\"servicosIds\":[10],\"pecas\":[{\"id\":5,\"quantidade\":2}],\"insumos\":[{\"id\":30,\"quantidade\":1}]}";
-        Mockito.when(insumoGateway.listarPorIds(List.of(30L)))
-                .thenReturn(List.of(Insumo.reconstituir(30L, "Insumo", "desc", BigDecimal.TEN, UnidadeMedida.LITRO, 10)));
-        Mockito.when(pecaGateway.listarPorIds(List.of(5L)))
-                .thenReturn(List.of(Peca.reconstituir(5L, "Peca", "desc", BigDecimal.TEN, 10)));
+        Mockito.when(tokenGateway.getUserId()).thenReturn(USER_ID);
+        Mockito.when(atendenteGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.of(atendente()));
+        Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculo()));
+        Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(cliente()));
+        Mockito.when(ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(VEICULO_ID)).thenReturn(false);
+        Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(1L);
         Mockito.when(servicoGateway.listarPorIds(List.of(10L)))
                 .thenReturn(List.of(Servico.reconstituir(10L, "Serviço", "desc", BigDecimal.TEN)));
+        Mockito.when(pecaGateway.listarPorIds(List.of(5L)))
+                .thenReturn(List.of(Peca.reconstituir(5L, "Peca", "desc", BigDecimal.TEN, 10)));
+        Mockito.when(insumoGateway.listarPorIds(List.of(30L)))
+                .thenReturn(List.of(Insumo.reconstituir(30L, "Insumo", "desc", BigDecimal.TEN, UnidadeMedida.LITRO, 10)));
+
+        String bodyWithLinks = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"," +
+                "\"servicosIds\":[10],\"pecas\":[{\"id\":5,\"quantidade\":2}],\"insumos\":[{\"id\":30,\"quantidade\":1}]}";
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -209,6 +213,7 @@ class OrdemDeServicoControllerContractTest {
 
     @Test
     void shouldReturn404WhenAtendenteNotFound() throws Exception {
+        Mockito.when(tokenGateway.getUserId()).thenReturn(USER_ID);
         Mockito.when(atendenteGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.empty());
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
@@ -220,6 +225,8 @@ class OrdemDeServicoControllerContractTest {
 
     @Test
     void shouldReturn404WhenVeiculoNotFound() throws Exception {
+        Mockito.when(tokenGateway.getUserId()).thenReturn(USER_ID);
+        Mockito.when(atendenteGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.of(atendente()));
         Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.empty());
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
@@ -231,6 +238,9 @@ class OrdemDeServicoControllerContractTest {
 
     @Test
     void shouldReturn404WhenClienteNotFound() throws Exception {
+        Mockito.when(tokenGateway.getUserId()).thenReturn(USER_ID);
+        Mockito.when(atendenteGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.of(atendente()));
+        Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculo()));
         Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.empty());
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
@@ -242,44 +252,62 @@ class OrdemDeServicoControllerContractTest {
 
     @Test
     void shouldReturn404WhenServicoNotFoundOnCriar() throws Exception {
+        Mockito.when(tokenGateway.getUserId()).thenReturn(USER_ID);
+        Mockito.when(atendenteGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.of(atendente()));
+        Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculo()));
+        Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(cliente()));
+        Mockito.when(ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(VEICULO_ID)).thenReturn(false);
+        Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(1L);
         Mockito.when(servicoGateway.listarPorIds(Mockito.anyList())).thenReturn(List.of());
-        String body = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"teste\",\"servicosIds\":[99]}";
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
+                        .content("{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"teste\",\"servicosIds\":[99]}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Serviço não encontrado"));
     }
 
     @Test
     void shouldReturn404WhenPecaNotFoundOnCriar() throws Exception {
+        Mockito.when(tokenGateway.getUserId()).thenReturn(USER_ID);
+        Mockito.when(atendenteGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.of(atendente()));
+        Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculo()));
+        Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(cliente()));
+        Mockito.when(ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(VEICULO_ID)).thenReturn(false);
+        Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(1L);
         Mockito.when(pecaGateway.listarPorIds(Mockito.anyList())).thenReturn(List.of());
-        String body = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"teste\",\"pecas\":[{\"id\":99,\"quantidade\":1}]}";
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
+                        .content("{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"teste\",\"pecas\":[{\"id\":99,\"quantidade\":1}]}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Peça não encontrada"));
     }
 
     @Test
     void shouldReturn404WhenInsumoNotFoundOnCriar() throws Exception {
+        Mockito.when(tokenGateway.getUserId()).thenReturn(USER_ID);
+        Mockito.when(atendenteGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.of(atendente()));
+        Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculo()));
+        Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(cliente()));
+        Mockito.when(ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(VEICULO_ID)).thenReturn(false);
+        Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(1L);
         Mockito.when(insumoGateway.listarPorIds(Mockito.anyList())).thenReturn(List.of());
-        String body = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"teste\",\"insumos\":[{\"id\":99,\"quantidade\":1}]}";
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
+                        .content("{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"teste\",\"insumos\":[{\"id\":99,\"quantidade\":1}]}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Insumo não encontrado"));
     }
 
     @Test
     void shouldReturn422WhenVeiculoNaoPertenceAoCliente() throws Exception {
+        Mockito.when(tokenGateway.getUserId()).thenReturn(USER_ID);
+        Mockito.when(atendenteGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.of(atendente()));
         Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID))
                 .thenReturn(Optional.of(Veiculo.reconstituir(VEICULO_ID, 99L, "ABC1234", "Gol", 2020)));
+        Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(cliente()));
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -290,6 +318,10 @@ class OrdemDeServicoControllerContractTest {
 
     @Test
     void shouldReturn422WhenOrdemAbertaExistsForVeiculo() throws Exception {
+        Mockito.when(tokenGateway.getUserId()).thenReturn(USER_ID);
+        Mockito.when(atendenteGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.of(atendente()));
+        Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculo()));
+        Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(cliente()));
         Mockito.when(ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(VEICULO_ID)).thenReturn(true);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
@@ -301,13 +333,18 @@ class OrdemDeServicoControllerContractTest {
 
     @Test
     void shouldReturn422WhenEstoqueInsuficienteOnCriar() throws Exception {
+        Mockito.when(tokenGateway.getUserId()).thenReturn(USER_ID);
+        Mockito.when(atendenteGateway.findByUsuarioId(USER_ID)).thenReturn(Optional.of(atendente()));
+        Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculo()));
+        Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(cliente()));
+        Mockito.when(ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(VEICULO_ID)).thenReturn(false);
+        Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(1L);
         Mockito.when(pecaGateway.listarPorIds(Mockito.anyList()))
                 .thenReturn(List.of(Peca.reconstituir(5L, "Peca", "desc", BigDecimal.TEN, 0)));
-        String body = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"teste\",\"pecas\":[{\"id\":5,\"quantidade\":2}]}";
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
+                        .content("{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"teste\",\"pecas\":[{\"id\":5,\"quantidade\":2}]}"))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Estoque insuficiente para realizar a operação"));
     }
@@ -340,8 +377,10 @@ class OrdemDeServicoControllerContractTest {
 
     @Test
     void shouldReturn200WithPagedDetalhamentoWhenSuccess() throws Exception {
-        var ordemPage = new Pagina<>(List.of(ordemRecebida()), 0, 10, 1L, 1);
-        Mockito.when(ordemDeServicoGateway.listar(0, 10)).thenReturn(ordemPage);
+        Mockito.when(ordemDeServicoGateway.listar(0, 10)).thenReturn(new Pagina<>(List.of(ordemRecebida()), 0, 10, 1L, 1));
+        Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(cliente()));
+        Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculo()));
+        Mockito.when(atendenteGateway.findById(ATENDENTE_ID)).thenReturn(Optional.of(atendente()));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/ordem-servico/detalhamento")
                         .param("page", "0")
@@ -360,6 +399,8 @@ class OrdemDeServicoControllerContractTest {
 
     @Test
     void shouldReturn200WithStatusWhenConsultarStatusSuccess() throws Exception {
+        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
+
         mockMvc.perform(MockMvcRequestBuilders.get("/ordem-servico/1/status"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
