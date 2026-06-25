@@ -1,6 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico;
 
-import com.fiap.mecanica.ordemdeservico.core.dto.ConsultarStatusOrdemDeServicoDto;
+import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 
@@ -16,8 +16,8 @@ public class ConsultarStatusOrdemDeServicoUseCase {
     }
 
     public void consultar(Long id) {
-        var os = ordemDeServicoGateway.buscarPorId(id)
+        OrdemDeServico ordemDeServico = ordemDeServicoGateway.buscarPorId(id)
                 .orElseThrow(OrdemDeServicoNaoEncontradaException::new);
-        outputPort.apresentar(new ConsultarStatusOrdemDeServicoDto(os.getId(), os.getStatus().name()));
+        outputPort.apresentar(ordemDeServico);
     }
 }

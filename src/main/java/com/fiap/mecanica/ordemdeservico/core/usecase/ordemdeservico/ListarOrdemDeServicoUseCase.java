@@ -39,10 +39,10 @@ public class ListarOrdemDeServicoUseCase {
 	}
 
 	public void listar(int page, int size) {
-		outputPort.apresentar(ordemDeServicoGateway.listar(page, size).map(this::mapear));
+		outputPort.apresentar(ordemDeServicoGateway.listar(page, size).map(this::enriquecer));
 	}
 
-	private OrdemDeServicoListagemDto mapear(OrdemDeServico os) {
+	private OrdemDeServicoListagemDto enriquecer(OrdemDeServico os) {
 		var cliente = clienteGateway.buscarPorId(os.getClienteId()).orElseThrow(ClienteNaoEncontradoException::new);
 		var veiculo = veiculoGateway.buscarPorId(os.getVeiculoId()).orElseThrow(VeiculoNaoEncontradoException::new);
 		var atendente = atendenteGateway.findById(os.getAtendenteId()).orElseThrow(AtendenteNaoEncontradoException::new);
