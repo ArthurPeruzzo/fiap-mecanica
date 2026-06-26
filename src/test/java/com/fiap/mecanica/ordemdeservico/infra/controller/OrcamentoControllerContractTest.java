@@ -9,12 +9,13 @@ import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -110,11 +111,16 @@ class OrcamentoControllerContractTest {
                 .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
     }
 
-    @Test
-    void shouldReturn422WhenTransicaoInvalidaOnEnviarOrcamento() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "/ordem-servico/orcamento/envio/1",
+            "/ordem-servico/orcamento/recusar/1",
+            "/ordem-servico/orcamento/aprovar/1"
+    })
+    void shouldReturn422WhenTransicaoInvalida(String url) throws Exception {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
 
-        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/envio/1"))
+        mockMvc.perform(MockMvcRequestBuilders.post(url))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
     }
@@ -136,14 +142,6 @@ class OrcamentoControllerContractTest {
                 .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
     }
 
-    @Test
-    void shouldReturn422WhenTransicaoInvalidaOnRecusar() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/recusar/1"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
-    }
 
     // ---- aprovarOrcamento (atendente) ----
 
@@ -160,15 +158,6 @@ class OrcamentoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/aprovar/99"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
-    }
-
-    @Test
-    void shouldReturn422WhenTransicaoInvalidaOnAprovar() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
-
-        mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico/orcamento/aprovar/1"))
-                .andExpect(status().isUnprocessableContent())
-                .andExpect(jsonPath("$.message").value("A ordem de serviço não está no status correto para esta operação"));
     }
 
     // ---- recusar / aprovar via token ----
