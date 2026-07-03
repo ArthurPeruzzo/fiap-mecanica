@@ -34,7 +34,8 @@ public class SecurityConfiguration {
             "/swagger-ui.html",
             "/swagger-ui/**",
             "/favicon.ico",
-            "/ordem-servico/orcamento/externo/**"
+            "/ordem-servico/orcamento/externo/**",
+            "/actuator/health/**"
     };
 
     private static final String[] ENDPOINTS_ADMINISTRADOR = {
