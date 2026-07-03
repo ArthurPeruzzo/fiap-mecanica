@@ -8,6 +8,20 @@ RUN ./mvnw package -DskipTests -q
 
 FROM eclipse-temurin:25-jre
 WORKDIR /app
-COPY --from=build /app/target/mecanica-0.0.1-SNAPSHOT.jar app.jar
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 mecanica \
+    && useradd --uid 10001 --gid mecanica --no-create-home --no-log-init mecanica
+
+COPY --from=build --chown=mecanica:mecanica /app/target/*.jar app.jar
+
+USER mecanica
+
 EXPOSE 8080
-ENTRYPOINT ["java", "-Xms64m", "-Xmx128m", "-jar", "app.jar"]
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8080/actuator/health/liveness || exit 1
+
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]
