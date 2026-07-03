@@ -35,7 +35,8 @@ class SecurityConfigurationUnitTest {
                 "/swagger-ui.html",
                 "/swagger-ui/**",
                 "/favicon.ico",
-                "/ordem-servico/orcamento/externo/**"
+                "/ordem-servico/orcamento/externo/**",
+                "/actuator/health/**"
         }, endpoints);
     }
 
