@@ -33,8 +33,6 @@ A aplicação possui entidades com relacionamentos bem definidos, o que se encai
 
 ---
 
-> **Aviso:** credenciais de banco de dados e o JWT secret estão expostos neste repositório intencionalmente para facilitar a execução em ambiente de testes e avaliação acadêmica.
-
 ## Rodando localmente
 
 ### Pré-requisitos
@@ -53,6 +51,25 @@ Realize o clone do repositório em sua máquina local.
 git clone https://github.com/ArthurPeruzzo/fiap-mecanica.git
 ```
 
+### Configuração de variáveis de ambiente
+
+O `docker-compose.yml` não traz credenciais nem o `JWT_SECRET` fixos no arquivo — eles vêm de um arquivo `.env` local, que **não é versionado** (está no `.gitignore`). Antes do primeiro `docker compose up`, copie o template:
+
+```
+cp .env.example .env
+```
+
+O `.env.example` já traz valores padrão (`root`/`root`) suficientes para rodar localmente sem nenhum ajuste.
+
+| Variável | Descrição |
+|---|---|
+| `DB_ROOT_PASSWORD` | Senha do usuário `root` do MySQL (container `db`) |
+| `DB_USERNAME` | Usuário usado pela aplicação para conectar ao banco |
+| `DB_PASSWORD` | Senha usada pela aplicação para conectar ao banco |
+| `JWT_SECRET` | Chave usada para assinar/validar os tokens JWT. Deve ser uma string Base64URL com no mínimo 32 bytes decodificados |
+
+> O Docker Compose carrega o `.env` automaticamente por estar no mesmo diretório do `docker-compose.yml` — não é preciso passar nenhuma flag adicional.
+
 ### Docker Compose
 
 Sobe a aplicação e o banco de dados juntos, sem necessidade de instalar Java ou MySQL localmente.
@@ -64,14 +81,14 @@ docker compose up
 
 A aplicação ficará disponível em `http://localhost:8080`.
 
-O MySQL ficará acessível no host em `localhost:3307` (útil para conectar com DBeaver ou outro cliente SQL):
+O MySQL ficará acessível no host em `localhost:3307` (útil para conectar com DBeaver ou outro cliente SQL). Com os valores padrão do `.env.example`:
 
 | Campo | Valor |
 |---|---|
 | Host | `127.0.0.1` |
 | Porta | `3307` |
 | Usuário | `root` |
-| Senha | `root` |
+| Senha | `root` (`DB_ROOT_PASSWORD` no `.env`) |
 | Database | `mecanica` |
 
 Para parar:
