@@ -29,3 +29,11 @@ output "eks_cluster_certificate_authority_data" {
 output "eks_node_group_name" {
   value = aws_eks_node_group.node-group.node_group_name
 }
+
+output "db_endpoint" {
+  value = aws_db_instance.mysql.endpoint
+}
+
+output "db_name" {
+  value = aws_db_instance.mysql.db_name
+}
