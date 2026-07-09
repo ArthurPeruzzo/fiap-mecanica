@@ -44,7 +44,10 @@ jobs:
       uses: advanced-security/maven-dependency-submission-action@571e99aab1055c2e71a1e2309b9691de18d6b7d6
 
   docker-build-push:
-    needs: build-test
+    # precisa do terraform-apply: se a infra (incluindo o ECR) tiver sido destruída
+    # e recriada, o repositório só existe depois que o apply terminar — sem essa
+    # dependência, o push corre risco de tentar publicar num ECR que ainda não existe.
+    needs: [build-test, terraform-apply]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: producao
@@ -90,7 +93,10 @@ jobs:
   terraform-apply:
     needs: build-test
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 40min: um apply incremental leva segundos, mas criar o cluster EKS +
+    # node group + RDS do zero (ex: após um terraform destroy) pode passar
+    # de 20min só no control plane do EKS.
+    timeout-minutes: 40
     environment: producao
     permissions:
       contents: read
