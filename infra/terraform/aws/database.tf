@@ -34,8 +34,8 @@ resource "aws_db_instance" "mysql" {
   instance_class = var.db_instance_class
 
   allocated_storage = 20
-  storage_type       = "gp2"
-  storage_encrypted  = true
+  storage_type      = "gp2"
+  storage_encrypted = true
 
   db_name  = var.db_name
   username = var.db_username
@@ -48,6 +48,7 @@ resource "aws_db_instance" "mysql" {
   multi_az            = false
   skip_final_snapshot = true
   deletion_protection = false
+  apply_immediately   = true # troca de senha/config vale na hora, sem esperar a maintenance window
 
   tags = var.tags
 }

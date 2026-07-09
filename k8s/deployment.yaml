@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fiap-mecanica
+  namespace: fiap-mecanica
+  labels:
+    app: fiap-mecanica
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fiap-mecanica
+  template:
+    metadata:
+      labels:
+        app: fiap-mecanica
+    spec:
+      containers:
+        - name: fiap-mecanica
+          # Requer imagem publicada no ECR antes do apply, senão ImagePullBackOff.
+          image: "423972067332.dkr.ecr.us-east-1.amazonaws.com/fiap-mecanica:latest"
+          # Explícito (mesmo já sendo o default do k8s p/ tag :latest) para garantir
+          # que cada novo pod puxa a imagem mais recente durante a fase de testes.
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: fiap-mecanica-config
+            - secretRef:
+                name: fiap-mecanica-secret
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "768Mi"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
