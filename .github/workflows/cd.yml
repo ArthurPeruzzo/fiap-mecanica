@@ -43,6 +43,7 @@ jobs:
     needs: build-test
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    environment: producao
     permissions:
       contents: read
     outputs:
@@ -86,6 +87,7 @@ jobs:
     needs: build-test
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    environment: producao
     permissions:
       contents: read
     defaults:
@@ -115,6 +117,7 @@ jobs:
     needs: [docker-build-push, terraform-apply]
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    environment: producao
     permissions:
       contents: read
 
