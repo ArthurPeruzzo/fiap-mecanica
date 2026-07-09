@@ -1,0 +1,16 @@
+# CI — roda em toda pull request pra main. Só valida (compila, testa, empacota),
+# não publica nem faz deploy de nada. Ver cd.yml para o que roda pós-merge.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    uses: ./.github/workflows/build-test.yml
