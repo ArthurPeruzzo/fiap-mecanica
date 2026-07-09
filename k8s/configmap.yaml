@@ -1,3 +1,7 @@
+# Referência para uso manual/local (ver k8s/README.md). A pipeline de CD
+# (.github/workflows/cd.yml) NÃO aplica este arquivo — ela gera o ConfigMap
+# dinamicamente a partir do output do Terraform (DB_URL) e do hostname real
+# do LoadBalancer (URLs de orçamento), resolvido em tempo de deploy.
 apiVersion: v1
 kind: ConfigMap
 metadata:

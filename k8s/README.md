@@ -37,7 +37,7 @@ O `image:` em `deployment.yaml` já aponta para o repositório ECR real (`423972
    kubectl apply -f k8s/service.yaml
    kubectl apply -f k8s/hpa.yaml
    ```
-   **Não use o atalho `kubectl apply -f k8s/`** num cluster do zero: ele processa os arquivos em ordem alfabética, e `configmap.yaml` viria antes de `namespace.yaml`, falhando porque o namespace ainda não existe. É por isso que o job `k8s-deploy` do pipeline (`.github/workflows/pipeline.yml`) também usa comandos explícitos nessa mesma ordem, não o atalho.
+   **Não use o atalho `kubectl apply -f k8s/`** num cluster do zero: ele processa os arquivos em ordem alfabética, e `configmap.yaml` viria antes de `namespace.yaml`, falhando porque o namespace ainda não existe. É por isso que o job `k8s-deploy` do pipeline (`.github/workflows/cd.yml`) também usa comandos explícitos nessa mesma ordem, não o atalho.
 
 4. **Atualizar as URLs de orçamento** depois que o LoadBalancer subir:
    ```bash
@@ -47,6 +47,8 @@ O `image:` em `deployment.yaml` já aponta para o repositório ECR real (`423972
    kubectl apply -f k8s/configmap.yaml
    kubectl rollout restart deployment/fiap-mecanica -n fiap-mecanica
    ```
+
+   **Isso é só para o fluxo manual.** O job `k8s-deploy` do `cd.yml` não usa o `configmap.yaml` commitado — ele gera o ConfigMap dinamicamente: `DB_URL` a partir do output do Terraform (`terraform output db_endpoint`, capturado automaticamente no job anterior) e as URLs de orçamento a partir do hostname real do LoadBalancer, obtido via `kubectl get svc` com espera ativa (poll) logo após aplicar o `Service` — sem precisar de passo manual, e funcionando mesmo depois de um `terraform destroy`/`apply` que gere um RDS e um LoadBalancer novos.
 
 ## Ciclo rápido de teste (enquanto a versão da imagem for `:latest`)
 
@@ -73,7 +75,7 @@ curl -fsSL -o k8s/metrics-server.yaml https://github.com/kubernetes-sigs/metrics
 | Arquivo | O que é |
 |---|---|
 | `namespace.yaml` | Namespace `fiap-mecanica` |
-| `configmap.yaml` | Config não sensível (DB_URL, URLs de orçamento) |
+| `configmap.yaml` | Config não sensível (DB_URL, URLs de orçamento) — referência para uso manual; o `cd.yml` gera o seu próprio ConfigMap dinamicamente, não aplica este arquivo |
 | `secret.yaml.example` | Template do Secret (credenciais DB, JWT). Copiar para `secret.yaml` e preencher — não commitar |
 | `deployment.yaml` | Deployment da app, probes de liveness/readiness via Actuator, requests/limits de CPU/memória |
 | `service.yaml` | Service `LoadBalancer`, expõe a porta 80 → 8080 |

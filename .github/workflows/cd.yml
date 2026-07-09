@@ -9,7 +9,11 @@ on:
 
 concurrency:
   group: cd-${{ github.ref }}
-  cancel-in-progress: true
+  # false de propósito: este workflow muda infraestrutura real (terraform apply,
+  # kubectl apply). Cancelar no meio pode deixar o Terraform state (sem lock) ou
+  # o cluster num estado parcialmente aplicado. Runs concorrentes ficam na fila
+  # em vez de matar um run em andamento.
+  cancel-in-progress: false
 
 env:
   AWS_REGION: us-east-1
@@ -40,7 +44,10 @@ jobs:
       uses: advanced-security/maven-dependency-submission-action@571e99aab1055c2e71a1e2309b9691de18d6b7d6
 
   docker-build-push:
-    needs: build-test
+    # precisa do terraform-apply: se a infra (incluindo o ECR) tiver sido destruída
+    # e recriada, o repositório só existe depois que o apply terminar — sem essa
+    # dependência, o push corre risco de tentar publicar num ECR que ainda não existe.
+    needs: [build-test, terraform-apply]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: producao
@@ -86,7 +93,10 @@ jobs:
   terraform-apply:
     needs: build-test
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 40min: um apply incremental leva segundos, mas criar o cluster EKS +
+    # node group + RDS do zero (ex: após um terraform destroy) pode passar
+    # de 20min só no control plane do EKS.
+    timeout-minutes: 40
     environment: producao
     permissions:
       contents: read
@@ -96,6 +106,8 @@ jobs:
     env:
       TF_VAR_db_username: ${{ secrets.TF_VAR_DB_USERNAME }}
       TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
+    outputs:
+      db_endpoint: ${{ steps.tf_outputs.outputs.db_endpoint }}
 
     steps:
     - uses: actions/checkout@v4
@@ -112,6 +124,9 @@ jobs:
       run: terraform init
     - name: Terraform apply
       run: terraform apply -auto-approve
+    - name: Capturar outputs do Terraform
+      id: tf_outputs
+      run: echo "db_endpoint=$(terraform output -raw db_endpoint)" >> "$GITHUB_OUTPUT"
 
   k8s-deploy:
     needs: [docker-build-push, terraform-apply]
@@ -143,15 +158,26 @@ jobs:
           --from-literal=DB_PASSWORD="${{ secrets.TF_VAR_DB_PASSWORD }}" \
           --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET }}" \
           --dry-run=client -o yaml | kubectl apply -f -
-    - name: Aplicar ConfigMap e Deployment
+    - name: Aplicar Service (antes do Deployment — só assim dá pra descobrir o hostname do LoadBalancer sem subir pods com config incompleta)
+      run: kubectl apply -f k8s/service.yaml
+    - name: Aguardar hostname do LoadBalancer
+      id: wait_lb
       run: |
-        kubectl apply -f k8s/configmap.yaml
-        kubectl apply -f k8s/deployment.yaml
+        kubectl wait --for=jsonpath='{.status.loadBalancer.ingress[0].hostname}' \
+          service/fiap-mecanica -n fiap-mecanica --timeout=180s
+        echo "hostname=$(kubectl get svc fiap-mecanica -n fiap-mecanica -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')" >> "$GITHUB_OUTPUT"
+    - name: Gerar ConfigMap (DB_URL + URLs de orçamento já resolvidos, numa única passada)
+      run: |
+        kubectl create configmap fiap-mecanica-config -n fiap-mecanica \
+          --from-literal=DB_URL="jdbc:mysql://${{ needs.terraform-apply.outputs.db_endpoint }}/mecanica" \
+          --from-literal=URL_APROVAR_ORCAMENTO="http://${{ steps.wait_lb.outputs.hostname }}/ordem-servico/orcamento/externo/aprovar/" \
+          --from-literal=URL_RECUSAR_ORCAMENTO="http://${{ steps.wait_lb.outputs.hostname }}/ordem-servico/orcamento/externo/recusar/" \
+          --dry-run=client -o yaml | kubectl apply -f -
+    - name: Aplicar Deployment (pods já nascem com a config completa)
+      run: kubectl apply -f k8s/deployment.yaml
     - name: Definir a versão da imagem publicada nesta run
       run: kubectl set image deployment/fiap-mecanica fiap-mecanica=${{ env.ECR_REPOSITORY }}:${{ needs.docker-build-push.outputs.version }} -n fiap-mecanica
-    - name: Aplicar Service e HPA
-      run: |
-        kubectl apply -f k8s/service.yaml
-        kubectl apply -f k8s/hpa.yaml
+    - name: Aplicar HPA
+      run: kubectl apply -f k8s/hpa.yaml
     - name: Aguardar rollout
       run: kubectl rollout status deployment/fiap-mecanica -n fiap-mecanica --timeout=180s
