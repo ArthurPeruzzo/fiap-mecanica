@@ -9,6 +9,10 @@ API REST para gestão de uma oficina mecânica, desenvolvida como projeto acadê
 - Gerenciar estoque de peças e insumos com baixa e devolução automática ao vincular/desvincular de ordens
 - Restringir operações por perfil: administrador, atendente e mecânico
 
+### Fase 2 — Objetivo desta etapa
+
+A Fase 1 entregou a API funcional com Clean Architecture. A Fase 2 evolui o projeto para um ambiente produtivo real na AWS: containerização, orquestração via Kubernetes, provisionamento de infraestrutura como código (Terraform) e uma pipeline de CI/CD que builda, testa, publica a imagem e faz o deploy automaticamente a cada merge na `main`.
+
 ## Stack
 
 - Java 25
@@ -30,6 +34,54 @@ protegendo o core do negócio dos detalhes de infraestrutura e trazendo uma manu
 ### Justificativa para a escolha do MySQL
 
 A aplicação possui entidades com relacionamentos bem definidos, o que se encaixa naturalmente no modelo relacional. Além disso, o MySQL é amplamente adotado no mercado e possui integração nativa com o ecossistema Spring.
+
+### Infraestrutura provisionada (AWS)
+
+```mermaid
+graph TB
+    User["Cliente / navegador"]
+
+    subgraph AWS["AWS — VPC (Terraform, infra/terraform/aws)"]
+        subgraph EKS["Cluster EKS: eks-fiap-mecanica"]
+            LB["Service — LoadBalancer"]
+            subgraph Deploy["Deployment fiap-mecanica<br/>(HPA: 1–4 réplicas, CPU/mem 70%)"]
+                Pod1["Pod"]
+                Pod2["Pod"]
+                PodN["Pod ..."]
+            end
+            CM["ConfigMap"]
+            Secret["Secret"]
+        end
+        RDS[("RDS MySQL<br/>privado")]
+        ECR["ECR — fiap-mecanica<br/>(imagem Docker)"]
+    end
+
+    User -- HTTP --> LB
+    LB --> Pod1 & Pod2 & PodN
+    CM -.env.-> Pod1
+    Secret -.env.-> Pod1
+    Pod1 -- JDBC --> RDS
+    ECR -.imagem.-> Pod1
+```
+
+**Componentes da aplicação:** API Spring Boot (Clean Architecture) empacotada em imagem Docker, rodando em 1–4 réplicas gerenciadas por um `Deployment` no Kubernetes, com escalonamento automático (`HorizontalPodAutoscaler`) por CPU/memória.
+
+**Infraestrutura provisionada:** VPC dedicada com subnets públicas multi-AZ, cluster EKS com node group gerenciado, banco RDS MySQL privado (acessível só pelo SG do cluster) e repositório ECR privado para a imagem. Tudo provisionado via Terraform — detalhes em [`infra/terraform/aws/README.md`](infra/terraform/aws/README.md).
+
+### Fluxo de deploy (CI/CD)
+
+```mermaid
+graph LR
+    PR["Pull Request → main"] --> CI["CI (ci.yml)<br/>build-test + terraform plan"]
+    CI -- merge --> CD["CD (cd.yml)<br/>build-test"]
+    CD --> Docker["docker build + push<br/>→ ECR"]
+    CD --> TF["terraform apply<br/>→ EKS / RDS / ECR"]
+    Docker --> K8s["kubectl apply<br/>→ cluster"]
+    TF --> K8s
+    K8s --> Rollout["kubectl rollout status"]
+```
+
+Toda `pull request` para a `main` dispara o **CI** (`.github/workflows/ci.yml`): compila, roda os testes automatizados e mostra o que o Terraform mudaria (`terraform plan`), sem aplicar nada. Ao dar merge, o **CD** (`.github/workflows/cd.yml`) builda e publica a imagem versionada no ECR, aplica a infraestrutura (`terraform apply`) e faz o deploy no cluster (`kubectl apply` dos manifestos + `kubectl set image` com a versão publicada + `kubectl rollout status`). Detalhes de cada job em [`k8s/README.md`](k8s/README.md) e [`infra/terraform/aws/README.md`](infra/terraform/aws/README.md).
 
 ---
 
@@ -98,9 +150,38 @@ docker compose down        # mantém os dados do banco
 docker compose down -v     # apaga os dados do banco também
 ```
 
+As migrations do Flyway rodam automaticamente na inicialização e criam todas as tabelas.
+
 ---
 
-As migrations do Flyway rodam automaticamente na inicialização e criam todas as tabelas.
+## Deploy em Kubernetes
+
+Assume um cluster EKS e um RDS já provisionados (ver seção Terraform abaixo). Resumo dos comandos essenciais:
+
+```bash
+aws eks update-kubeconfig --name eks-fiap-mecanica --region us-east-1
+
+cp k8s/secret.yaml.example k8s/secret.yaml   # preencher com credenciais reais, nunca commitar
+
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/metrics-server.yaml
+kubectl apply -f k8s/configmap.yaml -f k8s/secret.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/hpa.yaml
+```
+
+Guia completo (build/push da imagem, ordem de apply, ciclo de teste rápido, Metrics Server, troubleshooting) em [`k8s/README.md`](k8s/README.md).
+
+## Provisionamento da infraestrutura com Terraform
+
+```bash
+cd infra/terraform/aws
+terraform init
+terraform apply -var db_username=<usuario> -var db_password=<senha>
+```
+
+Provisiona VPC, cluster EKS, RDS MySQL e repositório ECR na AWS. Lista completa de recursos criados, variáveis, outputs e o passo de bootstrap do backend remoto em [`infra/terraform/aws/README.md`](infra/terraform/aws/README.md).
 
 ---
 
@@ -126,11 +207,18 @@ A migration `V14` carrega um conjunto de dados iniciais com clientes, veículos,
 
 ## Documentação da API
 
-Com a aplicação rodando, acesse o Swagger UI:
+Swagger UI, gerado automaticamente via SpringDoc OpenAPI:
 
-```
-http://localhost:8080/swagger-ui.html
-```
+| Ambiente | Link |
+|---|---|
+| Local | `http://localhost:8080/swagger-ui.html` |
+| Deployado (AWS) | `http://a2ed2418fcd4d4b1f9a10273c194af18-386897844.us-east-1.elb.amazonaws.com/swagger-ui.html` |
+
+---
+
+## Vídeo demonstrativo
+
+`TODO: link do vídeo (YouTube/Vimeo, até 15 min) — deploy da aplicação, execução do CI/CD, consumo das APIs e escalabilidade automática.`
 
 ---
 
