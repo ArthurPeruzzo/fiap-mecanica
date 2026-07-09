@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @OpenAPIDefinition(
         tags = {
-                @Tag(name = "Autenticação", description = "Autenticação"),
+                @Tag(name = "Autenticação", description = "Operações relacionadas a autenticação"),
                 @Tag(name = "Cliente", description = "Operações relacionadas ao cliente"),
                 @Tag(name = "Veículo", description = "Operações relacionadas ao veículo"),
                 @Tag(name = "Peça", description = "Operações relacionadas as peças"),
