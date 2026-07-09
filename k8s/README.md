@@ -28,7 +28,7 @@ O `image:` em `deployment.yaml` já aponta para o repositório ECR real (`423972
 
    `DB_URL` no `configmap.yaml` já está preenchido com o endpoint real do RDS (`fiap-mecanica-db.crg6wdidxgew.us-east-1.rds.amazonaws.com:3306`).
 
-3. **Aplicar tudo** (ordem lógica; a maioria não tem dependência estrita entre si):
+3. **Aplicar tudo, nessa ordem exata** — `namespace.yaml` precisa existir antes de qualquer recurso namespaced ser criado nele:
    ```bash
    kubectl apply -f k8s/namespace.yaml
    kubectl apply -f k8s/metrics-server.yaml
@@ -37,7 +37,7 @@ O `image:` em `deployment.yaml` já aponta para o repositório ECR real (`423972
    kubectl apply -f k8s/service.yaml
    kubectl apply -f k8s/hpa.yaml
    ```
-   Ou simplesmente `kubectl apply -f k8s/` (ignora `.example` e `.md` automaticamente, pois não são YAML de recurso — mas confira que `k8s/secret.yaml` já existe localmente antes).
+   **Não use o atalho `kubectl apply -f k8s/`** num cluster do zero: ele processa os arquivos em ordem alfabética, e `configmap.yaml` viria antes de `namespace.yaml`, falhando porque o namespace ainda não existe. É por isso que o job `k8s-deploy` do pipeline (`.github/workflows/pipeline.yml`) também usa comandos explícitos nessa mesma ordem, não o atalho.
 
 4. **Atualizar as URLs de orçamento** depois que o LoadBalancer subir:
    ```bash
@@ -59,7 +59,7 @@ kubectl rollout restart deployment/fiap-mecanica -n fiap-mecanica
 (rodar `aws ecr get-login-password ... | docker login ...` de novo se a sessão de credenciais da AWS Academy Lab tiver expirado)
 O `rollout restart` é necessário porque o Deployment não detecta sozinho que o conteúdo por trás da tag `:latest` mudou — ele só recria os pods quando o spec muda ou quando forçado. Com `imagePullPolicy: Always` (já definido em `deployment.yaml`), os pods recriados puxam a imagem nova.
 
-Quando sair da fase de teste e quiser versionamento real (SemVer, git tags, etc.), ver decisão registrada para ser retomada na Fase 4 (CI/CD).
+Em produção (via pipeline), a tag deixa de ser `:latest` — vira a versão do `pom.xml` (ex: `1.0.0`), publicada automaticamente pelo job `docker-build-push` a cada push na `main`. Esse ciclo rápido com `:latest` continua útil só para teste manual local, fora da pipeline.
 
 ## Metrics Server
 
