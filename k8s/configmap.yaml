@@ -8,11 +8,13 @@ metadata:
   name: fiap-mecanica-config
   namespace: fiap-mecanica
 data:
-  DB_URL: "jdbc:mysql://fiap-mecanica-db.crg6wdidxgew.us-east-1.rds.amazonaws.com:3306/mecanica"
+  # Endpoint do RDS — muda a cada recriação do banco. Pegue o atual com
+  # `terraform output -raw db_endpoint` (em infra/terraform/aws).
+  DB_URL: "jdbc:mysql://SEU_ENDPOINT_RDS:3306/mecanica"
 
   # Mapeiam para as propriedades url.aprovar.orcamento / url.recusar.orcamento
   # (src/main/resources/application.properties:16-17) via relaxed binding do
   # Spring Boot. No fluxo manual, atualizar com o hostname real do LoadBalancer
   # depois do Service subir (passo 4 do k8s/README.md) e reaplicar este arquivo.
-  URL_APROVAR_ORCAMENTO: "http://a2ed2418fcd4d4b1f9a10273c194af18-386897844.us-east-1.elb.amazonaws.com/ordem-servico/orcamento/externo/aprovar/"
-  URL_RECUSAR_ORCAMENTO: "http://a2ed2418fcd4d4b1f9a10273c194af18-386897844.us-east-1.elb.amazonaws.com/ordem-servico/orcamento/externo/recusar/"
+  URL_APROVAR_ORCAMENTO: "http://SEU_HOSTNAME_LOADBALANCER/ordem-servico/orcamento/externo/aprovar/"
+  URL_RECUSAR_ORCAMENTO: "http://SEU_HOSTNAME_LOADBALANCER/ordem-servico/orcamento/externo/recusar/"

@@ -11,7 +11,7 @@ API REST para gestão de uma oficina mecânica, desenvolvida como projeto acadê
 
 ### Fase 2 — Objetivo desta etapa
 
-A Fase 1 entregou a API funcional com Clean Architecture. A Fase 2 evolui o projeto para um ambiente produtivo real na AWS: containerização, orquestração via Kubernetes, provisionamento de infraestrutura como código (Terraform) e uma pipeline de CI/CD que builda, testa, publica a imagem e faz o deploy automaticamente a cada merge na `main`.
+Esta fase leva a aplicação a um ambiente produtivo real na AWS. Além de aplicar **Clean Architecture** no código — com separação estrita entre o núcleo de negócio (`core`) e os detalhes de framework, persistência e HTTP (`infra`), o que protege as regras de negócio e facilita testes e evolução —, a etapa entrega a operação da aplicação em produção: containerização via Docker, orquestração no Kubernetes (EKS), provisionamento de infraestrutura como código com Terraform e uma pipeline de CI/CD que builda, testa, publica a imagem e faz o deploy automaticamente a cada merge na `main`.
 
 ## Stack
 
@@ -28,41 +28,29 @@ A Fase 1 entregou a API funcional com Clean Architecture. A Fase 2 evolui o proj
 
 ## Arquitetura
 
-A aplicação é um monolito que utiliza arquitetura limpa em sua estrutura. A escolha por arquitetura limpa traz grandes benefícios pois com ela é possível separar muito bem as camadas de negócio das camadas de infraestrutura,
-protegendo o core do negócio dos detalhes de infraestrutura e trazendo uma manutenibilidade e evolução do sistema de forma muito mais organizada. A separação clara de responsabilidades traz também grandes ganhos na escrita dos testes pois é possível testar cada camada de forma clara e objetiva.
+A aplicação é um **monolito modular** organizado segundo os princípios da **Clean Architecture**. Cada módulo de negócio é dividido em duas camadas, com uma regra de dependência única: **as dependências apontam sempre para dentro**, em direção ao domínio — nunca o contrário.
 
-### Justificativa para a escolha do MySQL
+- **`core/` (domínio)** — regras de negócio em Java puro, sem nenhuma dependência de Spring, JPA ou HTTP. Concentra as entidades de domínio, os *use cases* (casos de uso), os DTOs e as **interfaces de gateway**. É o coração do sistema e não conhece frameworks nem banco de dados.
+- **`infra/` (infraestrutura)** — os detalhes que servem ao domínio: controllers HTTP, implementações dos gateways (persistência JPA), entidades de banco, segurança e serialização. Depende do `core`, jamais o inverso.
 
-A aplicação possui entidades com relacionamentos bem definidos, o que se encaixa naturalmente no modelo relacional. Além disso, o MySQL é amplamente adotado no mercado e possui integração nativa com o ecossistema Spring.
+Na prática, essa separação **protege as regras de negócio dos detalhes de infraestrutura** — trocar o banco, o framework web ou a forma de exposição não afeta o núcleo — e permite testar cada camada de forma isolada, com ganho direto de manutenibilidade e evolução do sistema.
 
-### Infraestrutura provisionada (AWS)
+#### Módulos de negócio
 
-```mermaid
-graph TB
-    User["Cliente / navegador"]
+| Módulo | Responsabilidade |
+|---|---|
+| `gestao` | Clientes, veículos, mecânicos e atendentes |
+| `estoque` | Peças e insumos, com baixa e devolução automática de estoque |
+| `ordemdeservico` | Ciclo de vida da ordem de serviço, serviços, orçamento e notificações |
+| `shared` | Segurança/JWT, tratamento global de exceções, *value objects*, paginação e notificação |
 
-    subgraph AWS["AWS — VPC (Terraform, infra/terraform/aws)"]
-        subgraph EKS["Cluster EKS: eks-fiap-mecanica"]
-            LB["Service — LoadBalancer"]
-            subgraph Deploy["Deployment fiap-mecanica<br/>(HPA: 1–4 réplicas, CPU/mem 70%)"]
-                Pod1["Pod"]
-                Pod2["Pod"]
-                PodN["Pod ..."]
-            end
-            CM["ConfigMap"]
-            Secret["Secret"]
-        end
-        RDS[("RDS MySQL<br/>privado")]
-        ECR["ECR — fiap-mecanica<br/>(imagem Docker)"]
-    end
+#### Padrões aplicados
 
-    User -- HTTP --> LB
-    LB --> Pod1 & Pod2 & PodN
-    CM -.env.-> Pod1
-    Secret -.env.-> Pod1
-    Pod1 -- JDBC --> RDS
-    ECR -.imagem.-> Pod1
-```
+- **Inversão de dependência via gateways** — os *use cases* dependem de interfaces (`core/gateway/`), implementadas em `infra/gateway/database/`. O domínio nunca importa JPA.
+- **Par CleanController + HttpController** — o `HttpController` (bean Spring) cuida do mapeamento HTTP, validação e OpenAPI; o `CleanController` (Java puro) orquestra os *use cases*, sem anotações de framework.
+- **Output Port / Presenter** — *use cases* de leitura entregam o resultado a um presenter (porta de saída) em vez de retornar valores direto, isolando o formato de resposta do domínio.
+- **State pattern na Ordem de Serviço** — o ciclo de vida (Recebida → Em Diagnóstico → … → Entregue/Cancelada) é uma máquina de estados: cada estado só permite as transições válidas, e transições inválidas falham no próprio domínio.
+- **Value objects com invariantes** — `Cpf`, `Cnpj`, `Placa`, `Email` normalizam e validam os dados na construção, garantindo que instâncias inválidas simplesmente não existam.
 
 **Componentes da aplicação:** API Spring Boot (Clean Architecture) empacotada em imagem Docker, rodando em 1–4 réplicas gerenciadas por um `Deployment` no Kubernetes, com escalonamento automático (`HorizontalPodAutoscaler`) por CPU/memória.
 
@@ -72,13 +60,27 @@ graph TB
 
 ```mermaid
 graph LR
-    PR["Pull Request → main"] --> CI["CI (ci.yml)<br/>build-test + terraform plan"]
-    CI -- merge --> CD["CD (cd.yml)<br/>build-test"]
-    CD --> Docker["docker build + push<br/>→ ECR"]
-    CD --> TF["terraform apply<br/>→ EKS / RDS / ECR"]
-    Docker --> K8s["kubectl apply<br/>→ cluster"]
-    TF --> K8s
-    K8s --> Rollout["kubectl rollout status"]
+    Dev["Push / PR na main"]
+
+    subgraph CI["CI · ci.yml (em Pull Request)"]
+        direction TB
+        BT1["Build + Test"]
+        TP["terraform plan<br/>(não aplica)"]
+    end
+
+    subgraph CD["CD · cd.yml (em push na main)"]
+        direction TB
+        BT2["Build + Test"]
+        TA["terraform apply"]
+        DBP["docker build + push → ECR"]
+        KD["kubectl apply → EKS"]
+        RS["rollout status ✅"]
+    end
+
+    Dev -->|abre PR| CI
+    Dev -->|merge / push| CD
+    BT2 --> TA --> DBP --> KD --> RS
+    TA --> KD
 ```
 
 Toda `pull request` para a `main` dispara o **CI** (`.github/workflows/ci.yml`): compila, roda os testes automatizados e mostra o que o Terraform mudaria (`terraform plan`), sem aplicar nada. Ao dar merge, o **CD** (`.github/workflows/cd.yml`) builda e publica a imagem versionada no ECR, aplica a infraestrutura (`terraform apply`) e faz o deploy no cluster (`kubectl apply` dos manifestos + `kubectl set image` com a versão publicada + `kubectl rollout status`). Detalhes de cada job em [`k8s/README.md`](k8s/README.md) e [`infra/terraform/aws/README.md`](infra/terraform/aws/README.md).
@@ -207,12 +209,15 @@ A migration `V14` carrega um conjunto de dados iniciais com clientes, veículos,
 
 ## Documentação da API
 
-Swagger UI, gerado automaticamente via SpringDoc OpenAPI:
+Swagger UI, gerado automaticamente via SpringDoc OpenAPI. Em ambiente local o endereço é fixo:
 
-| Ambiente | Link |
-|---|---|
-| Local | `http://localhost:8080/swagger-ui.html` |
-| Deployado (AWS) | `http://a2ed2418fcd4d4b1f9a10273c194af18-386897844.us-east-1.elb.amazonaws.com/swagger-ui.html` |
+`http://localhost:8080/swagger-ui.html`
+
+**Ambiente deployado (AWS):** não há um endereço fixo. O `Service` do tipo `LoadBalancer` recebe um hostname atribuído dinamicamente pela AWS (ex.: `...elb.amazonaws.com`), e como o projeto não usa um DNS próprio, **esse hostname muda a cada recriação do Service** (ou da infra). Por isso não faz sentido versionar a URL aqui — descubra a atual com:
+
+```bash
+echo "http://$(kubectl get svc fiap-mecanica -n fiap-mecanica -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')/swagger-ui.html"
+```
 
 ---
 

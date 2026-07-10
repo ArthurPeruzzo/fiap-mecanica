@@ -17,6 +17,10 @@ spec:
     spec:
       containers:
         - name: fiap-mecanica
+          # Valor concreto exigido pelo manifesto (fluxo manual). O prefixo é o
+          # account ID da conta AWS — muda se a conta da Lab for trocada; confira
+          # com `terraform output -raw ecr_repository_url`. No pipeline, o job
+          # k8s-deploy sobrescreve esta linha via `kubectl set image`.
           # Requer imagem publicada no ECR antes do apply, senão ImagePullBackOff.
           image: "423972067332.dkr.ecr.us-east-1.amazonaws.com/fiap-mecanica:latest"
           # Explícito (mesmo já sendo o default do k8s p/ tag :latest) para garantir
