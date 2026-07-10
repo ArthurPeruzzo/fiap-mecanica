@@ -2,11 +2,35 @@
 
 Assume um cluster EKS já provisionado (`infra/terraform/aws/`) e o RDS MySQL já aplicado. A aplicação roda no cluster; o banco fica fora (RDS gerenciado).
 
-## Nota — só se aplica ao fluxo manual abaixo
+## Fluxo (macro)
 
-O `image:` em `deployment.yaml` já aponta para o repositório ECR real (`423972067332.dkr.ecr.us-east-1.amazonaws.com/fiap-mecanica`), mas a tag `:latest` só existe depois de um primeiro `docker push`. Se você aplicar os manifests manualmente (passo a passo abaixo) antes de ter dado nenhum push, o Pod fica em `ImagePullBackOff`.
+```mermaid
+graph TB
+    User["Usuário / navegador"]
 
-**Isso não acontece via pipeline.** O job `docker-build-push` do `cd.yml` sempre builda e publica uma imagem versionada no ECR — e o `k8s-deploy` só roda depois disso (`needs: [docker-build-push, terraform-apply]`) — então esse cenário nunca ocorre num deploy automatizado.
+    subgraph NS["Cluster EKS · namespace fiap-mecanica"]
+        SVC["Service<br/>LoadBalancer :80 → 8080"]
+        subgraph DEP["Deployment"]
+            P1["Pod"]
+            P2["Pod"]
+        end
+        HPA["HPA<br/>CPU/mem 70% · 1–4 pods"]
+        CM["ConfigMap<br/>DB_URL · URLs"]
+        SEC["Secret<br/>DB cred · JWT"]
+        MS["Metrics Server"]
+    end
+
+    ECR["ECR"]
+    RDS[("RDS MySQL")]
+
+    User -->|HTTP| SVC --> P1 & P2
+    CM -->|env| DEP
+    SEC -->|env| DEP
+    MS -->|métricas| HPA
+    HPA -->|escala| DEP
+    ECR -->|imagem| DEP
+    P1 -->|JDBC| RDS
+```
 
 ## Passo a passo
 
@@ -15,11 +39,12 @@ O `image:` em `deployment.yaml` já aponta para o repositório ECR real (`423972
    aws eks update-kubeconfig --name eks-fiap-mecanica --region us-east-1
    ```
 
-1. **Build + push da imagem para o ECR**:
+1. **Build + push da imagem para o ECR**. O host do ECR inclui o *account ID* da conta AWS (muda se a conta da Lab for trocada), então em vez de fixá-lo, pegue a URL do repositório do output do Terraform:
    ```bash
-   aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 423972067332.dkr.ecr.us-east-1.amazonaws.com
-   docker build -t 423972067332.dkr.ecr.us-east-1.amazonaws.com/fiap-mecanica:latest .
-   docker push 423972067332.dkr.ecr.us-east-1.amazonaws.com/fiap-mecanica:latest
+   ECR=$(cd infra/terraform/aws && terraform output -raw ecr_repository_url)
+   aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "${ECR%/*}"
+   docker build -t "$ECR:latest" .
+   docker push "$ECR:latest"
    ```
 
 2. **Preencher o `secret.yaml`** (nunca commitar — está no `.gitignore`):
@@ -28,7 +53,7 @@ O `image:` em `deployment.yaml` já aponta para o repositório ECR real (`423972
    # editar k8s/secret.yaml com DB_USERNAME / DB_PASSWORD / JWT_SECRET reais
    ```
 
-   `DB_URL` no `configmap.yaml` já está preenchido com o endpoint real do RDS (`fiap-mecanica-db.crg6wdidxgew.us-east-1.rds.amazonaws.com:3306`).
+   Ajuste o `DB_URL` no `configmap.yaml` com o endpoint atual do RDS — ele **muda a cada recriação do banco**, por isso não fica fixado no repo. Pegue o valor atual com `terraform output -raw db_endpoint` (rodando em `infra/terraform/aws`).
 
 3. **Aplicar tudo, nessa ordem exata** — `namespace.yaml` precisa existir antes de qualquer recurso namespaced ser criado nele:
    ```bash
@@ -51,19 +76,6 @@ O `image:` em `deployment.yaml` já aponta para o repositório ECR real (`423972
    ```
 
    **Isso é só para o fluxo manual.** O job `k8s-deploy` do `cd.yml` não usa o `configmap.yaml` commitado — ele gera o ConfigMap dinamicamente: `DB_URL` a partir do output do Terraform (`terraform output db_endpoint`, capturado automaticamente no job anterior) e as URLs de orçamento a partir do hostname real do LoadBalancer, obtido via `kubectl get svc` com espera ativa (poll) logo após aplicar o `Service` — sem precisar de passo manual, e funcionando mesmo depois de um `terraform destroy`/`apply` que gere um RDS e um LoadBalancer novos.
-
-## Ciclo rápido de teste (enquanto a versão da imagem for `:latest`)
-
-Sem precisar editar nenhum YAML a cada iteração:
-```bash
-docker build -t 423972067332.dkr.ecr.us-east-1.amazonaws.com/fiap-mecanica:latest .
-docker push 423972067332.dkr.ecr.us-east-1.amazonaws.com/fiap-mecanica:latest
-kubectl rollout restart deployment/fiap-mecanica -n fiap-mecanica
-```
-(rodar `aws ecr get-login-password ... | docker login ...` de novo se a sessão de credenciais da AWS Academy Lab tiver expirado)
-O `rollout restart` é necessário porque o Deployment não detecta sozinho que o conteúdo por trás da tag `:latest` mudou — ele só recria os pods quando o spec muda ou quando forçado. Com `imagePullPolicy: Always` (já definido em `deployment.yaml`), os pods recriados puxam a imagem nova.
-
-Em produção (via pipeline), a tag deixa de ser `:latest` — vira a versão do `pom.xml` (ex: `1.0.0`), publicada automaticamente pelo job `docker-build-push` a cada push na `main`. Esse ciclo rápido com `:latest` continua útil só para teste manual local, fora da pipeline.
 
 ## Metrics Server
 

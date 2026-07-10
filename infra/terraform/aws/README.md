@@ -2,6 +2,32 @@
 
 Provisiona, na conta AWS Academy Lab, tudo que o cluster Kubernetes (`/k8s`) precisa pra rodar a aplicação: VPC, cluster EKS, banco RDS MySQL e repositório ECR pra imagem Docker.
 
+## Fluxo (macro)
+
+```mermaid
+graph TB
+    TF["terraform apply"]
+    S3["Backend S3<br/>(tfstate remoto)"]
+    TF -->|lê / grava state| S3
+
+    subgraph AWS["AWS"]
+        VPC["VPC<br/>subnets multi-AZ · IGW · rotas"]
+        EKS["EKS<br/>cluster + node group"]
+        RDS[("RDS MySQL<br/>privado")]
+        ECR["ECR<br/>repositório da imagem"]
+    end
+
+    TF --> VPC
+    VPC --> EKS
+    VPC --> RDS
+    TF --> ECR
+
+    EKS --> OUT["outputs<br/>(db_endpoint · ecr_repository_url · …)"]
+    RDS --> OUT
+    ECR --> OUT
+    OUT -->|consumidos no deploy| CD["Pipeline CD / kubectl"]
+```
+
 ## Recursos criados
 
 | Arquivo | Recurso | O que é |
@@ -80,29 +106,3 @@ Depois do `apply`, siga para `/k8s` (ver `k8s/README.md`) pra publicar a imagem 
 | `db_endpoint` | Host:porta do RDS — vai direto no `DB_URL` do `k8s/configmap.yaml` |
 | `db_name` | Nome do banco (`mecanica`) |
 | `ecr_repository_url` | URI do ECR — usado no `docker build`/`push` e no `image:` do `k8s/deployment.yaml` |
-
-## Destruir / pausar custos
-
-**Antes de destruir, delete o Service do Kubernetes primeiro:**
-```bash
-kubectl delete svc fiap-mecanica -n fiap-mecanica
-```
-O `Service` do tipo `LoadBalancer` cria dois recursos na AWS **fora do controle do Terraform** (quem cria é o Kubernetes, via cloud controller manager, não um `resource` deste repositório): um Classic Load Balancer **e** um Security Group próprio pra ele (`k8s-elb-<hash>`). Se você rodar `terraform destroy` sem apagar esse `Service` antes, os dois ficam presos na VPC — o `destroy` falha com `DependencyViolation` primeiro nas subnets/Internet Gateway (por causa do ELB) e depois na própria VPC (por causa do Security Group, mesmo depois do ELB removido). Se isso já aconteceu, dá pra encontrar e remover os dois manualmente:
-```bash
-# 1. Achar e apagar o ELB órfão
-aws elb describe-load-balancers --region us-east-1 --query 'LoadBalancerDescriptions[].LoadBalancerName'
-aws elb delete-load-balancer --load-balancer-name <nome> --region us-east-1
-
-# 2. Achar e apagar o Security Group órfão (criado pelo mesmo ELB, sobrevive à exclusão dele)
-aws ec2 describe-security-groups --region us-east-1 --filters "Name=vpc-id,Values=<vpc-id>" --query 'SecurityGroups[?GroupName!=`default`].{id:GroupId,name:GroupName}'
-aws ec2 delete-security-group --group-id <sg-id> --region us-east-1
-```
-Depois disso, `terraform destroy` roda normalmente.
-
-Ver `k8s/README.md` pra opções de pausa parcial (zerar node group, parar RDS). Pra zerar custo por completo:
-```bash
-terraform destroy -var db_username=<usuario> -var db_password=<senha>
-```
-Isso apaga o RDS (sem snapshot — dados são perdidos, o Flyway reseeda tudo na próxima subida) e a imagem do ECR (`force_delete = true`). Recriar depois é só repetir o `apply`, rebuild+push da imagem e reaplicar `/k8s`.
-
-**Erro esperado e inofensivo no final do `destroy`:** falha ao apagar o bucket S3 do backend (`BucketNotEmpty`) — ver seção Bootstrap acima. O bucket e o state continuam intactos, prontos pro próximo `apply`.
