@@ -6,7 +6,9 @@ metadata:
   labels:
     app: fiap-mecanica
 spec:
-  replicas: 1
+  # A contagem de réplicas é gerenciada pelo HPA (k8s/hpa.yaml). 'replicas' é
+  # omitido de propósito: se ficasse fixo aqui, cada `kubectl apply` resetaria a
+  # contagem e brigaria com o HPA (churn de pods a cada deploy).
   selector:
     matchLabels:
       app: fiap-mecanica
@@ -40,15 +42,24 @@ spec:
             limits:
               cpu: "500m"
               memory: "768Mi"
+          # startupProbe segura liveness/readiness até a JVM terminar de subir
+          # (Spring Boot + Flyway). Enquanto ele não passa, os outros probes ficam
+          # inativos — evita a liveness matar o pod no meio do boot (o exitCode 143
+          # que víamos) e o churn de restarts que dispara o HPA durante o deploy.
+          # Tolera até 30×10s = 5 min de arranque.
+          startupProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: 8080
-            initialDelaySeconds: 40
             periodSeconds: 15
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: 8080
-            initialDelaySeconds: 20
             periodSeconds: 10

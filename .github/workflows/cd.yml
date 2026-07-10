@@ -182,4 +182,4 @@ jobs:
     - name: Aplicar HPA
       run: kubectl apply -f k8s/hpa.yaml
     - name: Aguardar rollout
-      run: kubectl rollout status deployment/fiap-mecanica -n fiap-mecanica --timeout=180s
+      run: kubectl rollout status deployment/fiap-mecanica -n fiap-mecanica --timeout=300s
