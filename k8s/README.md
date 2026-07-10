@@ -2,9 +2,11 @@
 
 Assume um cluster EKS já provisionado (`infra/terraform/aws/`) e o RDS MySQL já aplicado. A aplicação roda no cluster; o banco fica fora (RDS gerenciado).
 
-## Pendência antes do primeiro apply
+## Nota — só se aplica ao fluxo manual abaixo
 
-O `image:` em `deployment.yaml` já aponta para o repositório ECR real (`423972067332.dkr.ecr.us-east-1.amazonaws.com/fiap-mecanica`), mas a tag `:latest` só existe depois de um primeiro `docker push`. Sem isso o Pod fica em `ImagePullBackOff`.
+O `image:` em `deployment.yaml` já aponta para o repositório ECR real (`423972067332.dkr.ecr.us-east-1.amazonaws.com/fiap-mecanica`), mas a tag `:latest` só existe depois de um primeiro `docker push`. Se você aplicar os manifests manualmente (passo a passo abaixo) antes de ter dado nenhum push, o Pod fica em `ImagePullBackOff`.
+
+**Isso não acontece via pipeline.** O job `docker-build-push` do `cd.yml` sempre builda e publica uma imagem versionada no ECR — e o `k8s-deploy` só roda depois disso (`needs: [docker-build-push, terraform-apply]`) — então esse cenário nunca ocorre num deploy automatizado.
 
 ## Passo a passo
 
