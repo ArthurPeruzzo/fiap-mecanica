@@ -81,22 +81,28 @@ Depois do `apply`, siga para `/k8s` (ver `k8s/README.md`) pra publicar a imagem 
 | `db_name` | Nome do banco (`mecanica`) |
 | `ecr_repository_url` | URI do ECR — usado no `docker build`/`push` e no `image:` do `k8s/deployment.yaml` |
 
-## Gotchas já resolvidos (documentados aqui pra não se repetirem)
-
-- **Access entry do node role**: `LabRole` é reusada tanto como service role do cluster quanto como node role do node group (a Lab não permite criar roles customizadas). Numa recriação do zero, a EKS pode auto-criar uma access entry `STANDARD` sem grupos pra essa identidade — isso autentica os nodes no cluster mas não autoriza nada via RBAC, e eles nunca conseguem virar objetos `Node` (`kubectl get nodes` fica vazio mesmo com o node group `ACTIVE`). `access-entry.tf` já declara a entry correta (`type = "EC2_LINUX"`, que vincula os grupos certos automaticamente) com `depends_on` no node group, evitando o bug em qualquer `apply` futuro.
-- **`apply_immediately = true`** no `aws_db_instance.mysql`: sem isso, trocar a senha do RDS via `-var db_password=...` só valeria na próxima janela de manutenção (sexta de madrugada) em vez de imediatamente.
-- **`force_delete = true`** no ECR e **`skip_final_snapshot = true` / `deletion_protection = false`** no RDS: facilitam `terraform destroy` sem travar em confirmações — aceitável aqui porque é ambiente de estudo, não produção.
-
-## Simplificações conscientes (nível de estudo, não são falhas)
-
-- Sem `required_providers` com versão fixada — não crítico pra um projeto de curso de uma pessoa só.
-- Sem state locking (ex: DynamoDB) — risco de conflito de state só existe com múltiplos aplicadores simultâneos, não é o caso aqui.
-- Secrets do Kubernetes (`k8s/secret.yaml`) usam só o base64 nativo do K8s, sem criptografia KMS em repouso no `etcd` do EKS — daria pra habilitar via `encryption_config` no `aws_eks_cluster`, mas não foi feito por simplicidade.
-
 ## Destruir / pausar custos
+
+**Antes de destruir, delete o Service do Kubernetes primeiro:**
+```bash
+kubectl delete svc fiap-mecanica -n fiap-mecanica
+```
+O `Service` do tipo `LoadBalancer` cria dois recursos na AWS **fora do controle do Terraform** (quem cria é o Kubernetes, via cloud controller manager, não um `resource` deste repositório): um Classic Load Balancer **e** um Security Group próprio pra ele (`k8s-elb-<hash>`). Se você rodar `terraform destroy` sem apagar esse `Service` antes, os dois ficam presos na VPC — o `destroy` falha com `DependencyViolation` primeiro nas subnets/Internet Gateway (por causa do ELB) e depois na própria VPC (por causa do Security Group, mesmo depois do ELB removido). Se isso já aconteceu, dá pra encontrar e remover os dois manualmente:
+```bash
+# 1. Achar e apagar o ELB órfão
+aws elb describe-load-balancers --region us-east-1 --query 'LoadBalancerDescriptions[].LoadBalancerName'
+aws elb delete-load-balancer --load-balancer-name <nome> --region us-east-1
+
+# 2. Achar e apagar o Security Group órfão (criado pelo mesmo ELB, sobrevive à exclusão dele)
+aws ec2 describe-security-groups --region us-east-1 --filters "Name=vpc-id,Values=<vpc-id>" --query 'SecurityGroups[?GroupName!=`default`].{id:GroupId,name:GroupName}'
+aws ec2 delete-security-group --group-id <sg-id> --region us-east-1
+```
+Depois disso, `terraform destroy` roda normalmente.
 
 Ver `k8s/README.md` pra opções de pausa parcial (zerar node group, parar RDS). Pra zerar custo por completo:
 ```bash
 terraform destroy -var db_username=<usuario> -var db_password=<senha>
 ```
 Isso apaga o RDS (sem snapshot — dados são perdidos, o Flyway reseeda tudo na próxima subida) e a imagem do ECR (`force_delete = true`). Recriar depois é só repetir o `apply`, rebuild+push da imagem e reaplicar `/k8s`.
+
+**Erro esperado e inofensivo no final do `destroy`:** falha ao apagar o bucket S3 do backend (`BucketNotEmpty`) — ver seção Bootstrap acima. O bucket e o state continuam intactos, prontos pro próximo `apply`.

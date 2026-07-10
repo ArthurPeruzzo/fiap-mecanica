@@ -12,8 +12,7 @@ data:
 
   # Mapeiam para as propriedades url.aprovar.orcamento / url.recusar.orcamento
   # (src/main/resources/application.properties:16-17) via relaxed binding do
-  # Spring Boot. Atualizar com o hostname real do LoadBalancer depois do
-  # primeiro `kubectl apply -f k8s/` (ver `kubectl get svc -n fiap-mecanica`)
-  # e reaplicar este ConfigMap.
+  # Spring Boot. No fluxo manual, atualizar com o hostname real do LoadBalancer
+  # depois do Service subir (passo 4 do k8s/README.md) e reaplicar este arquivo.
   URL_APROVAR_ORCAMENTO: "http://a2ed2418fcd4d4b1f9a10273c194af18-386897844.us-east-1.elb.amazonaws.com/ordem-servico/orcamento/externo/aprovar/"
   URL_RECUSAR_ORCAMENTO: "http://a2ed2418fcd4d4b1f9a10273c194af18-386897844.us-east-1.elb.amazonaws.com/ordem-servico/orcamento/externo/recusar/"
