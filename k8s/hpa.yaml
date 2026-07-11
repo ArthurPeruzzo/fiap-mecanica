@@ -19,17 +19,12 @@ spec:
           averageUtilization: 70
   behavior:
     scaleUp:
-      # Espera 15s de métrica alta antes de escalar — filtra picos transitórios
-      # (ex.: o burst de startup da JVM durante o deploy), evitando o salto
-      # imediato para o máximo. Depois sobe até 2 pods a cada 30s.
       stabilizationWindowSeconds: 15
       policies:
         - type: Pods
           value: 2
           periodSeconds: 30
     scaleDown:
-      # 120s de métrica baixa antes de reduzir (o padrão é 300s) — desce mais
-      # rápido depois que a carga cai, útil para demonstrar o scale-down no vídeo.
       stabilizationWindowSeconds: 120
       policies:
         - type: Pods

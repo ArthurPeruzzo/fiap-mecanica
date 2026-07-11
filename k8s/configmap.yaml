@@ -1,20 +1,9 @@
-# Referência para uso manual/local (ver k8s/README.md). A pipeline de CD
-# (.github/workflows/cd.yml) NÃO aplica este arquivo — ela gera o ConfigMap
-# dinamicamente a partir do output do Terraform (DB_URL) e do hostname real
-# do LoadBalancer (URLs de orçamento), resolvido em tempo de deploy.
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: fiap-mecanica-config
   namespace: fiap-mecanica
 data:
-  # Endpoint do RDS — muda a cada recriação do banco. Pegue o atual com
-  # `terraform output -raw db_endpoint` (em infra/terraform/aws).
   DB_URL: "jdbc:mysql://SEU_ENDPOINT_RDS:3306/mecanica"
-
-  # Mapeiam para as propriedades url.aprovar.orcamento / url.recusar.orcamento
-  # (src/main/resources/application.properties:16-17) via relaxed binding do
-  # Spring Boot. No fluxo manual, atualizar com o hostname real do LoadBalancer
-  # depois do Service subir (passo 4 do k8s/README.md) e reaplicar este arquivo.
   URL_APROVAR_ORCAMENTO: "http://SEU_HOSTNAME_LOADBALANCER/ordem-servico/orcamento/externo/aprovar/"
   URL_RECUSAR_ORCAMENTO: "http://SEU_HOSTNAME_LOADBALANCER/ordem-servico/orcamento/externo/recusar/"
