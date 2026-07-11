@@ -6,9 +6,6 @@ metadata:
   labels:
     app: fiap-mecanica
 spec:
-  # A contagem de réplicas é gerenciada pelo HPA (k8s/hpa.yaml). 'replicas' é
-  # omitido de propósito: se ficasse fixo aqui, cada `kubectl apply` resetaria a
-  # contagem e brigaria com o HPA (churn de pods a cada deploy).
   selector:
     matchLabels:
       app: fiap-mecanica
@@ -19,14 +16,7 @@ spec:
     spec:
       containers:
         - name: fiap-mecanica
-          # Valor concreto exigido pelo manifesto (fluxo manual). O prefixo é o
-          # account ID da conta AWS — muda se a conta da Lab for trocada; confira
-          # com `terraform output -raw ecr_repository_url`. No pipeline, o job
-          # k8s-deploy sobrescreve esta linha via `kubectl set image`.
-          # Requer imagem publicada no ECR antes do apply, senão ImagePullBackOff.
           image: "423972067332.dkr.ecr.us-east-1.amazonaws.com/fiap-mecanica:latest"
-          # Explícito (mesmo já sendo o default do k8s p/ tag :latest) para garantir
-          # que cada novo pod puxa a imagem mais recente durante a fase de testes.
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -42,11 +32,6 @@ spec:
             limits:
               cpu: "500m"
               memory: "768Mi"
-          # startupProbe segura liveness/readiness até a JVM terminar de subir
-          # (Spring Boot + Flyway). Enquanto ele não passa, os outros probes ficam
-          # inativos — evita a liveness matar o pod no meio do boot (o exitCode 143
-          # que víamos) e o churn de restarts que dispara o HPA durante o deploy.
-          # Tolera até 30×10s = 5 min de arranque.
           startupProbe:
             httpGet:
               path: /actuator/health/readiness

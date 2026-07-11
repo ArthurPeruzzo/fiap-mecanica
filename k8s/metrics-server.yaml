@@ -1,6 +1,3 @@
-# Cópia estática de https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-# Add-on de cluster (não específico da app), necessário para o HPA funcionar no EKS.
-# Rode `curl` na URL acima para atualizar manualmente quando precisar.
 apiVersion: v1
 kind: ServiceAccount
 metadata:

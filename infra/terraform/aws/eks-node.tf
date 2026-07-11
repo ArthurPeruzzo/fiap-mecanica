@@ -16,7 +16,6 @@ resource "aws_eks_node_group" "node-group" {
     max_unavailable = 1
   }
 
-  # Garante que a access entry da LabRole (com system:nodes/system:bootstrappers)
-  # já exista antes dos nodes tentarem se registrar no cluster.
+
   depends_on = [aws_eks_access_entry.node_role]
 }
