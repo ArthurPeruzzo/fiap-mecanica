@@ -33,8 +33,6 @@ A aplicação é um **monolito modular** organizado segundo os princípios da **
 - **`core/` (domínio)** — regras de negócio em Java puro, sem nenhuma dependência de Spring, JPA ou HTTP. Concentra as entidades de domínio, os *use cases* (casos de uso), os DTOs e as **interfaces de gateway**. É o coração do sistema e não conhece frameworks nem banco de dados.
 - **`infra/` (infraestrutura)** — os detalhes que servem ao domínio: controllers HTTP, implementações dos gateways (persistência JPA), entidades de banco, segurança e serialização. Depende do `core`, jamais o inverso.
 
-Na prática, essa separação **protege as regras de negócio dos detalhes de infraestrutura** — trocar o banco, o framework web ou a forma de exposição não afeta o núcleo — e permite testar cada camada de forma isolada, com ganho direto de manutenibilidade e evolução do sistema.
-
 #### Módulos de negócio
 
 | Módulo | Responsabilidade |
@@ -43,18 +41,6 @@ Na prática, essa separação **protege as regras de negócio dos detalhes de in
 | `estoque` | Peças e insumos, com baixa e devolução automática de estoque |
 | `ordemdeservico` | Ciclo de vida da ordem de serviço, serviços, orçamento e notificações |
 | `shared` | Segurança/JWT, tratamento global de exceções, *value objects*, paginação e notificação |
-
-#### Padrões aplicados
-
-- **Inversão de dependência via gateways** — os *use cases* dependem de interfaces (`core/gateway/`), implementadas em `infra/gateway/database/`. O domínio nunca importa JPA.
-- **Par CleanController + HttpController** — o `HttpController` (bean Spring) cuida do mapeamento HTTP, validação e OpenAPI; o `CleanController` (Java puro) orquestra os *use cases*, sem anotações de framework.
-- **Output Port / Presenter** — *use cases* de leitura entregam o resultado a um presenter (porta de saída) em vez de retornar valores direto, isolando o formato de resposta do domínio.
-- **State pattern na Ordem de Serviço** — o ciclo de vida (Recebida → Em Diagnóstico → … → Entregue/Cancelada) é uma máquina de estados: cada estado só permite as transições válidas, e transições inválidas falham no próprio domínio.
-- **Value objects com invariantes** — `Cpf`, `Cnpj`, `Placa`, `Email` normalizam e validam os dados na construção, garantindo que instâncias inválidas simplesmente não existam.
-
-**Componentes da aplicação:** API Spring Boot (Clean Architecture) empacotada em imagem Docker, rodando em 1–4 réplicas gerenciadas por um `Deployment` no Kubernetes, com escalonamento automático (`HorizontalPodAutoscaler`) por CPU/memória.
-
-**Infraestrutura provisionada:** VPC dedicada com subnets públicas multi-AZ, cluster EKS com node group gerenciado, banco RDS MySQL privado (acessível só pelo SG do cluster) e repositório ECR privado para a imagem. Tudo provisionado via Terraform — detalhes em [`infra/terraform/aws/README.md`](infra/terraform/aws/README.md).
 
 ### Fluxo de deploy (CI/CD)
 
@@ -218,12 +204,6 @@ Swagger UI, gerado automaticamente via SpringDoc OpenAPI. Em ambiente local o en
 ```bash
 echo "http://$(kubectl get svc fiap-mecanica -n fiap-mecanica -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')/swagger-ui.html"
 ```
-
----
-
-## Vídeo demonstrativo
-
-`TODO: link do vídeo (YouTube/Vimeo, até 15 min) — deploy da aplicação, execução do CI/CD, consumo das APIs e escalabilidade automática.`
 
 ---
 
