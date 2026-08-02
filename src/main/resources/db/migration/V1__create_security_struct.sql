@@ -6,10 +6,10 @@ CREATE TABLE IF NOT EXISTS `roles`(
 
 CREATE TABLE IF NOT EXISTS `users` (
     `id` bigint NOT NULL AUTO_INCREMENT,
-    `email` varchar(255) NOT NULL,
+    `cpf` varchar(255) NOT NULL,
     `password` varchar(255) NOT NULL,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `email` (`email`)
+    UNIQUE KEY `cpf` (`cpf`)
 );
 
 CREATE TABLE `users_roles` (

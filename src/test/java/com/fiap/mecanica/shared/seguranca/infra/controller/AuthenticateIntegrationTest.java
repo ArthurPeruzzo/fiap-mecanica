@@ -38,7 +38,7 @@ class AuthenticateIntegrationTest extends AbstractContainer {
         List<RoleEntity> roles = roleRepository.findByNameIn(List.of(RoleEnum.ROLE_ATENDENTE));
 
         UserEntity user = UserEntity.builder()
-                .email("any@any.com")
+                .cpf("52998224725")
                 .password(securityConfiguration.passwordEncoder().encode("any"))
                 .roles(roles)
                 .build();
@@ -50,7 +50,7 @@ class AuthenticateIntegrationTest extends AbstractContainer {
                 .contentType("application/json")
                 .body("""
                         {
-                            "email": "any@any.com",
+                            "cpf": "52998224725",
                             "password": "any"
                         }
                         """)

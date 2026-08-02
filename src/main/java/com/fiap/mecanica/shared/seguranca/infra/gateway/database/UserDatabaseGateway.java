@@ -1,7 +1,6 @@
 package com.fiap.mecanica.shared.seguranca.infra.gateway.database;
 
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
-import com.fiap.mecanica.shared.seguranca.core.domain.Email;
 import com.fiap.mecanica.shared.seguranca.core.domain.Role;
 import com.fiap.mecanica.shared.seguranca.core.domain.RoleEnum;
 import com.fiap.mecanica.shared.seguranca.core.domain.User;
@@ -11,6 +10,7 @@ import com.fiap.mecanica.shared.seguranca.infra.gateway.entity.RoleEntity;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.entity.UserEntity;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.repository.RoleRepository;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.repository.UserRepository;
+import com.fiap.mecanica.shared.valueobjects.Cpf;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -28,17 +28,17 @@ public class UserDatabaseGateway implements UserGateway {
     private final RoleRepository roleRepository;
 
     @Override
-    public Optional<User> findByEmail(String email) {
+    public Optional<User> findByCpf(String cpf) {
         try {
-            return userRepository.findByEmail(email)
+            return userRepository.findByCpf(cpf)
                     .map(entity -> new User(
                             entity.getId(),
-                            new Email(entity.getEmail()),
+                            new Cpf(entity.getCpf()),
                             new PasswordHash(entity.getPassword()),
                             entity.getRoles().stream().map(roleEntity -> new Role(roleEntity.getId(), roleEntity.getName()))
                     .toList()));
         } catch (Exception e) {
-            log.error("Erro ao buscar usuario por email: {}", email, e);
+            log.error("Erro ao buscar usuario por cpf: {}", cpf, e);
             throw new ErroAcessoBaseDeDadosException();
         }
     }
@@ -49,18 +49,18 @@ public class UserDatabaseGateway implements UserGateway {
             List<RoleEnum> roleEnums = user.getRoles().stream().map(Role::getName).toList();
             List<RoleEntity> roles = roleRepository.findByNameIn(roleEnums);
 
-            UserEntity userEntity = new UserEntity(user.getEmail().value(), user.getPassword().getValue(),
+            UserEntity userEntity = new UserEntity(user.getCpf().getValor(), user.getPassword().getValue(),
                     user.getRoles().stream().map(role -> new RoleEntity(role.getName())).toList());
             userEntity.setRoles(roles);
 
             UserEntity entity = userRepository.save(userEntity);
             return new User(
                     entity.getId(),
-                    new Email(entity.getEmail()),
+                    new Cpf(entity.getCpf()),
                     new PasswordHash(entity.getPassword()),
                     entity.getRoles().stream().map(roleEntity -> new Role(roleEntity.getId(), roleEntity.getName())).toList());
         } catch (DataIntegrityViolationException e) {
-            log.error("Já existe um usuario com o mesmo email", e);
+            log.error("Já existe um usuario com o mesmo cpf", e);
             throw new ErroAcessoBaseDeDadosException(); //Tratar melhor
         } catch (Exception e) {
             log.error("Erro ao salvar usuario", e);

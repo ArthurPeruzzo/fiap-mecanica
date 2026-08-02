@@ -21,9 +21,9 @@ public class AutenticacaoSpringGateway implements AutenticacaoGateway {
     private final AuthenticationManager authenticationManager;
 
     @Override
-    public User autenticar(String email, String senha) {
+    public User autenticar(String cpf, String senha) {
         try {
-            var token = new UsernamePasswordAuthenticationToken(email, senha);
+            var token = new UsernamePasswordAuthenticationToken(cpf, senha);
             var auth = authenticationManager.authenticate(token);
             if (!(auth.getPrincipal() instanceof UserDetailsImpl userDetails)) {
                 log.error("Principal retornado nao e do tipo esperado: {}", auth.getPrincipal());

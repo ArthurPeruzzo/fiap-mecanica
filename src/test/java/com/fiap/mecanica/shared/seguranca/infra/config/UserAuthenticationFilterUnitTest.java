@@ -1,12 +1,12 @@
 package com.fiap.mecanica.shared.seguranca.infra.config;
 
-import com.fiap.mecanica.shared.seguranca.core.domain.Email;
 import com.fiap.mecanica.shared.seguranca.core.domain.Role;
 import com.fiap.mecanica.shared.seguranca.core.domain.RoleEnum;
 import com.fiap.mecanica.shared.seguranca.core.domain.User;
 import com.fiap.mecanica.shared.seguranca.core.domain.password.PasswordHash;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.UserGateway;
+import com.fiap.mecanica.shared.valueobjects.Cpf;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -70,29 +70,29 @@ class UserAuthenticationFilterUnitTest {
 
         User user = new User(
                 1L,
-                new Email("user@test.com"),
+                new Cpf("52998224725"),
                 new PasswordHash("hashed"),
                 List.of(new Role(1L, RoleEnum.ROLE_ATENDENTE))
         );
 
         Mockito.when(request.getRequestURI()).thenReturn("/api/protected");
         Mockito.when(request.getHeader("Authorization")).thenReturn("Bearer valid-token");
-        Mockito.when(tokenGateway.getEmail()).thenReturn("user@test.com");
-        Mockito.when(userGateway.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+        Mockito.when(tokenGateway.getCpf()).thenReturn("52998224725");
+        Mockito.when(userGateway.findByCpf("52998224725")).thenReturn(Optional.of(user));
 
         filter.doFilterInternal(request, response, filterChain);
 
         Mockito.verify(filterChain).doFilter(request, response);
         assertNotNull(SecurityContextHolder.getContext().getAuthentication());
-        assertEquals("user@test.com", SecurityContextHolder.getContext().getAuthentication().getName());
+        assertEquals("52998224725", SecurityContextHolder.getContext().getAuthentication().getName());
     }
 
     @Test
     void doFilterInternal_shouldThrowWhenUserNotFoundForToken() {
         Mockito.when(request.getRequestURI()).thenReturn("/api/protected");
         Mockito.when(request.getHeader("Authorization")).thenReturn("Bearer valid-token");
-        Mockito.when(tokenGateway.getEmail()).thenReturn("notfound@test.com");
-        Mockito.when(userGateway.findByEmail("notfound@test.com")).thenReturn(Optional.empty());
+        Mockito.when(tokenGateway.getCpf()).thenReturn("00000000000");
+        Mockito.when(userGateway.findByCpf("00000000000")).thenReturn(Optional.empty());
 
         assertThrows(Exception.class, () -> filter.doFilterInternal(request, response, filterChain));
     }

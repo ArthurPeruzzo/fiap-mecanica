@@ -103,11 +103,11 @@ VALUES
 
 SET @atendente_id = (SELECT a.id FROM `atendente` a
                      INNER JOIN `users` u ON a.user_id = u.id
-                     WHERE u.email = 'atendente@mecanica.com');
+                     WHERE u.cpf = '33366699957');
 
 SET @mecanico_id  = (SELECT m.id FROM `mecanico` m
                      INNER JOIN `users` u ON m.user_id = u.id
-                     WHERE u.email = 'mecanico@mecanica.com');
+                     WHERE u.cpf = '11144477735');
 
 SET @cliente_carlos  = (SELECT id FROM `cliente` WHERE cpf  = '65997627004');
 SET @cliente_ana     = (SELECT id FROM `cliente` WHERE cpf  = '30014140063');

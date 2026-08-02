@@ -2,6 +2,7 @@ package com.fiap.mecanica.shared.seguranca.core.usecase;
 
 import com.fiap.mecanica.shared.seguranca.core.gateway.AutenticacaoGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
+import com.fiap.mecanica.shared.valueobjects.Cpf;
 
 public class AuthenticateUserUseCase {
 
@@ -16,8 +17,8 @@ public class AuthenticateUserUseCase {
         this.outputPort = outputPort;
     }
 
-    public void authenticate(String email, String senha) {
-        var user = autenticacaoGateway.autenticar(email, senha);
+    public void authenticate(String cpf, String senha) {
+        var user = autenticacaoGateway.autenticar(new Cpf(cpf).getValor(), senha);
         outputPort.apresentar(tokenGateway.generateToken(user));
     }
 }

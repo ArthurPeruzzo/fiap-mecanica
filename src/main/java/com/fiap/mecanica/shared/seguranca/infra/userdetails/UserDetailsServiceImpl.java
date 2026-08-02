@@ -17,9 +17,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     private final UserGateway userGateway;
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userGateway.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + email));
+    public UserDetails loadUserByUsername(String cpf) throws UsernameNotFoundException {
+        User user = userGateway.findByCpf(cpf)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + cpf));
 
         return new UserDetailsImpl(user);
     }

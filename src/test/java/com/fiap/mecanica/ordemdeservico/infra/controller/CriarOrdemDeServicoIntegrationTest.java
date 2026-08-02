@@ -101,7 +101,7 @@ class CriarOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrati
 
     @Test
     void shouldReturn403WhenUserIsNotAtendente() {
-        String token = obterToken(RoleEnum.ROLE_ADMINISTRADOR, "admin@test.com");
+        String token = obterToken(RoleEnum.ROLE_ADMINISTRADOR, "77722244432");
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + token)

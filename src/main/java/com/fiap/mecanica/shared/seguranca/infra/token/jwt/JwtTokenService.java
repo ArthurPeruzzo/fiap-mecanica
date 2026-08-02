@@ -24,7 +24,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class JwtTokenService implements TokenGateway {
 
-    private static final String EMAIL = "email";
+    private static final String CPF = "cpf";
     private static final String ROLES = "roles";
     private static final String AUTHORIZATION = "Authorization";
 
@@ -44,7 +44,7 @@ public class JwtTokenService implements TokenGateway {
                     .withIssuedAt(creationDate())
                     .withExpiresAt(expirationDate())
                     .withSubject(String.valueOf(user.getId()))
-                    .withClaim(EMAIL, user.getEmail().value())
+                    .withClaim(CPF, user.getCpf().getValor())
                     .withArrayClaim(ROLES, user.getRolesFormattedAsString().toArray(new String[0]))
                     .sign(algorithm);
             return "Bearer " + token;
@@ -54,9 +54,9 @@ public class JwtTokenService implements TokenGateway {
     }
 
     @Override
-    public String getEmail() {
+    public String getCpf() {
         try {
-            return decodeToken(getAuthorization()).getClaim(EMAIL).asString();
+            return decodeToken(getAuthorization()).getClaim(CPF).asString();
         } catch (JWTVerificationException ex) {
             falhaAoVerificarJwtLog(ex.getMessage());
             throw new JWTVerificationException("Token inválido ou expirado.", ex);

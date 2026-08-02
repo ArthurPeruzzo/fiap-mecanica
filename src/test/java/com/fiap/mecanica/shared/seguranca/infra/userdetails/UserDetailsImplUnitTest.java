@@ -1,10 +1,10 @@
 package com.fiap.mecanica.shared.seguranca.infra.userdetails;
 
-import com.fiap.mecanica.shared.seguranca.core.domain.Email;
 import com.fiap.mecanica.shared.seguranca.core.domain.Role;
 import com.fiap.mecanica.shared.seguranca.core.domain.RoleEnum;
 import com.fiap.mecanica.shared.seguranca.core.domain.User;
 import com.fiap.mecanica.shared.seguranca.core.domain.password.PasswordHash;
+import com.fiap.mecanica.shared.valueobjects.Cpf;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.GrantedAuthority;
 
@@ -17,7 +17,7 @@ class UserDetailsImplUnitTest {
 
     private static final User USER = new User(
             1L,
-            new Email("user@test.com"),
+            new Cpf("52998224725"),
             new PasswordHash("hashed-password"),
             List.of(
                     new Role(1L, RoleEnum.ROLE_ATENDENTE),
@@ -54,10 +54,10 @@ class UserDetailsImplUnitTest {
     }
 
     @Test
-    void getUsername_shouldReturnEmailValue() {
+    void getUsername_shouldReturnCpfValue() {
         UserDetailsImpl userDetails = new UserDetailsImpl(USER);
 
-        assertEquals("user@test.com", userDetails.getUsername());
+        assertEquals("52998224725", userDetails.getUsername());
     }
 
     @Test
@@ -69,7 +69,7 @@ class UserDetailsImplUnitTest {
 
     @Test
     void getAuthorities_shouldReturnEmptyCollectionWhenUserHasNoRoles() {
-        User userWithNoRoles = new User(1L, new Email("user@test.com"), new PasswordHash("hashed"), List.of());
+        User userWithNoRoles = new User(1L, new Cpf("52998224725"), new PasswordHash("hashed"), List.of());
         UserDetailsImpl userDetails = new UserDetailsImpl(userWithNoRoles);
 
         assertTrue(userDetails.getAuthorities().isEmpty());

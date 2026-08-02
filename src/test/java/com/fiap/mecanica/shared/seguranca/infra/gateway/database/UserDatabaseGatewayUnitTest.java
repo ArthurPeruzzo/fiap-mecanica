@@ -4,12 +4,12 @@ import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import com.fiap.mecanica.shared.seguranca.core.domain.Role;
 import com.fiap.mecanica.shared.seguranca.core.domain.RoleEnum;
 import com.fiap.mecanica.shared.seguranca.core.domain.User;
-import com.fiap.mecanica.shared.seguranca.core.domain.Email;
 import com.fiap.mecanica.shared.seguranca.core.domain.password.Password;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.entity.RoleEntity;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.entity.UserEntity;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.repository.RoleRepository;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.repository.UserRepository;
+import com.fiap.mecanica.shared.valueobjects.Cpf;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -36,46 +36,46 @@ class UserDatabaseGatewayUnitTest {
     private RoleRepository roleRepository;
 
     // -------------------------------------------------------------------------
-    // findByEmail
+    // findByCpf
     // -------------------------------------------------------------------------
 
     @Test
-    void findByEmail_shouldReturnMappedUserWhenFound() {
+    void findByCpf_shouldReturnMappedUserWhenFound() {
         RoleEntity roleEntity = new RoleEntity(1L, RoleEnum.ROLE_ATENDENTE);
         UserEntity userEntity = UserEntity.builder()
                 .id(1L)
-                .email("user@test.com")
+                .cpf("52998224725")
                 .password("hashed-password")
                 .roles(List.of(roleEntity))
                 .build();
 
-        Mockito.when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(userEntity));
+        Mockito.when(userRepository.findByCpf("52998224725")).thenReturn(Optional.of(userEntity));
 
-        Optional<User> result = gateway.findByEmail("user@test.com");
+        Optional<User> result = gateway.findByCpf("52998224725");
 
         assertTrue(result.isPresent());
         assertEquals(1L, result.get().getId());
-        assertEquals("user@test.com", result.get().getEmail().value());
+        assertEquals("52998224725", result.get().getCpf().getValor());
         assertEquals("hashed-password", result.get().getPassword().getValue());
         assertEquals(1, result.get().getRoles().size());
         assertEquals(RoleEnum.ROLE_ATENDENTE, result.get().getRoles().get(0).getName());
     }
 
     @Test
-    void findByEmail_shouldReturnEmptyWhenNotFound() {
-        Mockito.when(userRepository.findByEmail("unknown@test.com")).thenReturn(Optional.empty());
+    void findByCpf_shouldReturnEmptyWhenNotFound() {
+        Mockito.when(userRepository.findByCpf("00000000000")).thenReturn(Optional.empty());
 
-        Optional<User> result = gateway.findByEmail("unknown@test.com");
+        Optional<User> result = gateway.findByCpf("00000000000");
 
         assertTrue(result.isEmpty());
     }
 
     @Test
-    void findByEmail_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
-        Mockito.when(userRepository.findByEmail(Mockito.anyString()))
+    void findByCpf_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.when(userRepository.findByCpf(Mockito.anyString()))
                 .thenThrow(new RuntimeException("db error"));
 
-        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.findByEmail("user@test.com"));
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.findByCpf("52998224725"));
     }
 
     // -------------------------------------------------------------------------
@@ -87,13 +87,13 @@ class UserDatabaseGatewayUnitTest {
         RoleEntity roleEntity = new RoleEntity(1L, RoleEnum.ROLE_ATENDENTE);
         UserEntity savedEntity = UserEntity.builder()
                 .id(10L)
-                .email("new@test.com")
+                .cpf("11144477735")
                 .password("passworD2912@")
                 .roles(List.of(roleEntity))
                 .build();
 
         User user = new User(
-                new Email("new@test.com"),
+                new Cpf("11144477735"),
                 new Password("passworD2912@"),
                 List.of(new Role(1L, RoleEnum.ROLE_ATENDENTE))
         );
@@ -105,7 +105,7 @@ class UserDatabaseGatewayUnitTest {
         User result = gateway.create(user);
 
         assertEquals(10L, result.getId());
-        assertEquals("new@test.com", result.getEmail().value());
+        assertEquals("11144477735", result.getCpf().getValor());
         assertEquals("passworD2912@", result.getPassword().getValue());
         assertEquals(RoleEnum.ROLE_ATENDENTE, result.getRoles().getFirst().getName());
     }
@@ -113,7 +113,7 @@ class UserDatabaseGatewayUnitTest {
     @Test
     void create_shouldThrowErroAcessoBaseDeDadosExceptionOnDataIntegrityViolation() {
         User user = new User(
-                new Email("dup@test.com"),
+                new Cpf("22255588846"),
                 new Password("passworD2912@"),
                 List.of(new Role(1L, RoleEnum.ROLE_ATENDENTE))
         );
@@ -128,7 +128,7 @@ class UserDatabaseGatewayUnitTest {
     @Test
     void create_shouldThrowErroAcessoBaseDeDadosExceptionOnGenericException() {
         User user = new User(
-                new Email("user@test.com"),
+                new Cpf("52998224725"),
                 new Password("passworD2912@"),
                 List.of(new Role(1L, RoleEnum.ROLE_ATENDENTE))
         );

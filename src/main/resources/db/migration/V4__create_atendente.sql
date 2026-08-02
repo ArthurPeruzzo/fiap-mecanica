@@ -9,8 +9,8 @@ CREATE TABLE IF NOT EXISTS `atendente` (
 );
 
 -- Senha em texto plano: MeCanica2026!@#
-INSERT INTO `users` (`email`, `password`)
-VALUES ('atendente@mecanica.com', '$2a$10$AYbJPybutQmQz0ewR0wpb.E6d.S0DwZik2t2hD/koba1UQY10jUdO');
+INSERT INTO `users` (`cpf`, `password`)
+VALUES ('33366699957', '$2a$10$AYbJPybutQmQz0ewR0wpb.E6d.S0DwZik2t2hD/koba1UQY10jUdO');
 
 SET @user_id = LAST_INSERT_ID();
 

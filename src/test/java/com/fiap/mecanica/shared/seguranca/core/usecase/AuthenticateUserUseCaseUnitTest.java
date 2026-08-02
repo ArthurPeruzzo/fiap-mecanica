@@ -1,6 +1,5 @@
 package com.fiap.mecanica.shared.seguranca.core.usecase;
 
-import com.fiap.mecanica.shared.seguranca.core.domain.Email;
 import com.fiap.mecanica.shared.seguranca.core.domain.Role;
 import com.fiap.mecanica.shared.seguranca.core.domain.RoleEnum;
 import com.fiap.mecanica.shared.seguranca.core.domain.User;
@@ -9,6 +8,7 @@ import com.fiap.mecanica.shared.seguranca.core.exception.BadCredentialsAuthentic
 import com.fiap.mecanica.shared.seguranca.core.exception.UnexpectedErrorAuthenticateException;
 import com.fiap.mecanica.shared.seguranca.core.gateway.AutenticacaoGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
+import com.fiap.mecanica.shared.valueobjects.Cpf;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,9 +44,9 @@ class AuthenticateUserUseCaseUnitTest {
                 .thenThrow(new BadCredentialsAuthenticateException());
 
         var exception = Assertions.assertThrows(BadCredentialsAuthenticateException.class,
-                () -> useCase.authenticate("any@email.com", "wrong-password"));
+                () -> useCase.authenticate("52998224725", "wrong-password"));
 
-        Mockito.verify(autenticacaoGateway).autenticar("any@email.com", "wrong-password");
+        Mockito.verify(autenticacaoGateway).autenticar("52998224725", "wrong-password");
         Mockito.verifyNoInteractions(tokenGateway, outputPort);
 
         Assertions.assertEquals(401, exception.getStatusCode());
@@ -59,9 +59,9 @@ class AuthenticateUserUseCaseUnitTest {
                 .thenThrow(new UnexpectedErrorAuthenticateException());
 
         var exception = Assertions.assertThrows(UnexpectedErrorAuthenticateException.class,
-                () -> useCase.authenticate("any@email.com", "any-password"));
+                () -> useCase.authenticate("52998224725", "any-password"));
 
-        Mockito.verify(autenticacaoGateway).autenticar("any@email.com", "any-password");
+        Mockito.verify(autenticacaoGateway).autenticar("52998224725", "any-password");
         Mockito.verifyNoInteractions(tokenGateway, outputPort);
 
         Assertions.assertEquals(500, exception.getStatusCode());
@@ -70,19 +70,34 @@ class AuthenticateUserUseCaseUnitTest {
 
     @Test
     void shouldCallOutputPortWithTokenWhenAuthenticationSucceeds() {
-        var user = new User(1L, new Email("user@email.com"), new PasswordHash("hash"),
+        var user = new User(1L, new Cpf("52998224725"), new PasswordHash("hash"),
                 List.of(new Role(1L, RoleEnum.ROLE_ATENDENTE)));
         String expectedToken = "Bearer any-token";
 
-        Mockito.when(autenticacaoGateway.autenticar("user@email.com", "correct-password"))
+        Mockito.when(autenticacaoGateway.autenticar("52998224725", "correct-password"))
                 .thenReturn(user);
         Mockito.when(tokenGateway.generateToken(user))
                 .thenReturn(expectedToken);
 
-        useCase.authenticate("user@email.com", "correct-password");
+        useCase.authenticate("52998224725", "correct-password");
 
-        Mockito.verify(autenticacaoGateway).autenticar("user@email.com", "correct-password");
+        Mockito.verify(autenticacaoGateway).autenticar("52998224725", "correct-password");
         Mockito.verify(tokenGateway).generateToken(user);
         Mockito.verify(outputPort).apresentar(expectedToken);
+    }
+
+    @Test
+    void shouldStripFormattingFromCpfBeforeCallingGateway() {
+        var user = new User(1L, new Cpf("52998224725"), new PasswordHash("hash"),
+                List.of(new Role(1L, RoleEnum.ROLE_ATENDENTE)));
+
+        Mockito.when(autenticacaoGateway.autenticar("52998224725", "correct-password"))
+                .thenReturn(user);
+        Mockito.when(tokenGateway.generateToken(user))
+                .thenReturn("Bearer any-token");
+
+        useCase.authenticate("529.982.247-25", "correct-password");
+
+        Mockito.verify(autenticacaoGateway).autenticar("52998224725", "correct-password");
     }
 }
