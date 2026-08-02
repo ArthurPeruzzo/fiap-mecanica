@@ -9,11 +9,11 @@ import jakarta.validation.constraints.NotBlank;
 )
 public record LoginRequestJson(
         @Schema(
-                description = "Email",
-                example = "administrador@mecanica.com"
+                description = "CPF",
+                example = "22255588846"
         )
-        @NotBlank(message = "O email deve ser preenchido")
-        String email,
+        @NotBlank(message = "O CPF deve ser preenchido")
+        String cpf,
 
         @Schema(
                 description = "A senha deve conter letras maiúsculas, minúsculas, números e caracteres especiais",

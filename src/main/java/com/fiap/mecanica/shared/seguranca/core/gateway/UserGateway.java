@@ -7,6 +7,7 @@ import java.util.Optional;
 
 public interface UserGateway {
 
-    Optional<User> findByEmail(String email);
+    Optional<User> findByCpf(String cpf);
+    Optional<User> findById(Long id);
     User create(User user);
 }

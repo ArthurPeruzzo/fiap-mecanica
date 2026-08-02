@@ -15,9 +15,9 @@ public class AuthenticateCleanController {
         this.tokenGateway = tokenGateway;
     }
 
-    public String login(String email, String senha) {
+    public String login(String cpf, String senha) {
         var presenter = new AutenticarPresenter();
-        new AuthenticateUserUseCase(autenticacaoGateway, tokenGateway, presenter).authenticate(email, senha);
+        new AuthenticateUserUseCase(autenticacaoGateway, tokenGateway, presenter).authenticate(cpf, senha);
         return presenter.getViewModel();
     }
 }

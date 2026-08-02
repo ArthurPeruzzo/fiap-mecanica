@@ -43,7 +43,7 @@ class ConsultarStatusOrdemDeServicoIntegrationTest extends AbstractOrdemDeServic
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemAguardandoAprovacaoERetornarId(tokenAtendente, tokenMecanico);
 
-        String tokenAdmin = obterToken(RoleEnum.ROLE_ADMINISTRADOR, "admin@test.com");
+        String tokenAdmin = obterToken(RoleEnum.ROLE_ADMINISTRADOR, "77722244432");
 
         RestAssured.given()
                 .header("Authorization", "Bearer " + tokenAdmin)

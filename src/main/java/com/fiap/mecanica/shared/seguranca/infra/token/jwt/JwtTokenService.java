@@ -24,7 +24,6 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class JwtTokenService implements TokenGateway {
 
-    private static final String EMAIL = "email";
     private static final String ROLES = "roles";
     private static final String AUTHORIZATION = "Authorization";
 
@@ -44,22 +43,11 @@ public class JwtTokenService implements TokenGateway {
                     .withIssuedAt(creationDate())
                     .withExpiresAt(expirationDate())
                     .withSubject(String.valueOf(user.getId()))
-                    .withClaim(EMAIL, user.getEmail().value())
                     .withArrayClaim(ROLES, user.getRolesFormattedAsString().toArray(new String[0]))
                     .sign(algorithm);
             return "Bearer " + token;
         } catch (JWTCreationException exception) {
             throw new JWTCreationException("Erro ao gerar token.", exception);
-        }
-    }
-
-    @Override
-    public String getEmail() {
-        try {
-            return decodeToken(getAuthorization()).getClaim(EMAIL).asString();
-        } catch (JWTVerificationException ex) {
-            falhaAoVerificarJwtLog(ex.getMessage());
-            throw new JWTVerificationException("Token inválido ou expirado.", ex);
         }
     }
 

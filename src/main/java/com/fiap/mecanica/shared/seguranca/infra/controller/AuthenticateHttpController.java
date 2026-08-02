@@ -38,7 +38,7 @@ public class AuthenticateHttpController {
     })
     @PostMapping("/login")
     public ResponseEntity<LoginResponseJson> login(@RequestBody @Valid LoginRequestJson loginRequestJson) {
-        String token = cleanController.login(loginRequestJson.email(), loginRequestJson.password());
+        String token = cleanController.login(loginRequestJson.cpf(), loginRequestJson.password());
         return ResponseEntity.ok(new LoginResponseJson(token));
     }
 }

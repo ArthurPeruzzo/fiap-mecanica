@@ -30,7 +30,7 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public String getUsername() {
-        return user.getEmail().value();
+        return user.getCpf().getValor();
     }
 
     public User getUser() {

@@ -13,7 +13,7 @@ class DetalhamentoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIn
     @Test
     void shouldReturnDetalhamentoOrdemDeServicoSuccessfully() {
         String tokenAtendente = obterTokenAtendente();
-        String tokenAdmin = obterToken(RoleEnum.ROLE_ADMINISTRADOR, "admin@test.com");
+        String tokenAdmin = obterToken(RoleEnum.ROLE_ADMINISTRADOR, "77722244432");
 
         Long clienteId = criarClienteERetornarId();
         Long veiculoId = criarVeiculoERetornarId(clienteId);
@@ -44,7 +44,7 @@ class DetalhamentoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIn
     void shouldReturnNullTempoMedioWhenSemServicosFinalizados() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
-        String tokenAdmin = obterToken(RoleEnum.ROLE_ADMINISTRADOR, "admin@test.com");
+        String tokenAdmin = obterToken(RoleEnum.ROLE_ADMINISTRADOR, "77722244432");
 
         Long s1 = criarServicoERetornarId();
         Long s2 = criarServicoERetornarId();
@@ -66,7 +66,7 @@ class DetalhamentoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIn
     void shouldReturnTempoMedioConsideringOnlyServicosFinalizados() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
-        String tokenAdmin = obterToken(RoleEnum.ROLE_ADMINISTRADOR, "admin@test.com");
+        String tokenAdmin = obterToken(RoleEnum.ROLE_ADMINISTRADOR, "77722244432");
 
         Long s1 = criarServicoERetornarId();
         Long s2 = criarServicoERetornarId();
@@ -99,7 +99,7 @@ class DetalhamentoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIn
     void shouldReturnTempoMedioSpanningDays() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
-        String tokenAdmin = obterToken(RoleEnum.ROLE_ADMINISTRADOR, "admin@test.com");
+        String tokenAdmin = obterToken(RoleEnum.ROLE_ADMINISTRADOR, "77722244432");
 
         Long s1 = criarServicoERetornarId();
         Long s2 = criarServicoERetornarId();

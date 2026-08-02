@@ -1,11 +1,11 @@
 package com.fiap.mecanica.shared.seguranca.infra.userdetails;
 
-import com.fiap.mecanica.shared.seguranca.core.domain.Email;
 import com.fiap.mecanica.shared.seguranca.core.domain.Role;
 import com.fiap.mecanica.shared.seguranca.core.domain.RoleEnum;
 import com.fiap.mecanica.shared.seguranca.core.domain.User;
 import com.fiap.mecanica.shared.seguranca.core.domain.password.PasswordHash;
 import com.fiap.mecanica.shared.seguranca.core.gateway.UserGateway;
+import com.fiap.mecanica.shared.valueobjects.Cpf;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -33,34 +33,34 @@ class UserDetailsServiceImplUnitTest {
     void loadUserByUsername_shouldReturnUserDetailsWhenUserFound() {
         User user = new User(
                 1L,
-                new Email("user@test.com"),
+                new Cpf("52998224725"),
                 new PasswordHash("hashed-password"),
                 List.of(new Role(1L, RoleEnum.ROLE_ATENDENTE))
         );
 
-        Mockito.when(userGateway.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+        Mockito.when(userGateway.findByCpf("52998224725")).thenReturn(Optional.of(user));
 
-        UserDetails result = userDetailsService.loadUserByUsername("user@test.com");
+        UserDetails result = userDetailsService.loadUserByUsername("52998224725");
 
         assertNotNull(result);
         assertInstanceOf(UserDetailsImpl.class, result);
-        assertEquals("user@test.com", result.getUsername());
+        assertEquals("52998224725", result.getUsername());
         assertEquals("hashed-password", result.getPassword());
     }
 
     @Test
     void loadUserByUsername_shouldThrowNoSuchElementExceptionWhenUserNotFound() {
-        Mockito.when(userGateway.findByEmail("unknown@test.com")).thenReturn(Optional.empty());
+        Mockito.when(userGateway.findByCpf("00000000000")).thenReturn(Optional.empty());
 
         assertThrows(UsernameNotFoundException.class,
-                () -> userDetailsService.loadUserByUsername("unknown@test.com"));
+                () -> userDetailsService.loadUserByUsername("00000000000"));
     }
 
     @Test
     void loadUserByUsername_shouldReturnUserDetailsWithCorrectAuthorities() {
         User user = new User(
                 1L,
-                new Email("user@test.com"),
+                new Cpf("52998224725"),
                 new PasswordHash("hashed"),
                 List.of(
                         new Role(1L, RoleEnum.ROLE_ATENDENTE),
@@ -68,9 +68,9 @@ class UserDetailsServiceImplUnitTest {
                 )
         );
 
-        Mockito.when(userGateway.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+        Mockito.when(userGateway.findByCpf("52998224725")).thenReturn(Optional.of(user));
 
-        UserDetails result = userDetailsService.loadUserByUsername("user@test.com");
+        UserDetails result = userDetailsService.loadUserByUsername("52998224725");
 
         assertEquals(2, result.getAuthorities().size());
     }

@@ -49,11 +49,11 @@ MySQL is exposed on the **host at port 3307** (mapped from container port 3306).
 
 Seeded by Flyway migrations. All share the same password `MeCanica2026!@#`.
 
-| E-mail | Role |
+| CPF | Role |
 |---|---|
-| `administrador@mecanica.com` | `ROLE_ADMINISTRADOR` |
-| `atendente@mecanica.com` | `ROLE_ATENDENTE` |
-| `mecanico@mecanica.com` | `ROLE_MECANICO` |
+| `22255588846` | `ROLE_ADMINISTRADOR` |
+| `33366699957` | `ROLE_ATENDENTE` |
+| `11144477735` | `ROLE_MECANICO` |
 
 Login via `POST /authenticate/login`. Migration `V14` seeds sample data (clients, vehicles, parts, supplies, services, orders in every status) for immediate API exploration. Swagger UI: `http://localhost:8080/swagger-ui.html`.
 
@@ -168,7 +168,7 @@ com.fiap.mecanica
 ```
 
 `shared/seguranca/` follows the same core/infra split:
-- `core/`: `User`, `Email`, `Role`, `RoleEnum`, `Password`/`PasswordHash` value objects, `UserGateway`, `TokenGateway`, `AuthenticateUserUseCase`, domain exceptions
+- `core/`: `User` (identified by `Cpf`, from `shared/valueobjects/`), `Role`, `RoleEnum`, `Password`/`PasswordHash` value objects, `UserGateway`, `TokenGateway`, `AuthenticateUserUseCase`, domain exceptions
 - `infra/`: `SecurityConfiguration`, `UserAuthenticationFilter`, `JwtTokenService`, `AuthenticateController`, JPA entities/repositories
 
 `shared/notificacao/core/domain/` contains: `Mensagem` (record: `clienteId`, `conteudo`), abstract `MensagemFactory` (`criar(MensagemParams params)`), and `MensagemParams` (builder: `clienteId`, `ordemId`, `valorTotal`, `token`, `urlAprovar`, `urlRecusar`). `NotificacaoGateway` exposes a single method `enviar(Mensagem mensagem)`; the only implementation is `NotificacaoMockGateway`, which logs via SLF4J. Concrete factories live in `ordemdeservico/core/domain/ordemdeservico/mensagem/` and extend `MensagemFactory` — one per notification event (OS recebida, orçamento enviado, orçamento aprovado, OS cancelada, OS finalizada, OS entregue). Usage pattern: `notificacaoGateway.enviar(new MensagemXxxFactory().criar(params))`.
@@ -357,6 +357,6 @@ Standard field-level constraints: `@NotBlank`, `@NotNull`, `@CPF`, `@CNPJ` (Hibe
 
 **Contract tests** must declare a `@MockitoBean` for every use case injected into the controller under test, even those not exercised in the test class — Spring context will fail to start otherwise.
 
-**`ordemdeservico` integration test pattern:** instead of extending `AbstractContainer` directly, each feature area extends `AbstractOrdemDeServicoIntegrationTest` (in `ordemdeservico/infra/controller/`), which itself extends `AbstractContainer`. The abstract class holds all `@Autowired` repositories (including `linkAprovacaoOrcamentoRepository`), `@LocalServerPort`, the `@BeforeEach` port setup, and shared helper methods (`obterToken(RoleEnum, email)`, `obterTokenAtendente`, `obterTokenMecanico`, `obterTokenOutroMecanico`, `criarClienteERetornarId`, `criarVeiculoERetornarId`, `criarOrdemERetornarId`, `criarOrdemEmDiagnosticoERetornarId`, `criarOrdemAguardandoAprovacaoERetornarId`, `criarServicoERetornarId`, `criarPecaERetornarId`, `criarInsumoERetornarId`). Use `obterToken(RoleEnum.ROLE_ADMINISTRADOR, "admin@test.com")` for admin-role tests. Each concrete test class covers one feature area (criação, diagnóstico, serviço, peça, insumo, envio de orçamento, aprovação, execução, entrega, detalhamento). DB-query helpers specific to a single class (e.g. `contarVinculosPecaNoBanco`) stay in that class, not in the abstract base.
+**`ordemdeservico` integration test pattern:** instead of extending `AbstractContainer` directly, each feature area extends `AbstractOrdemDeServicoIntegrationTest` (in `ordemdeservico/infra/controller/`), which itself extends `AbstractContainer`. The abstract class holds all `@Autowired` repositories (including `linkAprovacaoOrcamentoRepository`), `@LocalServerPort`, the `@BeforeEach` port setup, and shared helper methods (`obterToken(RoleEnum, cpf)`, `obterTokenAtendente`, `obterTokenMecanico`, `obterTokenOutroMecanico`, `criarClienteERetornarId`, `criarVeiculoERetornarId`, `criarOrdemERetornarId`, `criarOrdemEmDiagnosticoERetornarId`, `criarOrdemAguardandoAprovacaoERetornarId`, `criarServicoERetornarId`, `criarPecaERetornarId`, `criarInsumoERetornarId`). Use `obterToken(RoleEnum.ROLE_ADMINISTRADOR, "44477711107")` for admin-role tests. Each concrete test class covers one feature area (criação, diagnóstico, serviço, peça, insumo, envio de orçamento, aprovação, execução, entrega, detalhamento). DB-query helpers specific to a single class (e.g. `contarVinculosPecaNoBanco`) stay in that class, not in the abstract base.
 
 > **REST Assured + Java 25 note:** REST Assured (Groovy-based) may throw `NullPointerException` in `applyProxySettings` on Java 25. If this occurs, add `--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED` to the `maven-surefire-plugin` `<argLine>`.

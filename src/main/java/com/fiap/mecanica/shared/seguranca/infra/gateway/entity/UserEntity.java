@@ -17,8 +17,8 @@ public class UserEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "email", nullable = false, unique = true)
-    private String email;
+    @Column(name = "cpf", nullable = false, unique = true)
+    private String cpf;
 
     @Column(name = "password", nullable = false)
     private String password;
@@ -30,8 +30,8 @@ public class UserEntity {
             inverseJoinColumns = @JoinColumn(name="role_id"))
     private List<RoleEntity> roles;
 
-    public UserEntity(String email, String password, List<RoleEntity> roles) {
-        this.email = email;
+    public UserEntity(String cpf, String password, List<RoleEntity> roles) {
+        this.cpf = cpf;
         this.password = password;
         this.roles = roles;
     }

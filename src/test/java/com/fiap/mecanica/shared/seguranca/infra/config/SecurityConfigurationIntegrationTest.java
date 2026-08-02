@@ -37,21 +37,21 @@ class SecurityConfigurationIntegrationTest extends AbstractContainer {
     @BeforeEach
     void configurar() {
         RestAssured.port = port;
-        tokenAdministrador = obterToken(RoleEnum.ROLE_ADMINISTRADOR, "admin@test.com");
-        tokenAtendente     = obterToken(RoleEnum.ROLE_ATENDENTE,     "atendente@test.com");
-        tokenMecanico      = obterToken(RoleEnum.ROLE_MECANICO,      "mecanico@test.com");
+        tokenAdministrador = obterToken(RoleEnum.ROLE_ADMINISTRADOR, "44477711107");
+        tokenAtendente     = obterToken(RoleEnum.ROLE_ATENDENTE,     "55588822200");
+        tokenMecanico      = obterToken(RoleEnum.ROLE_MECANICO,      "77722244432");
     }
 
-    private String obterToken(RoleEnum role, String email) {
+    private String obterToken(RoleEnum role, String cpf) {
         List<RoleEntity> roles = roleRepository.findByNameIn(List.of(role));
         userRepository.saveAndFlush(UserEntity.builder()
-                .email(email)
+                .cpf(cpf)
                 .password(securityConfiguration.passwordEncoder().encode("senha123"))
                 .roles(roles)
                 .build());
         return RestAssured.given()
                 .contentType("application/json")
-                .body(String.format("{\"email\":\"%s\",\"password\":\"senha123\"}", email))
+                .body(String.format("{\"cpf\":\"%s\",\"password\":\"senha123\"}", cpf))
                 .when().post("/authenticate/login")
                 .then().statusCode(200)
                 .extract().path("token");

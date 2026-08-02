@@ -1,13 +1,13 @@
 package com.fiap.mecanica.shared.seguranca.infra.controller;
 
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
-import com.fiap.mecanica.shared.seguranca.core.domain.Email;
 import com.fiap.mecanica.shared.seguranca.core.domain.Role;
 import com.fiap.mecanica.shared.seguranca.core.domain.RoleEnum;
 import com.fiap.mecanica.shared.seguranca.core.domain.User;
 import com.fiap.mecanica.shared.seguranca.core.domain.password.PasswordHash;
 import com.fiap.mecanica.shared.seguranca.core.gateway.AutenticacaoGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
+import com.fiap.mecanica.shared.valueobjects.Cpf;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -42,8 +42,8 @@ class AuthenticateControllerContractTest {
 
     @ParameterizedTest
     @CsvSource({
-            "'{\"email\":\"\",\"password\":\"123456\"}', email, 'O email deve ser preenchido'",
-            "'{\"email\":\"email@email.com\",\"password\":\"\"}', password, 'A senha deve ser preenchida'"
+            "'{\"cpf\":\"\",\"password\":\"123456\"}', cpf, 'O CPF deve ser preenchido'",
+            "'{\"cpf\":\"52998224725\",\"password\":\"\"}', password, 'A senha deve ser preenchida'"
     })
     void shouldReturn400WithValidationMessage(String requestJson, String field, String expectedMessage) throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.post("/authenticate/login")
@@ -59,12 +59,12 @@ class AuthenticateControllerContractTest {
     void shouldReturn200WhenParamsValid() throws Exception {
         String json = """
                 {
-                  "email": "email@test.com",
+                  "cpf": "52998224725",
                   "password": "password123"
                 }
                 """;
 
-        var user = new User(1L, new Email("email@test.com"), new PasswordHash("hash"),
+        var user = new User(1L, new Cpf("52998224725"), new PasswordHash("hash"),
                 List.of(new Role(1L, RoleEnum.ROLE_ATENDENTE)));
         String token = "Bearer any-token";
 

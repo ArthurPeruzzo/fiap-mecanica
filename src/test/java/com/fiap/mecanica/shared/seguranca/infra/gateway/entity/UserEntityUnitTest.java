@@ -10,11 +10,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class UserEntityUnitTest {
 
     @Test
-    void constructor_withEmailPasswordAndRoles_shouldSetFieldsCorrectly() {
+    void constructor_withCpfPasswordAndRoles_shouldSetFieldsCorrectly() {
         RoleEntity role = new RoleEntity(RoleEnum.ROLE_ATENDENTE);
-        UserEntity entity = new UserEntity("user@test.com", "hashed-password", List.of(role));
+        UserEntity entity = new UserEntity("52998224725", "hashed-password", List.of(role));
 
-        assertEquals("user@test.com", entity.getEmail());
+        assertEquals("52998224725", entity.getCpf());
         assertEquals("hashed-password", entity.getPassword());
         assertEquals(1, entity.getRoles().size());
         assertEquals(RoleEnum.ROLE_ATENDENTE, entity.getRoles().get(0).getName());
@@ -25,7 +25,7 @@ class UserEntityUnitTest {
         UserEntity entity = new UserEntity(42L);
 
         assertEquals(42L, entity.getId());
-        assertNull(entity.getEmail());
+        assertNull(entity.getCpf());
         assertNull(entity.getPassword());
     }
 
@@ -34,20 +34,20 @@ class UserEntityUnitTest {
         RoleEntity role = new RoleEntity(1L, RoleEnum.ROLE_MECANICO);
         UserEntity entity = UserEntity.builder()
                 .id(1L)
-                .email("builder@test.com")
+                .cpf("11144477735")
                 .password("hashed")
                 .roles(List.of(role))
                 .build();
 
         assertEquals(1L, entity.getId());
-        assertEquals("builder@test.com", entity.getEmail());
+        assertEquals("11144477735", entity.getCpf());
         assertEquals("hashed", entity.getPassword());
         assertEquals(RoleEnum.ROLE_MECANICO, entity.getRoles().get(0).getName());
     }
 
     @Test
     void setRoles_shouldUpdateRoles() {
-        UserEntity entity = new UserEntity("user@test.com", "hashed", List.of());
+        UserEntity entity = new UserEntity("52998224725", "hashed", List.of());
         RoleEntity newRole = new RoleEntity(RoleEnum.ROLE_MECANICO);
 
         entity.setRoles(List.of(newRole));

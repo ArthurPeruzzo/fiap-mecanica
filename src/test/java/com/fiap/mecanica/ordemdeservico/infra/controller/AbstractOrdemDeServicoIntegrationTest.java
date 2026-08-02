@@ -62,40 +62,40 @@ abstract class AbstractOrdemDeServicoIntegrationTest extends AbstractContainer {
         RestAssured.port = port;
     }
 
-    protected String obterToken(RoleEnum role, String email) {
+    protected String obterToken(RoleEnum role, String cpf) {
         List<RoleEntity> roles = roleRepository.findByNameIn(List.of(role));
         userRepository.saveAndFlush(UserEntity.builder()
-                .email(email)
+                .cpf(cpf)
                 .password(securityConfiguration.passwordEncoder().encode("senha123"))
                 .roles(roles)
                 .build());
         return RestAssured
                 .given().contentType("application/json")
-                .body(String.format("{\"email\":\"%s\",\"password\":\"senha123\"}", email))
+                .body(String.format("{\"cpf\":\"%s\",\"password\":\"senha123\"}", cpf))
                 .when().post("/authenticate/login")
                 .then().statusCode(200)
                 .extract().path("token");
     }
 
     protected String obterTokenAtendente() {
-        String token = obterToken(RoleEnum.ROLE_ATENDENTE, "atendente@test.com");
-        UserEntity user = userRepository.findByEmail("atendente@test.com").orElseThrow();
+        String token = obterToken(RoleEnum.ROLE_ATENDENTE, "44477711107");
+        UserEntity user = userRepository.findByCpf("44477711107").orElseThrow();
         atendenteRepository.saveAndFlush(AtendenteEntity.builder()
                 .nome("João").sobrenome("Silva").turno(Turno.INTEGRAL).userId(user.getId()).build());
         return token;
     }
 
     protected String obterTokenMecanico() {
-        String token = obterToken(RoleEnum.ROLE_MECANICO, "mecanico@test.com");
-        UserEntity user = userRepository.findByEmail("mecanico@test.com").orElseThrow();
+        String token = obterToken(RoleEnum.ROLE_MECANICO, "55588822200");
+        UserEntity user = userRepository.findByCpf("55588822200").orElseThrow();
         mecanicoRepository.saveAndFlush(MecanicoEntity.builder()
                 .nome("Carlos").sobrenome("Lima").especialidade("Motor").userId(user.getId()).build());
         return token;
     }
 
     protected String obterTokenOutroMecanico() {
-        String token = obterToken(RoleEnum.ROLE_MECANICO, "mecanico2@test.com");
-        UserEntity user = userRepository.findByEmail("mecanico2@test.com").orElseThrow();
+        String token = obterToken(RoleEnum.ROLE_MECANICO, "88811155576");
+        UserEntity user = userRepository.findByCpf("88811155576").orElseThrow();
         mecanicoRepository.saveAndFlush(MecanicoEntity.builder()
                 .nome("Pedro").sobrenome("Costa").especialidade("Freios").userId(user.getId()).build());
         return token;

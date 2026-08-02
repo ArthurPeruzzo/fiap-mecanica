@@ -177,11 +177,11 @@ Provisiona VPC, cluster EKS, RDS MySQL e repositório ECR na AWS. Lista completa
 
 Criados automaticamente pelas migrations do Flyway. Todos compartilham a mesma senha:
 
-| E-mail | Senha | Perfil |
+| CPF | Senha | Perfil |
 |---|---|---|
-| `administrador@mecanica.com` | `MeCanica2026!@#` | Administrador |
-| `atendente@mecanica.com` | `MeCanica2026!@#` | Atendente |
-| `mecanico@mecanica.com` | `MeCanica2026!@#` | Mecânico |
+| `22255588846` | `MeCanica2026!@#` | Administrador |
+| `33366699957` | `MeCanica2026!@#` | Atendente |
+| `11144477735` | `MeCanica2026!@#` | Mecânico |
 
 Use o token retornado no header `Authorization: Bearer <token>` nas demais requisições.
 
