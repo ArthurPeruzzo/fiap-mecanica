@@ -75,31 +75,9 @@ class JwtTokenServiceUnitTest {
         DecodedJWT decoded = jwtTokenService.decodeToken(rawToken);
 
         assertEquals("1", decoded.getSubject());
-        assertEquals("52998224725", decoded.getClaim("cpf").asString());
+        assertNull(decoded.getClaim("cpf").asString(), "o CPF nao deve ser incluido no token");
         assertEquals(List.of("ROLE_ATENDENTE"), decoded.getClaim("roles").asList(String.class));
         assertEquals(ISSUER, decoded.getIssuer());
-    }
-
-    // -------------------------------------------------------------------------
-    // getCpf
-    // -------------------------------------------------------------------------
-
-    @Test
-    void getCpf_shouldReturnCpfFromValidToken() {
-        var user = buildUser(1L, "52998224725", RoleEnum.ROLE_ATENDENTE);
-        String rawToken = generateRawToken(user);
-        Mockito.when(httpServletRequest.getHeader("Authorization")).thenReturn("Bearer " + rawToken);
-
-        String cpf = jwtTokenService.getCpf();
-
-        assertEquals("52998224725", cpf);
-    }
-
-    @Test
-    void getCpf_shouldThrowJWTVerificationExceptionForInvalidToken() {
-        Mockito.when(httpServletRequest.getHeader("Authorization")).thenReturn("Bearer invalid.token.here");
-
-        assertThrows(JWTVerificationException.class, () -> jwtTokenService.getCpf());
     }
 
     // -------------------------------------------------------------------------

@@ -70,9 +70,9 @@ public class UserAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private UserDetailsImpl getUserDetails() throws AuthenticationException {
-        String cpf = tokenGateway.getCpf();
-        User user = userGateway.findByCpf(cpf).orElseThrow(() -> {
-            log.error("Usuário não foi encontrado para o cpf: {}", cpf);
+        Long userId = tokenGateway.getUserId();
+        User user = userGateway.findById(userId).orElseThrow(() -> {
+            log.error("Usuário não foi encontrado para o id: {}", userId);
             return new AuthenticationException("Não foi possível processar sua solicitação");
         });
         return new UserDetailsImpl(user);

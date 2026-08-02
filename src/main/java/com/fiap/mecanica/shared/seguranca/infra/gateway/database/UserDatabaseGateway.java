@@ -44,6 +44,22 @@ public class UserDatabaseGateway implements UserGateway {
     }
 
     @Override
+    public Optional<User> findById(Long id) {
+        try {
+            return userRepository.findById(id)
+                    .map(entity -> new User(
+                            entity.getId(),
+                            new Cpf(entity.getCpf()),
+                            new PasswordHash(entity.getPassword()),
+                            entity.getRoles().stream().map(roleEntity -> new Role(roleEntity.getId(), roleEntity.getName()))
+                    .toList()));
+        } catch (Exception e) {
+            log.error("Erro ao buscar usuario por id: {}", id, e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
+
+    @Override
     public User create(User user) {
         try {
             List<RoleEnum> roleEnums = user.getRoles().stream().map(Role::getName).toList();

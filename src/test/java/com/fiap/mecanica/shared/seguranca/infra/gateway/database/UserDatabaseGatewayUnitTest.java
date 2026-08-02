@@ -79,6 +79,49 @@ class UserDatabaseGatewayUnitTest {
     }
 
     // -------------------------------------------------------------------------
+    // findById
+    // -------------------------------------------------------------------------
+
+    @Test
+    void findById_shouldReturnMappedUserWithRolesWhenFound() {
+        RoleEntity roleEntity = new RoleEntity(1L, RoleEnum.ROLE_ATENDENTE);
+        UserEntity userEntity = UserEntity.builder()
+                .id(1L)
+                .cpf("52998224725")
+                .password("hashed-password")
+                .roles(List.of(roleEntity))
+                .build();
+
+        Mockito.when(userRepository.findById(1L)).thenReturn(Optional.of(userEntity));
+
+        Optional<User> result = gateway.findById(1L);
+
+        assertTrue(result.isPresent());
+        assertEquals(1L, result.get().getId());
+        assertEquals("52998224725", result.get().getCpf().getValor());
+        assertEquals("hashed-password", result.get().getPassword().getValue());
+        assertEquals(1, result.get().getRoles().size());
+        assertEquals(RoleEnum.ROLE_ATENDENTE, result.get().getRoles().get(0).getName());
+    }
+
+    @Test
+    void findById_shouldReturnEmptyWhenNotFound() {
+        Mockito.when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+        Optional<User> result = gateway.findById(999L);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void findById_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
+        Mockito.when(userRepository.findById(Mockito.anyLong()))
+                .thenThrow(new RuntimeException("db error"));
+
+        assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.findById(1L));
+    }
+
+    // -------------------------------------------------------------------------
     // create
     // -------------------------------------------------------------------------
 

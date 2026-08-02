@@ -7,7 +7,6 @@ import java.util.List;
 
 public interface TokenGateway {
     String generateToken(User user);
-    String getCpf();
     Long getUserId();
     List<RoleEnum> getRoles();
 }

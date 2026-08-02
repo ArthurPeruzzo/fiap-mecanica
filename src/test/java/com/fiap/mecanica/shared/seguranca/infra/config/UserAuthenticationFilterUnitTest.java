@@ -77,8 +77,8 @@ class UserAuthenticationFilterUnitTest {
 
         Mockito.when(request.getRequestURI()).thenReturn("/api/protected");
         Mockito.when(request.getHeader("Authorization")).thenReturn("Bearer valid-token");
-        Mockito.when(tokenGateway.getCpf()).thenReturn("52998224725");
-        Mockito.when(userGateway.findByCpf("52998224725")).thenReturn(Optional.of(user));
+        Mockito.when(tokenGateway.getUserId()).thenReturn(1L);
+        Mockito.when(userGateway.findById(1L)).thenReturn(Optional.of(user));
 
         filter.doFilterInternal(request, response, filterChain);
 
@@ -91,8 +91,8 @@ class UserAuthenticationFilterUnitTest {
     void doFilterInternal_shouldThrowWhenUserNotFoundForToken() {
         Mockito.when(request.getRequestURI()).thenReturn("/api/protected");
         Mockito.when(request.getHeader("Authorization")).thenReturn("Bearer valid-token");
-        Mockito.when(tokenGateway.getCpf()).thenReturn("00000000000");
-        Mockito.when(userGateway.findByCpf("00000000000")).thenReturn(Optional.empty());
+        Mockito.when(tokenGateway.getUserId()).thenReturn(999L);
+        Mockito.when(userGateway.findById(999L)).thenReturn(Optional.empty());
 
         assertThrows(Exception.class, () -> filter.doFilterInternal(request, response, filterChain));
     }
