@@ -9,9 +9,11 @@ import com.fiap.mecanica.shared.seguranca.infra.gateway.repository.RoleRepositor
 import com.fiap.mecanica.shared.seguranca.infra.gateway.repository.UserRepository;
 import io.restassured.RestAssured;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -20,6 +22,10 @@ import java.util.List;
 @ActiveProfiles("integration-test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class AuthenticateIntegrationTest extends AbstractContainer {
+
+    @LocalServerPort
+    private int port;
+
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
@@ -31,6 +37,11 @@ class AuthenticateIntegrationTest extends AbstractContainer {
 
     @Autowired
     private SecurityConfiguration securityConfiguration;
+
+    @BeforeEach
+    void configurar() {
+        RestAssured.port = port;
+    }
 
     @Test
     void shouldAuthenticateSuccessFully() {
