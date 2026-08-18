@@ -20,11 +20,8 @@ env:
   EKS_CLUSTER_NAME: eks-fiap-mecanica
 
 jobs:
-  build-test:
-    uses: ./.github/workflows/build-test.yml
 
   dependency-graph:
-    needs: build-test
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -46,7 +43,7 @@ jobs:
     # precisa do terraform-apply: se a infra (incluindo o ECR) tiver sido destruída
     # e recriada, o repositório só existe depois que o apply terminar — sem essa
     # dependência, o push corre risco de tentar publicar num ECR que ainda não existe.
-    needs: [build-test, terraform-apply]
+    needs: terraform-apply
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: producao
@@ -90,7 +87,6 @@ jobs:
       run: docker push ${{ needs.terraform-apply.outputs.ecr_repo }}:${{ steps.get_version.outputs.version }}
 
   terraform-apply:
-    needs: build-test
     runs-on: ubuntu-latest
     # 40min: um apply incremental leva segundos, mas criar o cluster EKS +
     # node group + RDS do zero (ex: após um terraform destroy) pode passar
@@ -153,12 +149,30 @@ jobs:
       run: |
         kubectl apply -f k8s/namespace.yaml
         kubectl apply -f k8s/metrics-server.yaml
+    - name: Configurar Helm
+      uses: azure/setup-helm@v4
+    - name: Adicionar/atualizar repositório Helm da New Relic
+      run: |
+        helm repo add newrelic https://helm-charts.newrelic.com
+        helm repo update
+    - name: Instalar/atualizar a integração Kubernetes da New Relic (nri-bundle)
+      run: |
+        helm upgrade --install newrelic-bundle newrelic/nri-bundle \
+          --namespace newrelic --create-namespace \
+          --set global.licenseKey="${{ secrets.NEW_RELIC_LICENSE_KEY }}" \
+          --set global.cluster="${{ env.EKS_CLUSTER_NAME }}" \
+          --set global.lowDataMode=true \
+          --set newrelic-infrastructure.privileged=true \
+          --set kube-state-metrics.enabled=true \
+          --set newrelic-logging.enabled=true \
+          --wait --timeout 5m0s
     - name: Gerar e aplicar Secret (a partir dos GitHub Secrets, sem gravar em disco)
       run: |
         kubectl create secret generic fiap-mecanica-secret -n fiap-mecanica \
           --from-literal=DB_USERNAME="${{ secrets.TF_VAR_DB_USERNAME }}" \
           --from-literal=DB_PASSWORD="${{ secrets.TF_VAR_DB_PASSWORD }}" \
           --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+          --from-literal=NEW_RELIC_LICENSE_KEY="${{ secrets.NEW_RELIC_LICENSE_KEY }}" \
           --dry-run=client -o yaml | kubectl apply -f -
     - name: Aplicar Service (antes do Deployment — só assim dá pra descobrir o hostname do LoadBalancer sem subir pods com config incompleta)
       run: kubectl apply -f k8s/service.yaml

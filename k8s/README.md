@@ -20,8 +20,13 @@ graph TB
         MS["Metrics Server"]
     end
 
+    subgraph NR["namespace newrelic"]
+        NRB["nri-bundle<br/>(infra + kube-state-metrics + Fluent Bit)"]
+    end
+
     ECR["ECR"]
     RDS[("RDS MySQL")]
+    NEWRELIC(["New Relic<br/>(OTLP + logs + infra K8s)"])
 
     User -->|HTTP| SVC --> P1 & P2
     CM -->|env| DEP
@@ -30,6 +35,8 @@ graph TB
     HPA -->|escala| DEP
     ECR -->|imagem| DEP
     P1 -->|JDBC| RDS
+    P1 -.->|traces/métricas OTLP| NEWRELIC
+    NRB -->|CPU/mem dos nós/pods + logs| NEWRELIC
 ```
 
 ## Passo a passo
@@ -84,6 +91,36 @@ graph TB
 curl -fsSL -o k8s/metrics-server.yaml https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 ```
 
+## New Relic — Integração Kubernetes (Helm)
+
+Diferente de tudo mais neste diretório, isso **não é aplicado com `kubectl apply -f`** — a New Relic só distribui oficialmente essa integração via Helm chart (`nri-bundle`), então o `cd.yml` faz `helm upgrade --install` direto, sem nenhum arquivo `.yaml` commitado aqui. Instala em um namespace próprio, `newrelic` (separado de `fiap-mecanica` e de `kube-system`, onde fica o metrics-server), via `--create-namespace`.
+
+O bundle traz três peças, todas necessárias para cobrir o requisito de monitorar CPU/memória do cluster e, de brinde, enviar os logs estruturados (JSON/ECS) que a aplicação já escreve em stdout:
+- `newrelic-infrastructure` (agente de infraestrutura, coleta CPU/memória de nós e pods — habilitado por padrão no chart, mas com `privileged=true` explícito para métricas completas de host)
+- `kube-state-metrics` (visibilidade de objetos K8s — desabilitado por padrão no `nri-bundle`, precisa de `--set` explícito)
+- `newrelic-logging` (Fluent Bit, embarca os logs de todos os pods para a New Relic — também desabilitado por padrão, precisa de `--set` explícito)
+
+Para instalar manualmente (bootstrap de cluster do zero, mesma licença usada no `k8s/secret.yaml`):
+```bash
+helm repo add newrelic https://helm-charts.newrelic.com
+helm repo update
+helm upgrade --install newrelic-bundle newrelic/nri-bundle \
+  --namespace newrelic --create-namespace \
+  --set global.licenseKey="$NEW_RELIC_LICENSE_KEY" \
+  --set global.cluster=eks-fiap-mecanica \
+  --set global.lowDataMode=true \
+  --set newrelic-infrastructure.privileged=true \
+  --set kube-state-metrics.enabled=true \
+  --set newrelic-logging.enabled=true \
+  --wait --timeout 5m0s
+```
+
+O job `k8s-deploy` do `cd.yml` roda esse mesmo comando automaticamente a cada push na `main`, logo depois do metrics-server, usando o secret `NEW_RELIC_LICENSE_KEY` (GitHub Secrets) e a env `EKS_CLUSTER_NAME` já existentes no workflow — sem passo manual.
+
+Para verificar: `kubectl get pods -n newrelic` (esperar os DaemonSets `newrelic-bundle-nrk8s-*`/Fluent Bit e o Deployment do `kube-state-metrics` como `Running`), e no New Relic, em **Kubernetes → Cluster explorer**, procurar pelo cluster `eks-fiap-mecanica`.
+
+`global.account_id`/`NEW_RELIC_ACCOUNT_ID` **não é necessário** — o chart não tem essa chave em nenhum dos seus subcharts; a license key já associa os dados à conta certa no lado da New Relic.
+
 ## Arquivos
 
 | Arquivo | O que é |
@@ -95,3 +132,5 @@ curl -fsSL -o k8s/metrics-server.yaml https://github.com/kubernetes-sigs/metrics
 | `service.yaml` | Service `LoadBalancer`, expõe a porta 80 → 8080 |
 | `hpa.yaml` | HorizontalPodAutoscaler (CPU e memória, 70%, 1–4 réplicas) |
 | `metrics-server.yaml` | Add-on de cluster necessário para o HPA funcionar no EKS |
+
+> A integração Kubernetes da New Relic (`nri-bundle`) não tem arquivo aqui — é instalada via Helm, não `kubectl apply -f`. Ver seção "New Relic — Integração Kubernetes (Helm)" acima.
