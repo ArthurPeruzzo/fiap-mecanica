@@ -45,7 +45,8 @@ graph TB
 | `ecr.tf` | `aws_ecr_repository.app` | Repositório privado `fiap-mecanica` pra imagem Docker da app |
 | `bucket.tf` | `aws_s3_bucket.bucket-backend` | Bucket S3 usado como backend remoto do state (ver bootstrap abaixo) |
 | `backend.tf` | — | Configura o backend `s3` (bucket `fiap-mecanica`, `tfstate/terraform.tfstate`, `us-east-1`) |
-| `providers.tf` | — | Provider `aws`, região `us-east-1` |
+| `providers.tf` | — | Providers `aws` (região `us-east-1`) e `newrelic` (conta/API key pros alertas abaixo) |
+| `newrelic-alerts.tf` | `newrelic_alert_policy.os_falhas`, `newrelic_nrql_alert_condition.os_erros_500`, `newrelic_notification_destination.email`, `newrelic_notification_channel.email`, `newrelic_workflow.os_falhas` | Alerta de falha no processamento de OS: dispara quando `http.server.requests` reporta 5xx em rotas `/ordem-servico/**` (as exceções de negócio do domínio são todas 4xx, não entram aqui), notifica por e-mail (`alert_email`) |
 | `vars.tf` | — | Variáveis (ver tabela abaixo) |
 | `output.tf` | — | Outputs (ver tabela abaixo) |
 
@@ -73,11 +74,13 @@ Na conta AWS Academy Lab atual usada neste projeto o bucket já existe e o state
 ```bash
 cd infra/terraform/aws
 terraform init
-terraform plan -var db_username=<usuario> -var db_password=<senha>
-terraform apply -var db_username=<usuario> -var db_password=<senha>
+terraform plan -var db_username=<usuario> -var db_password=<senha> -var newrelic_api_key=<NRAK...> -var newrelic_account_id=<account_id>
+terraform apply -var db_username=<usuario> -var db_password=<senha> -var newrelic_api_key=<NRAK...> -var newrelic_account_id=<account_id>
 ```
 
 `db_username`/`db_password` são obrigatórios e não têm valor default (de propósito — não ficam hardcoded no repo). São as credenciais do usuário master do RDS.
+
+`newrelic_api_key`/`newrelic_account_id` também são obrigatórios — gere uma User API Key em Account settings → API keys na New Relic (o account ID aparece na mesma tela). São usados só pelo provider Terraform pra gerenciar o alerta em `newrelic-alerts.tf`, não pelo agente/Helm do cluster (esse usa a license key, `NEW_RELIC_LICENSE_KEY`, que é outro segredo — ver `k8s/README.md`).
 
 Depois do `apply`, siga para `/k8s` (ver `k8s/README.md`) pra publicar a imagem no ECR criado aqui e aplicar os manifests da aplicação no cluster.
 
@@ -94,6 +97,9 @@ Depois do `apply`, siga para `/k8s` (ver `k8s/README.md`) pra publicar a imagem 
 | `db_instance_class` | `db.t3.micro` | Classe da instância RDS |
 | `db_username` | — (obrigatório) | Usuário master do RDS |
 | `db_password` | — (obrigatório, sensível) | Senha master do RDS |
+| `newrelic_api_key` | — (obrigatório, sensível) | User API Key da New Relic (`NRAK...`) — gera em Account settings → API keys. Diferente da license key usada pelo agente/Helm (`k8s/secret.yaml`) |
+| `newrelic_account_id` | — (obrigatório) | Account ID numérico da New Relic |
+| `alert_email` | `arthurkohl0@gmail.com` | E-mail que recebe os alertas de falha de processamento de OS |
 
 ## Outputs (`output.tf`)
 

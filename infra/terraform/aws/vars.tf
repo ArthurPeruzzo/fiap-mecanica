@@ -41,3 +41,20 @@ variable "db_password" {
   type        = string
   sensitive   = true
 }
+
+variable "newrelic_api_key" {
+  description = "User API Key da New Relic (NRAK...) — gerenciada em Account settings > API keys. Usada só pelo provider Terraform, diferente da license key do agente/Helm."
+  type        = string
+  sensitive   = true
+}
+
+variable "newrelic_account_id" {
+  description = "Account ID numérico da New Relic"
+  type        = string
+}
+
+variable "alert_email" {
+  description = "E-mail que recebe os alertas de falha de processamento de OS"
+  type        = string
+  default     = "arthurkohl0@gmail.com"
+}
