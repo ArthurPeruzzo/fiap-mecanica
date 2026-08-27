@@ -7,6 +7,8 @@ import com.fiap.mecanica.ordemdeservico.core.exception.*;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.FinalizarServicoOrdemDeServicoUseCase;
+import com.fiap.mecanica.shared.metricas.core.domain.FaseOrdemDeServico;
+import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.notificacao.core.domain.Mensagem;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import org.junit.jupiter.api.Test;
@@ -40,6 +42,9 @@ class FinalizarServicoOrdemDeServicoUseCaseUnitTest {
 
     @Mock
     private NotificacaoGateway notificacaoGateway;
+
+    @Mock
+    private MetricasGateway metricasGateway;
 
     private static final Long ORDEM_ID = 1L;
     private static final Long CLIENTE_ID = 2L;
@@ -127,6 +132,7 @@ class FinalizarServicoOrdemDeServicoUseCaseUnitTest {
         assertNotNull(dataFimCaptor.getValue());
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
         Mockito.verifyNoInteractions(notificacaoGateway);
+        Mockito.verifyNoInteractions(metricasGateway);
     }
 
     @Test
@@ -146,6 +152,7 @@ class FinalizarServicoOrdemDeServicoUseCaseUnitTest {
         Mockito.verify(ordemDeServicoGateway).atualizar(Mockito.argThat(
                 os -> StatusOrdemDeServico.FINALIZADA.equals(os.getStatus())));
         Mockito.verify(notificacaoGateway).enviar(Mockito.any(Mensagem.class));
+        Mockito.verify(metricasGateway).registrarDuracaoFase(Mockito.eq(FaseOrdemDeServico.EXECUCAO), Mockito.any());
     }
 
     @Test

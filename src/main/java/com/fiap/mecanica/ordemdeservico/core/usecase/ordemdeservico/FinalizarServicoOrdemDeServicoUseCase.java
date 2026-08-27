@@ -8,21 +8,28 @@ import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoExcep
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoVinculadoException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
+import com.fiap.mecanica.shared.metricas.core.domain.FaseOrdemDeServico;
+import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.notificacao.core.domain.MensagemParams;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
+
+import java.util.Optional;
 
 public class FinalizarServicoOrdemDeServicoUseCase {
 
 	private final OrdemDeServicoGateway ordemDeServicoGateway;
 	private final ServicoGateway servicoGateway;
 	private final NotificacaoGateway notificacaoGateway;
+	private final MetricasGateway metricasGateway;
 
 	public FinalizarServicoOrdemDeServicoUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
 												  ServicoGateway servicoGateway,
-												  NotificacaoGateway notificacaoGateway) {
+												  NotificacaoGateway notificacaoGateway,
+												  MetricasGateway metricasGateway) {
 		this.ordemDeServicoGateway = ordemDeServicoGateway;
 		this.servicoGateway = servicoGateway;
 		this.notificacaoGateway = notificacaoGateway;
+		this.metricasGateway = metricasGateway;
 	}
 
 	public void finalizar(Long ordemDeServicoId, Long servicoId) {
@@ -53,6 +60,9 @@ public class FinalizarServicoOrdemDeServicoUseCase {
 					.ordemId(ordemDeServicoId)
 					.build();
 			notificacaoGateway.enviar(new MensagemOrdemFinalizadaFactory().criar(params));
+
+			Optional.ofNullable(ordemDeServico.getDuracaoExecucao())
+					.ifPresent(duracao -> metricasGateway.registrarDuracaoFase(FaseOrdemDeServico.EXECUCAO, duracao));
 		}
 	}
 }

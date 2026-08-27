@@ -5,6 +5,8 @@ import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.EntregarOrdemDeServicoUseCase;
+import com.fiap.mecanica.shared.metricas.core.domain.FaseOrdemDeServico;
+import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.notificacao.core.domain.Mensagem;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import org.junit.jupiter.api.Test;
@@ -34,6 +36,9 @@ class EntregarOrdemDeServicoUseCaseUnitTest {
 
     @Mock
     private NotificacaoGateway notificacaoGateway;
+
+    @Mock
+    private MetricasGateway metricasGateway;
 
     private static final Long ORDEM_ID = 1L;
     private static final Long CLIENTE_ID = 2L;
@@ -77,6 +82,7 @@ class EntregarOrdemDeServicoUseCaseUnitTest {
         var os = captor.getValue();
         assertEquals(StatusOrdemDeServico.ENTREGUE, os.getStatus());
         assertNotNull(os.getDataEntrega());
+        Mockito.verify(metricasGateway).registrarDuracaoFase(Mockito.eq(FaseOrdemDeServico.ENTREGA), Mockito.any());
     }
 
     @Test
@@ -87,5 +93,6 @@ class EntregarOrdemDeServicoUseCaseUnitTest {
                 () -> entregarOrdemDeServicoUseCase.entregar(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(metricasGateway);
     }
 }

@@ -17,6 +17,7 @@ import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
+import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.shared.page.Pagina;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
@@ -61,6 +62,7 @@ class OrdemDeServicoControllerContractTest {
     @MockitoBean private PecaGateway pecaGateway;
     @MockitoBean private InsumoGateway insumoGateway;
     @MockitoBean private NotificacaoGateway notificacaoGateway;
+    @MockitoBean private MetricasGateway metricasGateway;
 
     private static final Long USER_ID = 10L;
     private static final Long ATENDENTE_ID = 3L;

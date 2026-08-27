@@ -14,6 +14,8 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoSemServicos
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.ConcluirDiagnosticoOrdemDeServicoUseCase;
+import com.fiap.mecanica.shared.metricas.core.domain.FaseOrdemDeServico;
+import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +47,9 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
 
     @Mock
     private OrdemDeServicoGateway ordemDeServicoGateway;
+
+    @Mock
+    private MetricasGateway metricasGateway;
 
     private static final Long USER_ID = 10L;
     private static final Long MECANICO_ID = 5L;
@@ -121,6 +126,7 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
         assertEquals(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO, os.getStatus());
         assertNotNull(os.getDataConclusaoDiagnostico());
         assertNotNull(os.getOrcamento());
+        Mockito.verify(metricasGateway).registrarDuracaoFase(Mockito.eq(FaseOrdemDeServico.DIAGNOSTICO), Mockito.any());
     }
 
     @Test
@@ -143,6 +149,7 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
                 () -> concluirDiagnosticoOrdemDeServicoUseCase.concluirDiagnostico(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(metricasGateway);
     }
 
     @Test
@@ -176,6 +183,7 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
                 () -> concluirDiagnosticoOrdemDeServicoUseCase.concluirDiagnostico(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(metricasGateway);
     }
 
     @Test
@@ -187,6 +195,7 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
                 () -> concluirDiagnosticoOrdemDeServicoUseCase.concluirDiagnostico(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(metricasGateway);
     }
 
     @Test
@@ -220,5 +229,6 @@ class ConcluirDiagnosticoOrdemDeServicoUseCaseUnitTest {
                 () -> concluirDiagnosticoOrdemDeServicoUseCase.concluirDiagnostico(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(metricasGateway);
     }
 }

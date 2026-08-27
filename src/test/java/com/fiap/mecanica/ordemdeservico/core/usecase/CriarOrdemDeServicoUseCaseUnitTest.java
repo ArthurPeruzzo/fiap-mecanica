@@ -31,6 +31,7 @@ import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.CriarOrdemDeServicoOutputPort;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.CriarOrdemDeServicoUseCase;
+import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.notificacao.core.domain.Mensagem;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
@@ -81,6 +82,9 @@ class CriarOrdemDeServicoUseCaseUnitTest {
     private NotificacaoGateway notificacaoGateway;
 
     @Mock
+    private MetricasGateway metricasGateway;
+
+    @Mock
     private CriarOrdemDeServicoOutputPort outputPort;
 
     @BeforeEach
@@ -88,7 +92,7 @@ class CriarOrdemDeServicoUseCaseUnitTest {
         criarOrdemDeServicoUseCase = new CriarOrdemDeServicoUseCase(
                 atendenteGateway, tokenGateway, ordemDeServicoGateway,
                 veiculoGateway, clienteGateway, servicoGateway, pecaGateway,
-                insumoGateway, notificacaoGateway, outputPort);
+                insumoGateway, notificacaoGateway, metricasGateway, outputPort);
     }
 
     private static final Long USER_ID = 10L;
@@ -135,6 +139,7 @@ class CriarOrdemDeServicoUseCaseUnitTest {
 
         Mockito.verify(ordemDeServicoGateway).criar(captor.capture());
         Mockito.verify(notificacaoGateway).enviar(Mockito.any(Mensagem.class));
+        Mockito.verify(metricasGateway).registrarOrdemCriada();
         var os = captor.getValue();
 
         assertEquals(CLIENTE_ID, os.getClienteId());
@@ -154,7 +159,7 @@ class CriarOrdemDeServicoUseCaseUnitTest {
         assertThrows(AtendenteNaoEncontradoException.class,
                 () -> criarOrdemDeServicoUseCase.criar(criarOrdemDeServicoDto));
 
-        Mockito.verifyNoInteractions(veiculoGateway, clienteGateway, ordemDeServicoGateway, notificacaoGateway);
+        Mockito.verifyNoInteractions(veiculoGateway, clienteGateway, ordemDeServicoGateway, notificacaoGateway, metricasGateway);
     }
 
     @Test
@@ -168,6 +173,7 @@ class CriarOrdemDeServicoUseCaseUnitTest {
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).criar(Mockito.any());
         Mockito.verifyNoInteractions(notificacaoGateway);
+        Mockito.verifyNoInteractions(metricasGateway);
     }
 
     @Test
@@ -182,6 +188,7 @@ class CriarOrdemDeServicoUseCaseUnitTest {
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).criar(Mockito.any());
         Mockito.verifyNoInteractions(notificacaoGateway);
+        Mockito.verifyNoInteractions(metricasGateway);
     }
 
     @Test
@@ -197,6 +204,7 @@ class CriarOrdemDeServicoUseCaseUnitTest {
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).criar(Mockito.any());
         Mockito.verifyNoInteractions(notificacaoGateway);
+        Mockito.verifyNoInteractions(metricasGateway);
     }
 
     @Test
@@ -212,6 +220,7 @@ class CriarOrdemDeServicoUseCaseUnitTest {
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).criar(Mockito.any());
         Mockito.verifyNoInteractions(notificacaoGateway);
+        Mockito.verifyNoInteractions(metricasGateway);
     }
 
     @Test

@@ -6,6 +6,7 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
+import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,7 @@ class DiagnosticoOrdemDeServicoControllerContractTest {
     @MockitoBean private OrdemDeServicoGateway ordemDeServicoGateway;
     @MockitoBean private MecanicoGateway mecanicoGateway;
     @MockitoBean private TokenGateway tokenGateway;
+    @MockitoBean private MetricasGateway metricasGateway;
 
     private static final Long USER_ID = 10L;
     private static final Long MECANICO_ID = 5L;

@@ -27,6 +27,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoExcep
 import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
+import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.notificacao.core.domain.MensagemParams;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
@@ -47,6 +48,7 @@ public class CriarOrdemDeServicoUseCase {
 	private final PecaGateway pecaGateway;
 	private final InsumoGateway insumoGateway;
 	private final NotificacaoGateway notificacaoGateway;
+	private final MetricasGateway metricasGateway;
 	private final CriarOrdemDeServicoOutputPort outputPort;
 
 	public CriarOrdemDeServicoUseCase(AtendenteGateway atendenteGateway,
@@ -58,6 +60,7 @@ public class CriarOrdemDeServicoUseCase {
 									   PecaGateway pecaGateway,
 									   InsumoGateway insumoGateway,
 									   NotificacaoGateway notificacaoGateway,
+									   MetricasGateway metricasGateway,
 									   CriarOrdemDeServicoOutputPort outputPort) {
 		this.atendenteGateway = atendenteGateway;
 		this.tokenGateway = tokenGateway;
@@ -68,6 +71,7 @@ public class CriarOrdemDeServicoUseCase {
 		this.pecaGateway = pecaGateway;
 		this.insumoGateway = insumoGateway;
 		this.notificacaoGateway = notificacaoGateway;
+		this.metricasGateway = metricasGateway;
 		this.outputPort = outputPort;
 	}
 
@@ -86,6 +90,8 @@ public class CriarOrdemDeServicoUseCase {
 		vincularInsumos(ordemDeServico, dto.insumos());
 
 		notificarCliente(ordemDeServico);
+
+		metricasGateway.registrarOrdemCriada();
 
 		outputPort.apresentar(ordemDeServico.getId());
 	}
