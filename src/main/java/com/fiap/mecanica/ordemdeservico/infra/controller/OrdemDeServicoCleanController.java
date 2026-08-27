@@ -15,6 +15,7 @@ import com.fiap.mecanica.ordemdeservico.infra.controller.json.StatusOrdemDeServi
 import com.fiap.mecanica.ordemdeservico.infra.controller.presenter.ConsultarStatusOrdemDeServicoPresenter;
 import com.fiap.mecanica.ordemdeservico.infra.controller.presenter.CriarOrdemDeServicoPresenter;
 import com.fiap.mecanica.ordemdeservico.infra.controller.presenter.ListarOrdemDeServicoPresenter;
+import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.shared.page.Pagina;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
@@ -31,6 +32,7 @@ public class OrdemDeServicoCleanController {
     private final PecaGateway pecaGateway;
     private final InsumoGateway insumoGateway;
     private final NotificacaoGateway notificacaoGateway;
+    private final MetricasGateway metricasGateway;
 
     public OrdemDeServicoCleanController(OrdemDeServicoGateway ordemDeServicoGateway,
                                           AtendenteGateway atendenteGateway,
@@ -41,7 +43,8 @@ public class OrdemDeServicoCleanController {
                                           ServicoGateway servicoGateway,
                                           PecaGateway pecaGateway,
                                           InsumoGateway insumoGateway,
-                                          NotificacaoGateway notificacaoGateway) {
+                                          NotificacaoGateway notificacaoGateway,
+                                          MetricasGateway metricasGateway) {
         this.ordemDeServicoGateway = ordemDeServicoGateway;
         this.atendenteGateway = atendenteGateway;
         this.tokenGateway = tokenGateway;
@@ -52,18 +55,19 @@ public class OrdemDeServicoCleanController {
         this.pecaGateway = pecaGateway;
         this.insumoGateway = insumoGateway;
         this.notificacaoGateway = notificacaoGateway;
+        this.metricasGateway = metricasGateway;
     }
 
     public Long criar(CriarOrdemDeServicoDto dto) {
         var presenter = new CriarOrdemDeServicoPresenter();
         new CriarOrdemDeServicoUseCase(atendenteGateway, tokenGateway, ordemDeServicoGateway,
                 veiculoGateway, clienteGateway, servicoGateway, pecaGateway, insumoGateway,
-                notificacaoGateway, presenter).criar(dto);
+                notificacaoGateway, metricasGateway, presenter).criar(dto);
         return presenter.getViewModel();
     }
 
     public void entregar(Long ordemServicoId) {
-        new EntregarOrdemDeServicoUseCase(ordemDeServicoGateway, notificacaoGateway)
+        new EntregarOrdemDeServicoUseCase(ordemDeServicoGateway, notificacaoGateway, metricasGateway)
                 .entregar(ordemServicoId);
     }
 

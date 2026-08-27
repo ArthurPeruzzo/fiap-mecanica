@@ -310,6 +310,23 @@ public class OrdemDeServico {
         return Optional.ofNullable(orcamento).map(Orcamento::valorTotal).orElse(null);
     }
 
+    public Duration getDuracaoDiagnostico() {
+        return entre(dataInicioDiagnostico, dataConclusaoDiagnostico);
+    }
+
+    public Duration getDuracaoExecucao() {
+        return entre(dataAprovacao, dataFinalizacao);
+    }
+
+    public Duration getDuracaoEntrega() {
+        return entre(dataFinalizacao, dataEntrega);
+    }
+
+    private static Duration entre(LocalDateTime inicio, LocalDateTime fim) {
+        if (inicio == null || fim == null) return null;
+        return Duration.between(inicio, fim);
+    }
+
     public Duration calcularTempoMedioExecucaoServicos() {
         var finalizados = servicosVinculados.stream()
                 .filter(sv -> sv.dataInicioExecucao() != null && sv.dataFimExecucao() != null)

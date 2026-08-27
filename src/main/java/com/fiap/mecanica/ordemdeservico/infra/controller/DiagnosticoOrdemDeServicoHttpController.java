@@ -2,6 +2,7 @@ package com.fiap.mecanica.ordemdeservico.infra.controller;
 
 import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -22,9 +23,10 @@ public class DiagnosticoOrdemDeServicoHttpController {
 
     public DiagnosticoOrdemDeServicoHttpController(OrdemDeServicoGateway ordemDeServicoGateway,
                                                     MecanicoGateway mecanicoGateway,
-                                                    TokenGateway tokenGateway) {
+                                                    TokenGateway tokenGateway,
+                                                    MetricasGateway metricasGateway) {
         this.cleanController = new DiagnosticoOrdemDeServicoCleanController(
-                ordemDeServicoGateway, mecanicoGateway, tokenGateway
+                ordemDeServicoGateway, mecanicoGateway, tokenGateway, metricasGateway
         );
     }
 

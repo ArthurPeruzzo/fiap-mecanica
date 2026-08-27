@@ -12,6 +12,7 @@ import com.fiap.mecanica.ordemdeservico.core.dto.PecaVinculadaCriarDto;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.*;
+import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.shared.page.PageResponse;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
@@ -40,12 +41,13 @@ public class OrdemDeServicoHttpController {
                                          ServicoGateway servicoGateway,
                                          PecaGateway pecaGateway,
                                          InsumoGateway insumoGateway,
-                                         NotificacaoGateway notificacaoGateway) {
+                                         NotificacaoGateway notificacaoGateway,
+                                         MetricasGateway metricasGateway) {
         this.cleanController = new OrdemDeServicoCleanController(
                 ordemDeServicoGateway, atendenteGateway, tokenGateway,
                 veiculoGateway, clienteGateway, mecanicoGateway,
                 servicoGateway, pecaGateway, insumoGateway,
-                notificacaoGateway
+                notificacaoGateway, metricasGateway
         );
     }
 
