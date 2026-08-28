@@ -157,6 +157,8 @@ jobs:
       run: |
         helm repo add newrelic https://helm-charts.newrelic.com
         helm repo update
+    - name: Limpar webhook conflitante da New Relic antes do upgrade (SSA field-manager conflict conhecido)
+      run: kubectl delete mutatingwebhookconfiguration newrelic-bundle-nri-metadata-injection --ignore-not-found
     - name: Instalar/atualizar a integração Kubernetes da New Relic (nri-bundle)
       run: |
         helm upgrade --install newrelic-bundle newrelic/nri-bundle \
