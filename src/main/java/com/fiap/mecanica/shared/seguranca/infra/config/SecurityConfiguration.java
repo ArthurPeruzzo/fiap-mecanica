@@ -72,6 +72,8 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.DELETE, "/ordem-servico/*/insumos/*").hasRole(MECANICO)
                         // QUALQUER PERFIL AUTENTICADO
                         .requestMatchers(HttpMethod.GET, "/ordem-servico/*/status").hasAnyRole(ATENDENTE, MECANICO, ADMINISTRADOR)
+                        // Endpoint de teste — dispara falha simulada pra validar o alerta da New Relic (ver OrdemDeServicoHttpController)
+                        .requestMatchers(HttpMethod.GET, "/ordem-servico/teste-alerta").hasAnyRole(ATENDENTE, MECANICO, ADMINISTRADOR)
                         .anyRequest().denyAll()
                 )
                 .exceptionHandling(exception ->

@@ -12,6 +12,7 @@ import com.fiap.mecanica.ordemdeservico.core.dto.PecaVinculadaCriarDto;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.*;
+import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.shared.page.PageResponse;
@@ -116,5 +117,23 @@ public class OrdemDeServicoHttpController {
     @GetMapping("/{ordemServicoId}/status")
     public ResponseEntity<StatusOrdemDeServicoResponseJson> consultarStatus(@PathVariable Long ordemServicoId) {
         return ResponseEntity.ok(cleanController.consultarStatus(ordemServicoId));
+    }
+
+    @Operation(
+            summary = "[TESTE] Simular falha de processamento (não é um endpoint de negócio)",
+            description = "Endpoint criado exclusivamente para fins de estudo/demonstração da Fase 3 (observabilidade). " +
+                    "Lança propositalmente uma ErroAcessoBaseDeDadosException (HTTP 500) para validar, de ponta a ponta, " +
+                    "o alerta 'fiap-mecanica-os-falhas' configurado via Terraform (infra/terraform/aws/newrelic-alerts.tf) — " +
+                    "confirma que a métrica http.server.requests com status 5xx em rotas /ordem-servico/** realmente " +
+                    "dispara a condição NRQL e a notificação por e-mail. Não representa nenhuma regra de negócio; " +
+                    "não deveria existir num sistema de produção real fora de um contexto acadêmico como este."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "500", description = "Falha simulada de propósito — comportamento esperado desta chamada")
+    })
+    @GetMapping("/teste-alerta")
+    public ResponseEntity<Void> testeAlertaFalhaSimulada() {
+        // Lança de propósito para exercitar o caminho de erro real (ver Javadoc acima).
+        throw new ErroAcessoBaseDeDadosException();
     }
 }
