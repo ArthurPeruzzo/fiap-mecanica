@@ -69,5 +69,11 @@ public interface OrdemDeServicoRepository extends JpaRepository<OrdemDeServicoEn
     )
     Page<OrdemDeServicoEntity> buscaOrdemDeServicos(Pageable pageable);
 
+    @Query(
+        value = "SELECT * FROM ordem_servico WHERE cliente_id = :clienteId ORDER BY data_criacao DESC",
+        countQuery = "SELECT COUNT(*) FROM ordem_servico WHERE cliente_id = :clienteId",
+        nativeQuery = true
+    )
+    Page<OrdemDeServicoEntity> buscaOrdemDeServicosPorCliente(@Param("clienteId") Long clienteId, Pageable pageable);
 
 }

@@ -20,7 +20,13 @@ import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.shared.page.Pagina;
+import com.fiap.mecanica.shared.seguranca.core.domain.Role;
+import com.fiap.mecanica.shared.seguranca.core.domain.RoleEnum;
+import com.fiap.mecanica.shared.seguranca.core.domain.User;
+import com.fiap.mecanica.shared.seguranca.core.domain.password.PasswordHash;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
+import com.fiap.mecanica.shared.seguranca.core.gateway.UserGateway;
+import com.fiap.mecanica.shared.valueobjects.Cpf;
 import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -63,6 +69,7 @@ class OrdemDeServicoControllerContractTest {
     @MockitoBean private InsumoGateway insumoGateway;
     @MockitoBean private NotificacaoGateway notificacaoGateway;
     @MockitoBean private MetricasGateway metricasGateway;
+    @MockitoBean private UserGateway userGateway;
 
     private static final Long USER_ID = 10L;
     private static final Long ATENDENTE_ID = 3L;
@@ -414,5 +421,31 @@ class OrdemDeServicoControllerContractTest {
         mockMvc.perform(MockMvcRequestBuilders.get("/ordem-servico/99/status"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Ordem de serviço não encontrada"));
+    }
+
+    // ---- minhasOrdens ----
+
+    @Test
+    void shouldReturn200WithOnlyOrdensFromAuthenticatedClienteOnMinhasOrdens() throws Exception {
+        var user = new User(USER_ID, new Cpf("12345678909"), new PasswordHash("hash"),
+                List.of(new Role(1L, RoleEnum.ROLE_CLIENTE)));
+
+        Mockito.when(tokenGateway.getUserId()).thenReturn(USER_ID);
+        Mockito.when(userGateway.findById(USER_ID)).thenReturn(Optional.of(user));
+        Mockito.when(clienteGateway.buscarPorCpf("12345678909")).thenReturn(Optional.of(cliente()));
+        Mockito.when(ordemDeServicoGateway.listarPorClienteId(CLIENTE_ID, 0, 10))
+                .thenReturn(new Pagina<>(List.of(ordemRecebida()), 0, 10, 1L, 1));
+        Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(cliente()));
+        Mockito.when(veiculoGateway.buscarPorId(VEICULO_ID)).thenReturn(Optional.of(veiculo()));
+        Mockito.when(atendenteGateway.findById(ATENDENTE_ID)).thenReturn(Optional.of(atendente()));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/ordem-servico/minhas-ordens")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(1))
+                .andExpect(jsonPath("$.content[0].nomeCliente").value("Maria Santos"));
+
+        Mockito.verify(ordemDeServicoGateway, Mockito.never()).listar(Mockito.anyInt(), Mockito.anyInt());
     }
 }
