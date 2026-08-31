@@ -9,6 +9,7 @@ public interface ClienteGateway {
 	void criar(Cliente cliente);
 	void atualizar(Cliente cliente);
 	Optional<Cliente> buscarPorId(Long id);
+	Optional<Cliente> buscarPorCpf(String cpf);
 	boolean existePorCpf(String cpf);
 	boolean existePorCnpj(String cnpj);
 	boolean existePorCpfExcluindoId(String cpf, Long id);

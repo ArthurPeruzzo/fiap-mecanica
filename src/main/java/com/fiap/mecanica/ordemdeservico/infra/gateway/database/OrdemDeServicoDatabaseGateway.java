@@ -264,4 +264,16 @@ public class OrdemDeServicoDatabaseGateway implements OrdemDeServicoGateway {
             throw new ErroAcessoBaseDeDadosException();
         }
     }
+
+    @Override
+    public Pagina<OrdemDeServico> listarPorClienteId(Long clienteId, int page, int size) {
+        try {
+            var resultado = ordemDeServicoRepository.buscaOrdemDeServicosPorCliente(clienteId, PageRequest.of(page, size));
+            var ordens = resultado.getContent().stream().map(this::mapear).toList();
+            return new Pagina<>(ordens, resultado.getNumber(), resultado.getSize(), resultado.getTotalElements(), resultado.getTotalPages());
+        } catch (Exception e) {
+            log.error("Erro ao listar ordens de servico do cliente {}", clienteId, e);
+            throw new ErroAcessoBaseDeDadosException();
+        }
+    }
 }

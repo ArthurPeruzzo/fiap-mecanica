@@ -21,4 +21,5 @@ public interface OrdemDeServicoGateway {
 	void vincularOuSomarInsumo(Long ordemServicoId, Long insumoId, Integer quantidade,  BigDecimal preco);
 	void desvincularOuSubtrairInsumo(Long ordemServicoId, Long insumoId, Integer quantidade);
 	Pagina<OrdemDeServico> listar(int page, int size);
+	Pagina<OrdemDeServico> listarPorClienteId(Long clienteId, int page, int size);
 }

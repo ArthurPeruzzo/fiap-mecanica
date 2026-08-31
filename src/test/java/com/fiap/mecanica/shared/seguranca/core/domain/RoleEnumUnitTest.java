@@ -22,8 +22,13 @@ class RoleEnumUnitTest {
     }
 
     @Test
+    void shouldContainRoleCliente() {
+        assertDoesNotThrow(() -> RoleEnum.valueOf("ROLE_CLIENTE"));
+    }
+
+    @Test
     void shouldHaveExactlyTwoValues() {
-        assertEquals(3, RoleEnum.values().length);
+        assertEquals(4, RoleEnum.values().length);
     }
 
     @Test

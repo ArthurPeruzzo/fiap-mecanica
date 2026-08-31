@@ -53,6 +53,21 @@ public class ClienteDatabaseGateway implements ClienteGateway {
 	}
 
 	@Override
+	public Optional<Cliente> buscarPorCpf(String cpf) {
+		try {
+			return clienteRepository.findByCpf(cpf)
+					.map(e -> Cliente.reconstituir(
+							e.getId(),
+							e.getNome(),
+							e.getCnpj(),
+							e.getCpf()));
+		} catch (Exception e) {
+			log.error("Erro ao buscar cliente por cpf: {}", cpf, e);
+			throw new ErroAcessoBaseDeDadosException();
+		}
+	}
+
+	@Override
 	public void atualizar(Cliente cliente) {
 		try {
 			var entity = ClienteEntity.builder()

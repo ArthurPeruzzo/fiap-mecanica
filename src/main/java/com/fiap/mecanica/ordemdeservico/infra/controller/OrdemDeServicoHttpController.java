@@ -17,6 +17,7 @@ import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.shared.page.PageResponse;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
+import com.fiap.mecanica.shared.seguranca.core.gateway.UserGateway;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -43,12 +44,13 @@ public class OrdemDeServicoHttpController {
                                          PecaGateway pecaGateway,
                                          InsumoGateway insumoGateway,
                                          NotificacaoGateway notificacaoGateway,
-                                         MetricasGateway metricasGateway) {
+                                         MetricasGateway metricasGateway,
+                                         UserGateway userGateway) {
         this.cleanController = new OrdemDeServicoCleanController(
                 ordemDeServicoGateway, atendenteGateway, tokenGateway,
                 veiculoGateway, clienteGateway, mecanicoGateway,
                 servicoGateway, pecaGateway, insumoGateway,
-                notificacaoGateway, metricasGateway
+                notificacaoGateway, metricasGateway, userGateway
         );
     }
 
@@ -135,5 +137,23 @@ public class OrdemDeServicoHttpController {
     public ResponseEntity<Void> testeAlertaFalhaSimulada() {
         // Lança de propósito para exercitar o caminho de erro real (ver Javadoc acima).
         throw new ErroAcessoBaseDeDadosException();
+    }
+
+    @Operation(
+            summary = "Listar minhas ordens de serviço (cliente)",
+            description = "Retorna a lista paginada de ordens de serviço do cliente autenticado (identificado via o " +
+                    "CPF vinculado ao token JWT emitido pela Function Lambda). Inclui todos os status, do histórico " +
+                    "completo do cliente, ordenadas da mais recente para a mais antiga. Somente perfil CLIENTE."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado — requer perfil CLIENTE"),
+            @ApiResponse(responseCode = "404", description = "Usuário ou cliente vinculado ao token não encontrado")
+    })
+    @GetMapping("/minhas-ordens")
+    public ResponseEntity<PageResponse<OrdemDeServicoResponseJson>> minhasOrdens(@RequestParam(defaultValue = "0") int page,
+                                                                                   @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(PageResponse.from(cleanController.listarMinhasOrdens(page, size)));
     }
 }
