@@ -2,6 +2,12 @@
 
 Provisiona, na conta AWS Academy Lab, tudo que o cluster Kubernetes (`/k8s`) precisa pra rodar a aplicação: VPC, cluster EKS, banco RDS MySQL e repositório ECR pra imagem Docker.
 
+> **Este é um dos dois root modules do projeto.** O API Gateway fica em
+> [`../apigateway`](../apigateway/README.md), com **state próprio**
+> (`tfstate/apigateway.tfstate`), porque depende do hostname do LoadBalancer do Kubernetes — que
+> só existe *depois* do `apply` deste módulo aqui. Ver o README de lá para a ordem de deploy
+> completa.
+
 ## Fluxo (macro)
 
 ```mermaid
@@ -82,7 +88,7 @@ terraform apply -var db_username=<usuario> -var db_password=<senha> -var newreli
 
 `newrelic_api_key`/`newrelic_account_id` também são obrigatórios — gere uma User API Key em Account settings → API keys na New Relic (o account ID aparece na mesma tela). São usados só pelo provider Terraform pra gerenciar o alerta em `newrelic-alerts.tf`, não pelo agente/Helm do cluster (esse usa a license key, `NEW_RELIC_LICENSE_KEY`, que é outro segredo — ver `k8s/README.md`).
 
-Depois do `apply`, siga para `/k8s` (ver `k8s/README.md`) pra publicar a imagem no ECR criado aqui e aplicar os manifests da aplicação no cluster.
+Depois do `apply`, siga para `/k8s` (ver `k8s/README.md`) pra publicar a imagem no ECR criado aqui e aplicar os manifests da aplicação no cluster. Com o Service de pé e o ELB com hostname, aplique por último o módulo do gateway (`../apigateway`, ver `README.md` de lá).
 
 ## Variáveis (`vars.tf`)
 

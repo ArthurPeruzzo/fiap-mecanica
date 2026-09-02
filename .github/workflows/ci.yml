@@ -25,9 +25,17 @@ jobs:
     environment: producao
     permissions:
       contents: read
+    strategy:
+      # Um plan por root module. `fail-fast: false` pra ver os dois resultados de uma vez em vez
+      # de perder o segundo quando o primeiro falha.
+      fail-fast: false
+      matrix:
+        # O módulo `apigateway` não usa nenhuma das TF_VAR_* abaixo — declará-las no nível do job
+        # é inofensivo, e evita duplicar o job inteiro só por causa das variáveis.
+        modulo: [aws, apigateway]
     defaults:
       run:
-        working-directory: infra/terraform/aws
+        working-directory: infra/terraform/${{ matrix.modulo }}
     env:
       TF_VAR_db_username: ${{ secrets.TF_VAR_DB_USERNAME }}
       TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
