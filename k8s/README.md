@@ -7,6 +7,7 @@ Assume um cluster EKS já provisionado (`infra/terraform/aws/`) e o RDS MySQL j�
 ```mermaid
 graph TB
     User["Usuário / navegador"]
+    APIGW["API Gateway (HTTP API v2)<br/>porta de entrada · infra/terraform/apigateway"]
 
     subgraph NS["Cluster EKS · namespace fiap-mecanica"]
         SVC["Service<br/>LoadBalancer :80 → 8080"]
@@ -28,7 +29,8 @@ graph TB
     RDS[("RDS MySQL")]
     NEWRELIC(["New Relic<br/>(OTLP + logs + infra K8s)"])
 
-    User -->|HTTP| SVC --> P1 & P2
+    User -->|HTTPS| APIGW -->|HTTP_PROXY| SVC --> P1 & P2
+    User -.->|acesso direto ainda possível| SVC
     CM -->|env| DEP
     SEC -->|env| DEP
     MS -->|métricas| HPA
@@ -84,6 +86,8 @@ graph TB
 
    **Isso é só para o fluxo manual.** O job `k8s-deploy` do `cd.yml` não usa o `configmap.yaml` commitado — ele gera o ConfigMap dinamicamente: `DB_URL` a partir do output do Terraform (`terraform output db_endpoint`, capturado automaticamente no job anterior) e as URLs de orçamento a partir do hostname real do LoadBalancer, obtido via `kubectl get svc` com espera ativa (poll) logo após aplicar o `Service` — sem precisar de passo manual, e funcionando mesmo depois de um `terraform destroy`/`apply` que gere um RDS e um LoadBalancer novos.
 
+   **Depois disso, o job `apigw-apply` reescreve as URLs de orçamento apontando para o API Gateway.** Elas são os links enviados ao cliente final por notificação, e precisam passar pelo gateway, não pelo ELB. Só dá pra fazer nesse ponto do pipeline: a URL do gateway só é conhecida depois do `terraform apply` do módulo `infra/terraform/apigateway`, que por sua vez precisa do hostname do ELB gerado aqui. O job só reinicia os pods quando o valor realmente muda — como o ID do gateway é estável entre deploys, na prática só o primeiro deploy (ou uma recriação do gateway) paga esse rollout extra.
+
 ## Metrics Server
 
 `k8s/metrics-server.yaml` é uma cópia estática do manifest oficial do [kubernetes-sigs/metrics-server](https://github.com/kubernetes-sigs/metrics-server). Roda em `kube-system`, não no namespace `fiap-mecanica` — é um add-on do cluster, não da aplicação. Sem ele o HPA (`kubectl get hpa -n fiap-mecanica`) mostra `<unknown>` nos targets de CPU/memória e nunca escala. Para atualizar a versão, baixe novamente de:
@@ -129,7 +133,7 @@ Para verificar: `kubectl get pods -n newrelic` (esperar os DaemonSets `newrelic-
 | `configmap.yaml` | Config não sensível (DB_URL, URLs de orçamento) — referência para uso manual; o `cd.yml` gera o seu próprio ConfigMap dinamicamente, não aplica este arquivo |
 | `secret.yaml.example` | Template do Secret (credenciais DB, JWT). Copiar para `secret.yaml` e preencher — não commitar |
 | `deployment.yaml` | Deployment da app, probes de liveness/readiness via Actuator, requests/limits de CPU/memória |
-| `service.yaml` | Service `LoadBalancer`, expõe a porta 80 → 8080 |
+| `service.yaml` | Service `LoadBalancer`, expõe a porta 80 → 8080. É o alvo da integração `HTTP_PROXY` do API Gateway — o hostname do ELB é gerado pela AWS e **muda a cada recriação do Service**, por isso o `cd.yml` o descobre em runtime e repassa ao módulo `infra/terraform/apigateway` |
 | `hpa.yaml` | HorizontalPodAutoscaler (CPU e memória, 70%, 1–4 réplicas) |
 | `metrics-server.yaml` | Add-on de cluster necessário para o HPA funcionar no EKS |
 

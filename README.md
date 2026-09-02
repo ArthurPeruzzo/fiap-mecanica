@@ -51,25 +51,32 @@ graph LR
     subgraph CI["CI · ci.yml (em Pull Request)"]
         direction TB
         BT1["Build + Test"]
-        TP["terraform plan<br/>(não aplica)"]
+        TP["terraform plan<br/>(aws + apigateway · não aplica)"]
     end
 
     subgraph CD["CD · cd.yml (em push na main)"]
         direction TB
         BT2["Build + Test"]
-        TA["terraform apply"]
+        TA["terraform apply<br/>(infra/terraform/aws)"]
         DBP["docker build + push → ECR"]
         KD["kubectl apply → EKS"]
         RS["rollout status ✅"]
+        AG["terraform apply<br/>(infra/terraform/apigateway)"]
     end
 
     Dev -->|abre PR| CI
     Dev -->|merge / push| CD
-    BT2 --> TA --> DBP --> KD --> RS
+    BT2 --> TA --> DBP --> KD --> RS --> AG
     TA --> KD
 ```
 
-Toda `pull request` para a `main` dispara o **CI** (`.github/workflows/ci.yml`): compila, roda os testes automatizados e mostra o que o Terraform mudaria (`terraform plan`), sem aplicar nada. Ao dar merge, o **CD** (`.github/workflows/cd.yml`) builda e publica a imagem versionada no ECR, aplica a infraestrutura (`terraform apply`) e faz o deploy no cluster (`kubectl apply` dos manifestos + `kubectl set image` com a versão publicada + `kubectl rollout status`). Detalhes de cada job em [`k8s/README.md`](k8s/README.md) e [`infra/terraform/aws/README.md`](infra/terraform/aws/README.md).
+Toda `pull request` para a `main` dispara o **CI** (`.github/workflows/ci.yml`): compila, roda os testes automatizados e mostra o que o Terraform mudaria (`terraform plan` nos dois root modules), sem aplicar nada. Ao dar merge, o **CD** (`.github/workflows/cd.yml`) builda e publica a imagem versionada no ECR, aplica a infraestrutura (`terraform apply`) e faz o deploy no cluster (`kubectl apply` dos manifestos + `kubectl set image` com a versão publicada + `kubectl rollout status`). Por último, o job `apigw-apply` aplica o **API Gateway** — ele roda no fim porque a integração precisa do hostname do LoadBalancer, que só existe depois do deploy no cluster. Detalhes de cada job em [`k8s/README.md`](k8s/README.md), [`infra/terraform/aws/README.md`](infra/terraform/aws/README.md) e [`infra/terraform/apigateway/README.md`](infra/terraform/apigateway/README.md).
+
+### Porta de entrada — API Gateway
+
+Em produção o acesso à API passa por um **AWS API Gateway (HTTP API v2)**, provisionado em [`infra/terraform/apigateway`](infra/terraform/apigateway/README.md). Ele publica uma URL estável e com TLS (`https://<id>.execute-api.us-east-1.amazonaws.com`) e encaminha todo o tráfego (`ANY /{proxy+}`, integração `HTTP_PROXY`) para o LoadBalancer do Service no EKS — cujo hostname é gerado pela AWS e muda a cada recriação, o que o pipeline resolve automaticamente.
+
+O gateway apenas **roteia**: a autenticação e a autorização continuam inteiramente na aplicação (`UserAuthenticationFilter` + `SecurityConfiguration`), e o header `Authorization` é repassado intacto. O stage é `$default`, sem prefixo de path, para que os matchers de rota do Spring Security continuem válidos. O módulo já está preparado para receber a Function Lambda de autenticação de cliente da Fase 3 como uma rota adicional (`POST /auth/cliente`), sem acoplamento: enquanto a variável `auth_lambda_name` estiver vazia, nada da Lambda é avaliado.
 
 ---
 

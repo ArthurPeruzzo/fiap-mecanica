@@ -135,6 +135,10 @@ jobs:
     environment: producao
     permissions:
       contents: read
+    outputs:
+      # Hostname do ELB criado pelo Service. Consumido pelo apigw-apply, que é o único
+      # ponto do pipeline onde esse valor já existe (o terraform-apply roda antes daqui).
+      lb_hostname: ${{ steps.wait_lb.outputs.hostname }}
 
     steps:
     - uses: actions/checkout@v4
@@ -201,3 +205,76 @@ jobs:
       run: kubectl apply -f k8s/hpa.yaml
     - name: Aguardar rollout
       run: kubectl rollout status deployment/fiap-mecanica -n fiap-mecanica --timeout=300s
+
+  # Aplica o API Gateway (state próprio, infra/terraform/apigateway). Roda por último porque a
+  # integração HTTP_PROXY precisa do hostname do ELB, que só existe depois do k8s-deploy.
+  apigw-apply:
+    needs: [k8s-deploy, terraform-apply]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: producao
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: infra/terraform/apigateway
+    env:
+      TF_VAR_app_elb_host: ${{ needs.k8s-deploy.outputs.lb_hostname }}
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+        aws-region: ${{ env.AWS_REGION }}
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+    - name: Terraform init
+      run: terraform init
+    - name: Terraform apply
+      run: terraform apply -auto-approve
+    - name: Capturar a URL do gateway
+      id: tf_outputs
+      run: echo "api_url=$(terraform output -raw api_gateway_url)" >> "$GITHUB_OUTPUT"
+    - name: Apontar kubectl para o cluster EKS
+      working-directory: .
+      run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+    # Os links de aprovação/recusa vão para o cliente final por notificação — precisam apontar
+    # para o gateway, não para o ELB, senão o fluxo mais externo do sistema passa por fora dele.
+    # Só dá pra fazer aqui: a URL do gateway só é conhecida depois do apply acima.
+    - name: Repontar as URLs de orçamento para o gateway (e reiniciar só se algo mudou)
+      working-directory: .
+      env:
+        API_URL: ${{ steps.tf_outputs.outputs.api_url }}
+        DB_ENDPOINT: ${{ needs.terraform-apply.outputs.db_endpoint }}
+      run: |
+        ATUAL=$(kubectl get configmap fiap-mecanica-config -n fiap-mecanica \
+          -o jsonpath='{.data.URL_APROVAR_ORCAMENTO}' 2>/dev/null || echo "")
+        DESEJADO="${API_URL}/ordem-servico/orcamento/externo/aprovar/"
+
+        kubectl create configmap fiap-mecanica-config -n fiap-mecanica \
+          --from-literal=DB_URL="jdbc:mysql://${DB_ENDPOINT}/mecanica" \
+          --from-literal=URL_APROVAR_ORCAMENTO="${DESEJADO}" \
+          --from-literal=URL_RECUSAR_ORCAMENTO="${API_URL}/ordem-servico/orcamento/externo/recusar/" \
+          --dry-run=client -o yaml | kubectl apply -f -
+
+        # O ID do gateway é estável entre deploys, então a partir da segunda run os valores já
+        # batem e o rollout extra é dispensado. Só o primeiro deploy (ou uma recriação do
+        # gateway) paga o custo do restart.
+        if [ "$ATUAL" = "$DESEJADO" ]; then
+          echo "URLs de orçamento já apontam para o gateway — rollout dispensado."
+        else
+          echo "URLs de orçamento mudaram ('$ATUAL' -> '$DESEJADO') — reiniciando os pods."
+          kubectl rollout restart deployment/fiap-mecanica -n fiap-mecanica
+          kubectl rollout status deployment/fiap-mecanica -n fiap-mecanica --timeout=300s
+        fi
+    - name: Publicar a URL do gateway no resumo da run
+      run: |
+        {
+          echo "### API Gateway"
+          echo ""
+          echo "\`${{ steps.tf_outputs.outputs.api_url }}\`"
+        } >> "$GITHUB_STEP_SUMMARY"
