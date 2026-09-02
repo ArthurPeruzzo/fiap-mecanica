@@ -5,5 +5,9 @@ metadata:
   namespace: fiap-mecanica
 data:
   DB_URL: "jdbc:mysql://SEU_ENDPOINT_RDS:3306/mecanica"
-  URL_APROVAR_ORCAMENTO: "http://SEU_HOSTNAME_LOADBALANCER/ordem-servico/orcamento/externo/aprovar/"
-  URL_RECUSAR_ORCAMENTO: "http://SEU_HOSTNAME_LOADBALANCER/ordem-servico/orcamento/externo/recusar/"
+  # URL publica do API Gateway (output api_gateway_url de infra/terraform/apigateway).
+  # Alimenta o campo servers do OpenAPI — sem ela, o Swagger aponta para o ELB e o
+  # "Try it out" sai por fora do gateway.
+  PUBLIC_BASE_URL: "https://SEU_ID.execute-api.us-east-1.amazonaws.com"
+  URL_APROVAR_ORCAMENTO: "https://SEU_ID.execute-api.us-east-1.amazonaws.com/ordem-servico/orcamento/externo/aprovar/"
+  URL_RECUSAR_ORCAMENTO: "https://SEU_ID.execute-api.us-east-1.amazonaws.com/ordem-servico/orcamento/externo/recusar/"
