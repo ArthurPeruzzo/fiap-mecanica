@@ -19,6 +19,7 @@ import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.shared.page.Pagina;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
+import com.fiap.mecanica.shared.seguranca.core.gateway.UserGateway;
 
 public class OrdemDeServicoCleanController {
 
@@ -33,6 +34,7 @@ public class OrdemDeServicoCleanController {
     private final InsumoGateway insumoGateway;
     private final NotificacaoGateway notificacaoGateway;
     private final MetricasGateway metricasGateway;
+    private final UserGateway userGateway;
 
     public OrdemDeServicoCleanController(OrdemDeServicoGateway ordemDeServicoGateway,
                                           AtendenteGateway atendenteGateway,
@@ -44,7 +46,8 @@ public class OrdemDeServicoCleanController {
                                           PecaGateway pecaGateway,
                                           InsumoGateway insumoGateway,
                                           NotificacaoGateway notificacaoGateway,
-                                          MetricasGateway metricasGateway) {
+                                          MetricasGateway metricasGateway,
+                                          UserGateway userGateway) {
         this.ordemDeServicoGateway = ordemDeServicoGateway;
         this.atendenteGateway = atendenteGateway;
         this.tokenGateway = tokenGateway;
@@ -56,6 +59,7 @@ public class OrdemDeServicoCleanController {
         this.insumoGateway = insumoGateway;
         this.notificacaoGateway = notificacaoGateway;
         this.metricasGateway = metricasGateway;
+        this.userGateway = userGateway;
     }
 
     public Long criar(CriarOrdemDeServicoDto dto) {
@@ -81,6 +85,13 @@ public class OrdemDeServicoCleanController {
     public StatusOrdemDeServicoResponseJson consultarStatus(Long ordemServicoId) {
         var presenter = new ConsultarStatusOrdemDeServicoPresenter();
         new ConsultarStatusOrdemDeServicoUseCase(ordemDeServicoGateway, presenter).consultar(ordemServicoId);
+        return presenter.getViewModel();
+    }
+
+    public Pagina<OrdemDeServicoResponseJson> listarMinhasOrdens(int page, int size) {
+        var presenter = new ListarOrdemDeServicoPresenter();
+        new ListarOrdemDeServicoDoClienteUseCase(ordemDeServicoGateway, clienteGateway, veiculoGateway,
+                atendenteGateway, mecanicoGateway, tokenGateway, userGateway, presenter).listar(page, size);
         return presenter.getViewModel();
     }
 }

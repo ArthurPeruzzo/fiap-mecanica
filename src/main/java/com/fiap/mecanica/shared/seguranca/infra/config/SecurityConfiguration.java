@@ -27,9 +27,14 @@ public class SecurityConfiguration {
     protected static final String ADMINISTRADOR = "ADMINISTRADOR";
     protected static final String ATENDENTE = "ATENDENTE";
     protected static final String MECANICO = "MECANICO";
+    protected static final String CLIENTE = "CLIENTE";
 
     static final String[] ENDPOINTS_SEM_AUTENTICACAO = {
             "/authenticate/login",
+            // Uso interno, chamado pela Function Lambda antes de qualquer JWT existir —
+            // fica público por decisão de escopo (ver ADR de observabilidade/autenticação
+            // da Fase 3); não expõe nada além de existência de CPF + id numérico de User.
+            "/authenticate/cliente/status",
             "/v3/api-docs/**",
             "/swagger-ui.html",
             "/swagger-ui/**",
@@ -74,6 +79,8 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.GET, "/ordem-servico/*/status").hasAnyRole(ATENDENTE, MECANICO, ADMINISTRADOR)
                         // Endpoint de teste — dispara falha simulada pra validar o alerta da New Relic (ver OrdemDeServicoHttpController)
                         .requestMatchers(HttpMethod.GET, "/ordem-servico/teste-alerta").hasAnyRole(ATENDENTE, MECANICO, ADMINISTRADOR)
+                        // CLIENTE
+                        .requestMatchers(HttpMethod.GET, "/ordem-servico/minhas-ordens").hasRole(CLIENTE)
                         .anyRequest().denyAll()
                 )
                 .exceptionHandling(exception ->
