@@ -234,11 +234,61 @@ jobs:
       uses: hashicorp/setup-terraform@v3
     - name: Terraform init
       run: terraform init
+    # A rota POST /auth/cliente só é criada se a Function Lambda já existir na conta. Ela é
+    # publicada pelo CD do repositório fiap-mecanica-lambda, que é independente deste. Numa infra
+    # do zero a função ainda não existe na primeira passada — sem esta checagem, o
+    # `data "aws_lambda_function"` faria o apply falhar e derrubaria o deploy inteiro do app por
+    # causa de um componente satélite. A próxima execução do CD cria a rota.
+    - name: Habilitar a rota da Lambda somente se a função já existir
+      working-directory: .
+      run: |
+        if aws lambda get-function --function-name fiap-mecanica-auth >/dev/null 2>&1; then
+          echo "Function fiap-mecanica-auth encontrada — a rota POST /auth/cliente será criada."
+          echo "TF_VAR_auth_lambda_name=fiap-mecanica-auth" >> "$GITHUB_ENV"
+        else
+          echo "::warning::Function fiap-mecanica-auth não existe ainda — POST /auth/cliente não será criada nesta run. Rode o CD do repositório fiap-mecanica-lambda e depois este workflow novamente."
+        fi
     - name: Terraform apply
       run: terraform apply -auto-approve
     - name: Capturar a URL do gateway
       id: tf_outputs
       run: echo "api_url=$(terraform output -raw api_gateway_url)" >> "$GITHUB_OUTPUT"
+    # A Lambda chama a aplicação direto no ELB (um hop a menos, e evita a chamada voltar pelo
+    # gateway que a invocou). O hostname do ELB muda a cada recriação do Service, e este job é o
+    # único ponto do pipeline que o conhece — por isso o repasse acontece aqui.
+    - name: Repassar o endereço do ELB para a Function Lambda
+      working-directory: .
+      env:
+        ELB_HOST: ${{ needs.k8s-deploy.outputs.lb_hostname }}
+      run: |
+        if ! aws lambda get-function --function-name fiap-mecanica-auth >/dev/null 2>&1; then
+          echo "Function ainda não existe — nada a repassar."
+          exit 0
+        fi
+        ATUAL=$(aws lambda get-function-configuration --function-name fiap-mecanica-auth \
+          --query 'Environment.Variables.APP_BASE_URL' --output text)
+        DESEJADO="http://${ELB_HOST}"
+        if [ "$ATUAL" = "$DESEJADO" ]; then
+          echo "APP_BASE_URL da Lambda já está correto ($ATUAL)."
+          exit 0
+        fi
+        echo "Atualizando APP_BASE_URL da Lambda: '$ATUAL' -> '$DESEJADO'"
+        # Merge com as variáveis existentes: a API substitui o mapa de environment inteiro, então
+        # mandar só APP_BASE_URL apagaria JWT_SECRET e as demais.
+        aws lambda get-function-configuration --function-name fiap-mecanica-auth \
+          --query 'Environment.Variables' --output json > /tmp/env-atual.json
+        NOVO_APP_BASE_URL="$DESEJADO" python3 - > /tmp/payload.json <<'PY'
+        import json, os
+        variaveis = json.load(open("/tmp/env-atual.json"))
+        variaveis["APP_BASE_URL"] = os.environ["NOVO_APP_BASE_URL"]
+        print(json.dumps({
+            "FunctionName": "fiap-mecanica-auth",
+            "Environment": {"Variables": variaveis},
+        }))
+        PY
+        aws lambda update-function-configuration --cli-input-json file:///tmp/payload.json >/dev/null
+        aws lambda wait function-updated --function-name fiap-mecanica-auth
+        echo "APP_BASE_URL atualizado."
     - name: Apontar kubectl para o cluster EKS
       working-directory: .
       run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}

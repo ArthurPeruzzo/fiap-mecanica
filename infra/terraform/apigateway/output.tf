@@ -7,3 +7,8 @@ output "api_gateway_id" {
   description = "ID da API — usado para montar a URL e para consultar logs/metricas no CloudWatch."
   value       = aws_apigatewayv2_api.gateway.id
 }
+
+output "auth_route_ativa" {
+  description = "Indica se a rota POST /auth/cliente (Function Lambda) foi criada. Falso enquanto auth_lambda_name estiver vazio."
+  value       = var.auth_lambda_name != ""
+}
