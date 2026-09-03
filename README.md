@@ -159,7 +159,6 @@ aws eks update-kubeconfig --name eks-fiap-mecanica --region us-east-1
 cp k8s/secret.yaml.example k8s/secret.yaml   # preencher com credenciais reais, nunca commitar
 
 kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/metrics-server.yaml
 kubectl apply -f k8s/configmap.yaml -f k8s/secret.yaml
 kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/service.yaml

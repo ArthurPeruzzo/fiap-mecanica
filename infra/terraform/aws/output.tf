@@ -30,14 +30,7 @@ output "eks_node_group_name" {
   value = aws_eks_node_group.node-group.node_group_name
 }
 
-output "db_endpoint" {
-  value = aws_db_instance.mysql.endpoint
-}
-
-output "db_name" {
-  value = aws_db_instance.mysql.db_name
-}
-
-output "ecr_repository_url" {
-  value = aws_ecr_repository.app.repository_url
+output "eks_cluster_security_group_id" {
+  description = "SG do control plane do EKS. Consumido pelo repositório fiap-mecanica-infra-db via terraform_remote_state, para liberar a porta 3306 do RDS só para o cluster."
+  value       = aws_eks_cluster.cluster.vpc_config[0].cluster_security_group_id
 }

@@ -40,10 +40,10 @@ jobs:
       uses: advanced-security/maven-dependency-submission-action@571e99aab1055c2e71a1e2309b9691de18d6b7d6
 
   docker-build-push:
-    # precisa do terraform-apply: se a infra (incluindo o ECR) tiver sido destruída
+    # precisa do app-infra-apply: se a infra (incluindo o ECR) tiver sido destruída
     # e recriada, o repositório só existe depois que o apply terminar — sem essa
     # dependência, o push corre risco de tentar publicar num ECR que ainda não existe.
-    needs: terraform-apply
+    needs: app-infra-apply
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: producao
@@ -82,27 +82,23 @@ jobs:
           exit 1
         fi
     - name: Build da imagem
-      run: docker build -t ${{ needs.terraform-apply.outputs.ecr_repo }}:${{ steps.get_version.outputs.version }} .
+      run: docker build -t ${{ needs.app-infra-apply.outputs.ecr_repo }}:${{ steps.get_version.outputs.version }} .
     - name: Push da imagem
-      run: docker push ${{ needs.terraform-apply.outputs.ecr_repo }}:${{ steps.get_version.outputs.version }}
+      run: docker push ${{ needs.app-infra-apply.outputs.ecr_repo }}:${{ steps.get_version.outputs.version }}
 
-  terraform-apply:
+  # Aplica infra/terraform/app-infra (ECR + leitura, via terraform_remote_state, do db_endpoint
+  # do repositório fiap-mecanica-infra-db e do eks_cluster_name do fiap-mecanica-infra-k8s).
+  # Substitui o antigo módulo combinado infra/terraform/aws, que agora só gerencia o que ainda
+  # não foi migrado (New Relic — ver job newrelic-legacy-apply, abaixo).
+  app-infra-apply:
     runs-on: ubuntu-latest
-    # 40min: um apply incremental leva segundos, mas criar o cluster EKS +
-    # node group + RDS do zero (ex: após um terraform destroy) pode passar
-    # de 20min só no control plane do EKS.
-    timeout-minutes: 40
+    timeout-minutes: 15
     environment: producao
     permissions:
       contents: read
     defaults:
       run:
-        working-directory: infra/terraform/aws
-    env:
-      TF_VAR_db_username: ${{ secrets.TF_VAR_DB_USERNAME }}
-      TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
-      TF_VAR_newrelic_api_key: ${{ secrets.NEW_RELIC_API_KEY }}
-      TF_VAR_newrelic_account_id: ${{ secrets.NEW_RELIC_ACCOUNT_ID }}
+        working-directory: infra/terraform/app-infra
     outputs:
       db_endpoint: ${{ steps.tf_outputs.outputs.db_endpoint }}
       ecr_repo: ${{ steps.tf_outputs.outputs.ecr_repo }}
@@ -128,8 +124,55 @@ jobs:
         echo "db_endpoint=$(terraform output -raw db_endpoint)" >> "$GITHUB_OUTPUT"
         echo "ecr_repo=$(terraform output -raw ecr_repository_url)" >> "$GITHUB_OUTPUT"
 
+  # Legado: o único recurso que ainda mora em infra/terraform/aws são os alertas/dashboards de
+  # New Relic (migração para app-infra adiada de propósito — ver README daquele módulo). VPC/EKS
+  # também têm arquivos .tf neste diretório (intocados, código idêntico ao do repositório
+  # fiap-mecanica-infra-k8s, que agora é quem de fato os gerencia), porque compartilham o MESMO
+  # backend key que aquele repositório usa — não há como "esvaziar" este diretório sem também
+  # apagar os arquivos de VPC/EKS, o que não foi feito ainda.
+  #
+  # Por isso todo apply aqui usa -target, restrito EXPLICITAMENTE aos 6 recursos newrelic_*.
+  # Isso é a garantia de segurança: mesmo que os arquivos de VPC/EKS aqui um dia divirjam do que
+  # o repositório fiap-mecanica-infra-k8s aplicar (drift), este job JAMAIS os tocaria — o
+  # -target torna estruturalmente impossível, não é uma questão de "hoje bate, então tá seguro".
+  newrelic-legacy-apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: producao
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: infra/terraform/aws
+    env:
+      TF_VAR_newrelic_api_key: ${{ secrets.NEW_RELIC_API_KEY }}
+      TF_VAR_newrelic_account_id: ${{ secrets.NEW_RELIC_ACCOUNT_ID }}
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+        aws-region: ${{ env.AWS_REGION }}
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+    - name: Terraform init
+      run: terraform init
+    - name: Terraform apply (restrito aos 6 recursos New Relic — nunca toca em VPC/EKS)
+      run: |
+        terraform apply -auto-approve \
+          -target=newrelic_alert_policy.os_falhas \
+          -target=newrelic_nrql_alert_condition.os_erros_500 \
+          -target=newrelic_notification_destination.email \
+          -target=newrelic_notification_channel.email \
+          -target=newrelic_workflow.os_falhas \
+          -target=newrelic_one_dashboard.observabilidade_negocio
+
   k8s-deploy:
-    needs: [docker-build-push, terraform-apply]
+    needs: [docker-build-push, app-infra-apply]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: producao
@@ -137,7 +180,7 @@ jobs:
       contents: read
     outputs:
       # Hostname do ELB criado pelo Service. Consumido pelo apigw-apply, que é o único
-      # ponto do pipeline onde esse valor já existe (o terraform-apply roda antes daqui).
+      # ponto do pipeline onde esse valor já existe (o app-infra-apply roda antes daqui).
       lb_hostname: ${{ steps.wait_lb.outputs.hostname }}
 
     steps:
@@ -151,29 +194,13 @@ jobs:
         aws-region: ${{ env.AWS_REGION }}
     - name: Apontar kubectl para o cluster EKS
       run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
-    - name: Aplicar namespace e metrics-server
-      run: |
-        kubectl apply -f k8s/namespace.yaml
-        kubectl apply -f k8s/metrics-server.yaml
-    - name: Configurar Helm
-      uses: azure/setup-helm@v4
-    - name: Adicionar/atualizar repositório Helm da New Relic
-      run: |
-        helm repo add newrelic https://helm-charts.newrelic.com
-        helm repo update
-    - name: Limpar webhook conflitante da New Relic antes do upgrade (SSA field-manager conflict conhecido)
-      run: kubectl delete mutatingwebhookconfiguration newrelic-bundle-nri-metadata-injection --ignore-not-found
-    - name: Instalar/atualizar a integração Kubernetes da New Relic (nri-bundle)
-      run: |
-        helm upgrade --install newrelic-bundle newrelic/nri-bundle \
-          --namespace newrelic --create-namespace \
-          --set global.licenseKey="${{ secrets.NEW_RELIC_LICENSE_KEY }}" \
-          --set global.cluster="${{ env.EKS_CLUSTER_NAME }}" \
-          --set global.lowDataMode=true \
-          --set newrelic-infrastructure.privileged=true \
-          --set kube-state-metrics.enabled=true \
-          --set newrelic-logging.enabled=true \
-          --wait --timeout 5m0s
+    # metrics-server e a integração Kubernetes da New Relic (Helm nri-bundle) são add-ons de
+    # CLUSTER, não da aplicação — migraram para o CD do repositório fiap-mecanica-infra-k8s, que
+    # roda logo após criar o EKS. Numa infra do zero, rodar aquele CD antes do primeiro deploy
+    # daqui, senão o HPA fica com métricas <unknown> até o metrics-server existir (ele se
+    # autocorrige assim que o add-on chegar, não é um erro permanente).
+    - name: Aplicar namespace
+      run: kubectl apply -f k8s/namespace.yaml
     - name: Gerar e aplicar Secret (a partir dos GitHub Secrets, sem gravar em disco)
       run: |
         kubectl create secret generic fiap-mecanica-secret -n fiap-mecanica \
@@ -193,14 +220,14 @@ jobs:
     - name: Gerar ConfigMap (DB_URL + URLs de orçamento já resolvidos, numa única passada)
       run: |
         kubectl create configmap fiap-mecanica-config -n fiap-mecanica \
-          --from-literal=DB_URL="jdbc:mysql://${{ needs.terraform-apply.outputs.db_endpoint }}/mecanica" \
+          --from-literal=DB_URL="jdbc:mysql://${{ needs.app-infra-apply.outputs.db_endpoint }}/mecanica" \
           --from-literal=URL_APROVAR_ORCAMENTO="http://${{ steps.wait_lb.outputs.hostname }}/ordem-servico/orcamento/externo/aprovar/" \
           --from-literal=URL_RECUSAR_ORCAMENTO="http://${{ steps.wait_lb.outputs.hostname }}/ordem-servico/orcamento/externo/recusar/" \
           --dry-run=client -o yaml | kubectl apply -f -
     - name: Aplicar Deployment (pods já nascem com a config completa)
       run: kubectl apply -f k8s/deployment.yaml
     - name: Definir a versão da imagem publicada nesta run
-      run: kubectl set image deployment/fiap-mecanica fiap-mecanica=${{ needs.terraform-apply.outputs.ecr_repo }}:${{ needs.docker-build-push.outputs.version }} -n fiap-mecanica
+      run: kubectl set image deployment/fiap-mecanica fiap-mecanica=${{ needs.app-infra-apply.outputs.ecr_repo }}:${{ needs.docker-build-push.outputs.version }} -n fiap-mecanica
     - name: Aplicar HPA
       run: kubectl apply -f k8s/hpa.yaml
     - name: Aguardar rollout
@@ -209,7 +236,7 @@ jobs:
   # Aplica o API Gateway (state próprio, infra/terraform/apigateway). Roda por último porque a
   # integração HTTP_PROXY precisa do hostname do ELB, que só existe depois do k8s-deploy.
   apigw-apply:
-    needs: [k8s-deploy, terraform-apply]
+    needs: [k8s-deploy, app-infra-apply]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: producao
@@ -299,7 +326,7 @@ jobs:
       working-directory: .
       env:
         API_URL: ${{ steps.tf_outputs.outputs.api_url }}
-        DB_ENDPOINT: ${{ needs.terraform-apply.outputs.db_endpoint }}
+        DB_ENDPOINT: ${{ needs.app-infra-apply.outputs.db_endpoint }}
       run: |
         ATUAL_APROVAR=$(kubectl get configmap fiap-mecanica-config -n fiap-mecanica \
           -o jsonpath='{.data.URL_APROVAR_ORCAMENTO}' 2>/dev/null || echo "")

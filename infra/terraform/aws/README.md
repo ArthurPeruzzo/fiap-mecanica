@@ -1,120 +1,100 @@
-# Infraestrutura AWS — fiap-mecanica (Terraform)
+# infra/terraform/aws — legado, só New Relic (Terraform)
 
-Provisiona, na conta AWS Academy Lab, tudo que o cluster Kubernetes (`/k8s`) precisa pra rodar a aplicação: VPC, cluster EKS, banco RDS MySQL e repositório ECR pra imagem Docker.
+> ⚠️ **Este diretório é legado.** Até 2026-09-02 concentrava toda a infraestrutura AWS do
+> projeto (VPC, EKS, RDS, ECR, alertas/dashboards New Relic) num state só. Em 2026-09-03 o
+> projeto foi dividido em 4 repositórios (exigência da Fase 3) e a maior parte destes recursos
+> migrou:
+>
+> | Recurso | Foi para |
+> |---|---|
+> | VPC, EKS, node group, access entries | repositório [`fiap-mecanica-infra-k8s`](https://github.com/ArthurPeruzzo/fiap-mecanica-infra-k8s) |
+> | RDS, subnet group, security group | repositório [`fiap-mecanica-infra-db`](https://github.com/ArthurPeruzzo/fiap-mecanica-infra-db) |
+> | ECR | [`../app-infra`](../app-infra/) (state próprio, `tfstate/app-infra.tfstate`) |
+> | **New Relic (alertas + dashboard)** | **ainda aqui — migração adiada de propósito** |
 
-> **Este é um dos dois root modules do projeto.** O API Gateway fica em
-> [`../apigateway`](../apigateway/README.md), com **state próprio**
-> (`tfstate/apigateway.tfstate`), porque depende do hostname do LoadBalancer do Kubernetes — que
-> só existe *depois* do `apply` deste módulo aqui. Ver o README de lá para a ordem de deploy
-> completa.
+## Por que os arquivos de VPC/EKS ainda estão neste diretório
 
-## Fluxo (macro)
+`vpc.tf`, `subnet.tf`, `eks-cluster.tf`, `eks-node.tf`, `access-entry.tf`, `iam-role.tf`,
+`internet-g.tf`, `route-t.tf`, `bucket.tf` **continuam aqui, intocados** — código idêntico ao do
+repositório `fiap-mecanica-infra-k8s`, que agora é quem de fato gerencia esses recursos.
 
-```mermaid
-graph TB
-    TF["terraform apply"]
-    S3["Backend S3<br/>(tfstate remoto)"]
-    TF -->|lê / grava state| S3
+Não foram apagados porque, como este diretório aponta para a **mesma chave de backend**
+(`tfstate/terraform.tfstate`) que o repositório novo, apagar essas configurações sem também
+fazer `terraform state rm` teria criado um risco real: o CD deste repositório roda
+`terraform apply -auto-approve`, **sem revisão humana** — qualquer descompasso entre config e
+state (config sem o recurso, state com o recurso) faz o Terraform planejar destruir, e o
+`-auto-approve` executaria isso sozinho no próximo push.
 
-    subgraph AWS["AWS"]
-        VPC["VPC<br/>subnets multi-AZ · IGW · rotas"]
-        EKS["EKS<br/>cluster + node group"]
-        RDS[("RDS MySQL<br/>privado")]
-        ECR["ECR<br/>repositório da imagem"]
-    end
+A correção aplicada foi no `cd.yml`: o job `newrelic-legacy-apply` roda `terraform apply` com
+`-target` restrito **explicitamente** aos 6 recursos `newrelic_*` — nunca aos de VPC/EKS, mesmo
+que esses arquivos aqui um dia divirjam do que o repositório `fiap-mecanica-infra-k8s` aplicar.
+Isso torna estruturalmente impossível este diretório destruir o cluster por acidente, não é
+"hoje está tudo igual, então tá seguro" — é uma garantia que se mantém mesmo se divergir.
 
-    TF --> VPC
-    VPC --> EKS
-    VPC --> RDS
-    TF --> ECR
+**Nunca rode `terraform apply` neste diretório sem `-target` explícito.** Os arquivos de
+VPC/EKS/RDS/ECR aqui são cópias congeladas, mantidas só para o state permanecer consistente
+com o config restante (New Relic) — remover essas cópias é um cleanup futuro possível, não
+urgente.
 
-    EKS --> OUT["outputs<br/>(db_endpoint · ecr_repository_url · …)"]
-    RDS --> OUT
-    ECR --> OUT
-    OUT -->|consumidos no deploy| CD["Pipeline CD / kubectl"]
-```
-
-## Recursos criados
+## O que ainda é gerenciado daqui
 
 | Arquivo | Recurso | O que é |
 |---|---|---|
-| `vpc.tf` | `aws_vpc.vpc_fiap` | VPC dedicada (`10.0.0.0/16`), com DNS support/hostnames habilitado (exigido pelo EKS) |
-| `subnet.tf` | `aws_subnet.subnet_public` (x3) | 3 subnets públicas, uma por AZ (`us-east-1a/b/c`) — EKS exige subnets em pelo menos 2 AZs |
-| `internet-g.tf` | `aws_internet_gateway.igw` | Gateway de internet da VPC |
-| `route-t.tf` | `aws_route_table.rt_public` + associations | Rota `0.0.0.0/0` → IGW, associada às 3 subnets públicas |
-| `iam-role.tf` | `data.aws_iam_role.lab_role` | Referência à role `LabRole`, já existente na conta AWS Academy Lab (a Lab **não permite criar IAM roles próprias** — por isso é `data`, não `resource`) |
-| `eks-cluster.tf` | `aws_eks_cluster.cluster` | Cluster EKS `eks-fiap-mecanica`, `authentication_mode = "API"`, control plane usando `LabRole` como service role |
-| `eks-node.tf` | `aws_eks_node_group.node-group` | Node group gerenciado (`t3.medium`, 1–3 nodes, desired 2), node role também `LabRole` |
-| `access-entry.tf` | `aws_eks_access_entry.voclabs` + policy association | Dá acesso de admin do cluster ao seu usuário (`voclabs`, a role assumida pela AWS Academy Lab) |
-| `access-entry.tf` | `aws_eks_access_entry.node_role` | Access entry tipo `EC2_LINUX` pra `LabRole` — necessária pros nodes conseguirem se registrar como objetos `Node` (ver "Gotchas" abaixo) |
-| `database.tf` | `aws_db_subnet_group`, `aws_security_group.db_sg`, `aws_db_instance.mysql` | RDS MySQL 8.0 privado (`publicly_accessible = false`), criptografado, SG só libera porta 3306 pro SG do cluster EKS |
-| `ecr.tf` | `aws_ecr_repository.app` | Repositório privado `fiap-mecanica` pra imagem Docker da app |
-| `bucket.tf` | `aws_s3_bucket.bucket-backend` | Bucket S3 usado como backend remoto do state (ver bootstrap abaixo) |
-| `backend.tf` | — | Configura o backend `s3` (bucket `fiap-mecanica`, `tfstate/terraform.tfstate`, `us-east-1`) |
-| `providers.tf` | — | Providers `aws` (região `us-east-1`) e `newrelic` (conta/API key pros alertas abaixo) |
-| `newrelic-alerts.tf` | `newrelic_alert_policy.os_falhas`, `newrelic_nrql_alert_condition.os_erros_500`, `newrelic_notification_destination.email`, `newrelic_notification_channel.email`, `newrelic_workflow.os_falhas` | Alerta de falha no processamento de OS: dispara quando `http.server.requests` reporta 5xx em rotas `/ordem-servico/**` (as exceções de negócio do domínio são todas 4xx, não entram aqui), notifica por e-mail (`alert_email`) |
-| `vars.tf` | — | Variáveis (ver tabela abaixo) |
-| `output.tf` | — | Outputs (ver tabela abaixo) |
+| `newrelic-alerts.tf` | `newrelic_alert_policy.os_falhas`, `newrelic_nrql_alert_condition.os_erros_500`, `newrelic_notification_destination.email`, `newrelic_notification_channel.email`, `newrelic_workflow.os_falhas` | Alerta de falha no processamento de OS: dispara quando `http.server.requests` reporta 5xx em rotas `/ordem-servico/**` |
+| `newrelic-dashboards.tf` | `newrelic_one_dashboard.observabilidade_negocio` | Dashboard de negócio: volume diário de OS, tempo médio por fase, taxa de erro |
 
-## Pré-requisitos
+## Migração adiada — por quê
 
-- Conta AWS Academy Lab ativa, com credenciais de sessão exportadas (`aws configure` ou variáveis `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_SESSION_TOKEN`) — **essas credenciais expiram por sessão**, renovar quando necessário.
-- Terraform ≥ 1.5 (usa `import` blocks em versões anteriores do projeto; a versão testada foi 1.15.7).
-- `aws` CLI configurado com a mesma conta.
+Diferente de RDS/ECR (migrados via `import`, sem tocar no recurso real), os objetos New Relic
+seriam migrados via `destroy` + `create`, porque o `newrelic_workflow` **exige nome único** — já
+provou isso numa sessão anterior deste projeto (`DUPLICATE: The name provided already exists`).
+Recriar não afeta a aplicação em produção (observabilidade fica fora do caminho de requisição),
+mas ainda assim é uma operação real de destruição, e ficou combinado adiar para quando fizer
+sentido revisitar.
 
-## Bootstrap (só na primeira vez, conta/state do zero)
+Quando migrar: copiar `newrelic-alerts.tf`/`newrelic-dashboards.tf` para `../app-infra/`
+(adicionando o provider `newrelic` no `providers.tf` de lá, hoje comentado como pendência), criar
+os novos objetos por lá, **depois** apagar os 6 daqui com `terraform destroy -target=...`
+(mesmos alvos do job `newrelic-legacy-apply` do `cd.yml`) e remover estes 2 arquivos.
 
-O bucket S3 usado como backend remoto (`bucket.tf`) é gerenciado pela **mesma** configuração Terraform que o usa como backend (`backend.tf`) — isso é um problema do tipo "ovo e galinha": `terraform init` exige que o bucket já exista, mas o bucket é criado por essa própria configuração.
-
-Se o bucket `fiap-mecanica` ainda não existir na conta:
-1. Comente temporariamente o bloco `backend "s3" { ... }` em `backend.tf`.
-2. Rode `terraform init` (usa state local) e `terraform apply -target=aws_s3_bucket.bucket-backend` pra criar só o bucket.
-3. Descomente o bloco `backend "s3"`.
-4. Rode `terraform init` de novo — o Terraform detecta o backend novo e oferece migrar o state local pra ele (responda `yes`).
-5. Siga o fluxo normal abaixo.
-
-Na conta AWS Academy Lab atual usada neste projeto o bucket já existe e o state já está migrado — esse bootstrap só é necessário se alguém for provisionar isso do zero numa conta nova.
-
-## Como aplicar (fluxo normal)
+## Aplicar manualmente
 
 ```bash
 cd infra/terraform/aws
 terraform init
-terraform plan -var db_username=<usuario> -var db_password=<senha> -var newrelic_api_key=<NRAK...> -var newrelic_account_id=<account_id>
-terraform apply -var db_username=<usuario> -var db_password=<senha> -var newrelic_api_key=<NRAK...> -var newrelic_account_id=<account_id>
+terraform apply -var newrelic_api_key=<NRAK...> -var newrelic_account_id=<account_id> \
+  -target=newrelic_alert_policy.os_falhas \
+  -target=newrelic_nrql_alert_condition.os_erros_500 \
+  -target=newrelic_notification_destination.email \
+  -target=newrelic_notification_channel.email \
+  -target=newrelic_workflow.os_falhas \
+  -target=newrelic_one_dashboard.observabilidade_negocio
 ```
 
-`db_username`/`db_password` são obrigatórios e não têm valor default (de propósito — não ficam hardcoded no repo). São as credenciais do usuário master do RDS.
+`newrelic_api_key`/`newrelic_account_id`: gere uma User API Key em Account settings → API keys na
+New Relic (o account ID aparece na mesma tela). Usados só pelo provider Terraform, diferente da
+license key do agente/Helm (`NEW_RELIC_LICENSE_KEY`, usada pelo repositório
+`fiap-mecanica-infra-k8s` e pelo Secret Kubernetes da aplicação).
 
-`newrelic_api_key`/`newrelic_account_id` também são obrigatórios — gere uma User API Key em Account settings → API keys na New Relic (o account ID aparece na mesma tela). São usados só pelo provider Terraform pra gerenciar o alerta em `newrelic-alerts.tf`, não pelo agente/Helm do cluster (esse usa a license key, `NEW_RELIC_LICENSE_KEY`, que é outro segredo — ver `k8s/README.md`).
-
-Depois do `apply`, siga para `/k8s` (ver `k8s/README.md`) pra publicar a imagem no ECR criado aqui e aplicar os manifests da aplicação no cluster. Com o Service de pé e o ELB com hostname, aplique por último o módulo do gateway (`../apigateway`, ver `README.md` de lá).
-
-## Variáveis (`vars.tf`)
+## Variáveis relevantes hoje (`vars.tf`)
 
 | Variável | Default | Descrição |
 |---|---|---|
-| `project_name` | `fiap-mecanica` | Prefixo usado no nome da maioria dos recursos |
+| `project_name` | `fiap-mecanica` | Prefixo usado no nome dos recursos (inclusive os legados de VPC/EKS) |
 | `region_default` | `us-east-1` | Região AWS |
-| `cidr_vpc` | `10.0.0.0/16` | CIDR da VPC |
 | `tags` | `{Name = "fiap-mecanica-terraform"}` | Tags aplicadas aos recursos |
-| `instance_type` | `t3.medium` | Tipo de instância dos nodes EKS |
-| `db_name` | `mecanica` | Nome do banco criado no RDS |
-| `db_instance_class` | `db.t3.micro` | Classe da instância RDS |
-| `db_username` | — (obrigatório) | Usuário master do RDS |
-| `db_password` | — (obrigatório, sensível) | Senha master do RDS |
-| `newrelic_api_key` | — (obrigatório, sensível) | User API Key da New Relic (`NRAK...`) — gera em Account settings → API keys. Diferente da license key usada pelo agente/Helm (`k8s/secret.yaml`) |
+| `instance_type` | `t3.medium` | Só relevante para os arquivos legados de EKS (não aplicados por este CD) |
+| `newrelic_api_key` | — (obrigatório, sensível) | User API Key da New Relic |
 | `newrelic_account_id` | — (obrigatório) | Account ID numérico da New Relic |
 | `alert_email` | `arthurkohl0@gmail.com` | E-mail que recebe os alertas de falha de processamento de OS |
 
+`db_name`, `db_instance_class`, `db_username`, `db_password` foram removidas — não há mais banco
+gerenciado daqui.
+
 ## Outputs (`output.tf`)
 
-| Output | Uso |
-|---|---|
-| `vpc_id`, `vpc_cidr`, `subnet_id`, `subnet_cidr` | Referência de rede |
-| `eks_cluster_name` | Usado em `aws eks update-kubeconfig --name <valor> --region us-east-1` |
-| `eks_cluster_endpoint`, `eks_cluster_certificate_authority_data` | Endpoint/CA do control plane |
-| `eks_node_group_name` | Nome do node group |
-| `db_endpoint` | Host:porta do RDS — vai direto no `DB_URL` do `k8s/configmap.yaml` |
-| `db_name` | Nome do banco (`mecanica`) |
-| `ecr_repository_url` | URI do ECR — usado no `docker build`/`push` e no `image:` do `k8s/deployment.yaml` |
+Além dos outputs legados de VPC/EKS (não usados por nada, mantidos só para o state ficar
+consistente com o config), este módulo expõe `eks_cluster_security_group_id` — duplicando o
+mesmo output do repositório `fiap-mecanica-infra-k8s`, pelo mesmo motivo de tudo aqui: enquanto
+os dois configs apontarem para a mesma chave de state, precisam declarar exatamente os mesmos
+outputs, senão `terraform plan` mostraria diferença.
