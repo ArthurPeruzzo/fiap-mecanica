@@ -54,6 +54,10 @@ O state deste módulo (`tfstate/apigateway.tfstate`) é **independente** do stat
 | `main.tf` | `aws_apigatewayv2_stage.default` | Stage `$default` com `auto_deploy` — ver "Por que `$default`" abaixo |
 | `main.tf` | `aws_apigatewayv2_integration.app` | Integração `HTTP_PROXY` → `http://<app_elb_host>/{proxy}`, timeout 30s. Criada só quando `app_elb_host != ""` |
 | `main.tf` | `aws_apigatewayv2_route.app_proxy` | Rota `ANY /{proxy+}`. Criada só quando `app_elb_host != ""` |
+| `main.tf` | `data.aws_lambda_function.auth` | Referência à Function Lambda, criada no repo `fiap-mecanica-lambda`. Só avaliada quando `auth_lambda_name != ""` |
+| `main.tf` | `aws_apigatewayv2_integration.auth` | Integração `AWS_PROXY` → Lambda, `payload_format_version = "1.0"`, timeout 29s |
+| `main.tf` | `aws_apigatewayv2_route.auth` | Rota `POST /auth/cliente` |
+| `main.tf` | `aws_lambda_permission.apigw` | Autoriza este gateway a invocar a função. **Sem ela, o gateway devolve 500** |
 | `backend.tf` | — | Backend `s3` (bucket `fiap-mecanica`, `tfstate/apigateway.tfstate`). O bucket é criado por `../aws/bucket.tf` — sem bootstrap próprio |
 | `providers.tf` | — | Provider `aws` (`us-east-1`). O provider `newrelic` **não** é replicado aqui |
 
@@ -138,38 +142,68 @@ reaplicar depois passando `-var app_elb_host=...`.
   sendo permissões incertas no Lab. Se virar requisito, é aditivo:
   `aws_apigatewayv2_domain_name` + `aws_apigatewayv2_api_mapping`.
 
-## Fase 3 — entrada da Lambda (ainda não implementado)
+## Fase 3 — a rota da Lambda
 
-Quando a Lambda `fiap-mecanica-auth` existir, o acréscimo é **aditivo**, sem tocar em nada do que
-está aqui hoje:
+`POST /auth/cliente` encaminha para a Function Lambda `fiap-mecanica-auth`, que é criada no
+repositório **`fiap-mecanica-lambda`** (state próprio, `tfstate/lambda.tfstate`). Aqui ela é
+apenas referenciada por nome, através de `auth_lambda_name`.
 
-```hcl
-data "aws_lambda_function" "auth" {
-  count         = var.auth_lambda_name != "" ? 1 : 0
-  function_name = var.auth_lambda_name
-}
+Tudo relacionado à Lambda fica desligado enquanto `auth_lambda_name` estiver vazio — inclusive o
+`data "aws_lambda_function"`, que nem chega a ser avaliado. É isso que permite um `plan`/`apply`
+deste módulo numa conta onde a função ainda não existe.
 
-resource "aws_apigatewayv2_integration" "auth" {
-  count                  = var.auth_lambda_name != "" ? 1 : 0
-  integration_type       = "AWS_PROXY"
-  integration_uri        = data.aws_lambda_function.auth[0].invoke_arn
-  payload_format_version = "1.0"  # o handler espera APIGatewayProxyEvent
-}
+Quem preenche a variável é o job `apigw-apply` do `cd.yml`, **só depois de confirmar que a função
+existe**:
 
-resource "aws_apigatewayv2_route" "auth" {
-  count     = var.auth_lambda_name != "" ? 1 : 0
-  route_key = "POST /auth/cliente"
-  # ...
-}
-
-resource "aws_lambda_permission" "apigw" {
-  count = var.auth_lambda_name != "" ? 1 : 0
-  # sem isso o gateway recebe 500 ao invocar a Lambda
-}
+```bash
+if aws lambda get-function --function-name fiap-mecanica-auth >/dev/null 2>&1; then
+  echo "TF_VAR_auth_lambda_name=fiap-mecanica-auth" >> "$GITHUB_ENV"
+fi
 ```
 
+Sem essa checagem, uma infra do zero quebraria: o CD da aplicação falharia inteiro por causa de um
+componente satélite que ainda não subiu.
+
 `POST /auth/cliente` é mais específica que `ANY /{proxy+}`, e o HTTP API prioriza a rota mais
-específica — as duas convivem sem conflito.
+específica — as duas convivem sem conflito. O path `/auth/**` não existe na aplicação (ela expõe
+`/authenticate/**`), então não há colisão.
+
+### Cadeia de timeouts
+```
+HTTP da Lambda (15s)  <  timeout da Lambda (25s)  <  integração (29s)  <  teto do HTTP API (30s)
+```
+
+### O endereço da aplicação na Lambda
+A Lambda chama a aplicação **direto no ELB**, não pelo gateway — um hop a menos, e evita a chamada
+voltar pelo gateway que a invocou. Como o hostname do ELB muda a cada recriação do Service, o job
+`apigw-apply` também repassa esse valor para a função (`aws lambda update-function-configuration`),
+fazendo merge com as variáveis existentes para não apagar o `JWT_SECRET`.
+
+### Operação no dia a dia — os dois CDs são independentes
+
+Um deploy de código novo na Lambda **não exige rodar este pipeline**. A integração aponta para a
+função pelo ARN, que é derivado do nome e não muda quando só o código é publicado; e o
+`data "aws_lambda_function"` não usa `qualifier`, então resolve para `$LATEST`. O gateway passa a
+entregar a versão nova sozinho.
+
+Este pipeline precisa rodar de novo só nestes casos:
+
+| Situação | Motivo |
+|---|---|
+| Primeira vez | A rota só é criada depois que a função existe |
+| A função foi **destruída e recriada** | A `aws_lambda_permission` vive no *resource policy* da função e se perde junto. Sem ela, o gateway devolve **500** ao invocar |
+| A função foi **renomeada** | `auth_lambda_name` aponta para o nome antigo |
+
+> **Sintoma reconhecível:** `500` em `POST /auth/cliente` logo após mexer na função. É a permissão
+> que se perdeu — este pipeline a recria.
+
+A permissão fica deste lado, e não no módulo da Lambda, porque precisa do `execution_arn` do
+gateway (state daqui) **e** do nome da função (state de lá). Colocá-la lá criaria dependência
+circular entre os dois states.
+
+Na direção contrária não há acoplamento nenhum: o job `apigw-apply` checa `aws lambda get-function`
+e, se a função não existir, apenas avisa e segue — o deploy da aplicação nunca é bloqueado pela
+Lambda.
 
 > ⚠️ **O JWT authorizer nativo do gateway não serve para este projeto.**
 > `aws_apigatewayv2_authorizer` do tipo `JWT` só aceita **OIDC/JWKS (RS256 com issuer discovery)**.
