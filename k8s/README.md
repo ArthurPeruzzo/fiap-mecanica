@@ -62,12 +62,13 @@ graph TB
    # editar k8s/secret.yaml com DB_USERNAME / DB_PASSWORD / JWT_SECRET reais
    ```
 
-   Ajuste o `DB_URL` no `configmap.yaml` com o endpoint atual do RDS — ele **muda a cada recriação do banco**, por isso não fica fixado no repo. Pegue o valor atual com `terraform output -raw db_endpoint` (rodando em `infra/terraform/aws`).
+   Ajuste o `DB_URL` no `configmap.yaml` com o endpoint atual do RDS — ele **muda a cada recriação do banco**, por isso não fica fixado no repo. Pegue o valor atual com `terraform output -raw db_endpoint` no repositório `fiap-mecanica-infra-db`.
+
+   Pré-requisito: o cluster precisa ter o **metrics-server** e a integração da New Relic já instalados — isso agora é feito pelo CD do repositório `fiap-mecanica-infra-k8s`, não daqui (ver "Metrics Server" e "New Relic" abaixo).
 
 3. **Aplicar tudo, nessa ordem exata** — `namespace.yaml` precisa existir antes de qualquer recurso namespaced ser criado nele:
    ```bash
    kubectl apply -f k8s/namespace.yaml
-   kubectl apply -f k8s/metrics-server.yaml
    kubectl apply -f k8s/configmap.yaml -f k8s/secret.yaml
    kubectl apply -f k8s/deployment.yaml
    kubectl apply -f k8s/service.yaml
@@ -88,42 +89,22 @@ graph TB
 
    **Depois disso, o job `apigw-apply` reescreve as URLs de orçamento apontando para o API Gateway.** Elas são os links enviados ao cliente final por notificação, e precisam passar pelo gateway, não pelo ELB. Só dá pra fazer nesse ponto do pipeline: a URL do gateway só é conhecida depois do `terraform apply` do módulo `infra/terraform/apigateway`, que por sua vez precisa do hostname do ELB gerado aqui. O job só reinicia os pods quando o valor realmente muda — como o ID do gateway é estável entre deploys, na prática só o primeiro deploy (ou uma recriação do gateway) paga esse rollout extra.
 
-## Metrics Server
+## Metrics Server e New Relic (Helm) — agora no repositório fiap-mecanica-infra-k8s
 
-`k8s/metrics-server.yaml` é uma cópia estática do manifest oficial do [kubernetes-sigs/metrics-server](https://github.com/kubernetes-sigs/metrics-server). Roda em `kube-system`, não no namespace `fiap-mecanica` — é um add-on do cluster, não da aplicação. Sem ele o HPA (`kubectl get hpa -n fiap-mecanica`) mostra `<unknown>` nos targets de CPU/memória e nunca escala. Para atualizar a versão, baixe novamente de:
-```bash
-curl -fsSL -o k8s/metrics-server.yaml https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-```
+Migraram para lá porque são add-ons de **cluster**, não da aplicação — não mudam junto com o
+código daqui, mudam junto com a infraestrutura do EKS. O `cd.yml` deste repositório não os aplica
+mais.
 
-## New Relic — Integração Kubernetes (Helm)
+Pré-requisito para um deploy funcionar de ponta a ponta (HPA reportando métricas, logs/traces
+chegando na New Relic): o CD do `fiap-mecanica-infra-k8s` precisa ter rodado pelo menos uma vez
+depois que o cluster existe. Numa infra do zero, isso significa: CD daquele repositório antes do
+primeiro CD deste. Se a ordem for invertida, o HPA (`kubectl get hpa -n fiap-mecanica`) mostra
+`<unknown>` até o metrics-server chegar — não é erro permanente, se autocorrige assim que o add-on
+for instalado.
 
-Diferente de tudo mais neste diretório, isso **não é aplicado com `kubectl apply -f`** — a New Relic só distribui oficialmente essa integração via Helm chart (`nri-bundle`), então o `cd.yml` faz `helm upgrade --install` direto, sem nenhum arquivo `.yaml` commitado aqui. Instala em um namespace próprio, `newrelic` (separado de `fiap-mecanica` e de `kube-system`, onde fica o metrics-server), via `--create-namespace`.
-
-O bundle traz três peças, todas necessárias para cobrir o requisito de monitorar CPU/memória do cluster e, de brinde, enviar os logs estruturados (JSON/ECS) que a aplicação já escreve em stdout:
-- `newrelic-infrastructure` (agente de infraestrutura, coleta CPU/memória de nós e pods — habilitado por padrão no chart, mas com `privileged=true` explícito para métricas completas de host)
-- `kube-state-metrics` (visibilidade de objetos K8s — desabilitado por padrão no `nri-bundle`, precisa de `--set` explícito)
-- `newrelic-logging` (Fluent Bit, embarca os logs de todos os pods para a New Relic — também desabilitado por padrão, precisa de `--set` explícito)
-
-Para instalar manualmente (bootstrap de cluster do zero, mesma licença usada no `k8s/secret.yaml`):
-```bash
-helm repo add newrelic https://helm-charts.newrelic.com
-helm repo update
-helm upgrade --install newrelic-bundle newrelic/nri-bundle \
-  --namespace newrelic --create-namespace \
-  --set global.licenseKey="$NEW_RELIC_LICENSE_KEY" \
-  --set global.cluster=eks-fiap-mecanica \
-  --set global.lowDataMode=true \
-  --set newrelic-infrastructure.privileged=true \
-  --set kube-state-metrics.enabled=true \
-  --set newrelic-logging.enabled=true \
-  --wait --timeout 5m0s
-```
-
-O job `k8s-deploy` do `cd.yml` roda esse mesmo comando automaticamente a cada push na `main`, logo depois do metrics-server, usando o secret `NEW_RELIC_LICENSE_KEY` (GitHub Secrets) e a env `EKS_CLUSTER_NAME` já existentes no workflow — sem passo manual.
-
-Para verificar: `kubectl get pods -n newrelic` (esperar os DaemonSets `newrelic-bundle-nrk8s-*`/Fluent Bit e o Deployment do `kube-state-metrics` como `Running`), e no New Relic, em **Kubernetes → Cluster explorer**, procurar pelo cluster `eks-fiap-mecanica`.
-
-`global.account_id`/`NEW_RELIC_ACCOUNT_ID` **não é necessário** — o chart não tem essa chave em nenhum dos seus subcharts; a license key já associa os dados à conta certa no lado da New Relic.
+Detalhes de versão do metrics-server, dos três subcharts do `nri-bundle`
+(`newrelic-infrastructure`, `kube-state-metrics`, `newrelic-logging`) e como verificar a
+instalação: ver o README de `fiap-mecanica-infra-k8s`.
 
 ## Arquivos
 
@@ -135,6 +116,5 @@ Para verificar: `kubectl get pods -n newrelic` (esperar os DaemonSets `newrelic-
 | `deployment.yaml` | Deployment da app, probes de liveness/readiness via Actuator, requests/limits de CPU/memória |
 | `service.yaml` | Service `LoadBalancer`, expõe a porta 80 → 8080. É o alvo da integração `HTTP_PROXY` do API Gateway — o hostname do ELB é gerado pela AWS e **muda a cada recriação do Service**, por isso o `cd.yml` o descobre em runtime e repassa ao módulo `infra/terraform/apigateway` |
 | `hpa.yaml` | HorizontalPodAutoscaler (CPU e memória, 70%, 1–4 réplicas) |
-| `metrics-server.yaml` | Add-on de cluster necessário para o HPA funcionar no EKS |
 
-> A integração Kubernetes da New Relic (`nri-bundle`) não tem arquivo aqui — é instalada via Helm, não `kubectl apply -f`. Ver seção "New Relic — Integração Kubernetes (Helm)" acima.
+> `metrics-server.yaml` e a integração Kubernetes da New Relic (`nri-bundle`) não têm mais arquivo/passo aqui — ver "Metrics Server e New Relic (Helm)" acima.

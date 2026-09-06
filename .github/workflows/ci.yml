@@ -19,6 +19,15 @@ jobs:
   build-test:
     uses: ./.github/workflows/build-test.yml
 
+  # Um plan por root module deste repositório. Os módulos de infra K8s e de banco agora têm CI
+  # próprio, nos respectivos repositórios (fiap-mecanica-infra-k8s, fiap-mecanica-infra-db).
+  #
+  # infra/terraform/aws (legado, só New Relic agora) fica de fora deste matrix de propósito: os
+  # arquivos de VPC/EKS que ainda restam ali (intocados, mesmo código do repositório
+  # fiap-mecanica-infra-k8s) fariam um `plan` sem -target mostrar "a destruir" tudo que já foi
+  # migrado para lá — ruído, não sinal real. Até a migração do New Relic para app-infra, revisar
+  # mudanças ali com `terraform plan -target=...` local (mesmos targets do job
+  # newrelic-legacy-apply do cd.yml).
   terraform-plan:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -30,17 +39,10 @@ jobs:
       # de perder o segundo quando o primeiro falha.
       fail-fast: false
       matrix:
-        # O módulo `apigateway` não usa nenhuma das TF_VAR_* abaixo — declará-las no nível do job
-        # é inofensivo, e evita duplicar o job inteiro só por causa das variáveis.
-        modulo: [aws, apigateway]
+        modulo: [app-infra, apigateway]
     defaults:
       run:
         working-directory: infra/terraform/${{ matrix.modulo }}
-    env:
-      TF_VAR_db_username: ${{ secrets.TF_VAR_DB_USERNAME }}
-      TF_VAR_db_password: ${{ secrets.TF_VAR_DB_PASSWORD }}
-      TF_VAR_newrelic_api_key: ${{ secrets.NEW_RELIC_API_KEY }}
-      TF_VAR_newrelic_account_id: ${{ secrets.NEW_RELIC_ACCOUNT_ID }}
 
     steps:
     - uses: actions/checkout@v4

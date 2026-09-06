@@ -20,28 +20,6 @@ variable "instance_type" {
   default = "t3.medium"
 }
 
-variable "db_name" {
-  description = "Initial database name created on the RDS instance"
-  default     = "mecanica"
-}
-
-variable "db_instance_class" {
-  description = "RDS instance class"
-  default     = "db.t3.micro"
-}
-
-variable "db_username" {
-  description = "Master username for the RDS MySQL instance"
-  type        = string
-  sensitive   = true
-}
-
-variable "db_password" {
-  description = "Master password for the RDS MySQL instance"
-  type        = string
-  sensitive   = true
-}
-
 variable "newrelic_api_key" {
   description = "User API Key da New Relic (NRAK...) — gerenciada em Account settings > API keys. Usada só pelo provider Terraform, diferente da license key do agente/Helm."
   type        = string
