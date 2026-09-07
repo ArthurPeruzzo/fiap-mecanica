@@ -1,6 +1,7 @@
 package com.fiap.mecanica.shared.exception;
 
 import com.fiap.mecanica.shared.exception.dto.ExceptionDto;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -14,6 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @ControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -22,6 +24,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ExceptionDto> exceptionHandler(Exception e) {
+        log.error("Erro inesperado não tratado", e);
         return ResponseEntity
                 .status(INTERNAL_SERVER_ERROR).body(
                         new ExceptionDto(INTERNAL_SERVER_ERROR, LocalDateTime.now().format(FORMATTER), "Ocorreu um erro inesperado: " + e.getMessage())
@@ -30,6 +33,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BaseException.class)
     public ResponseEntity<ExceptionDto> baseExceptionHandler(BaseException e) {
+        // 5xx é falha de infra/inesperada (ex.: ErroAcessoBaseDeDadosException) — merece stack
+        // trace completo. 4xx é regra de negócio em fluxo esperado (não encontrado, conflito,
+        // credenciais inválidas) — WARN com só a mensagem evita poluir o log com stack trace de
+        // algo que não é bug.
+        if (e.getStatusCode() >= INTERNAL_SERVER_ERROR) {
+            log.error(e.getMessage(), e);
+        } else {
+            log.warn(e.getMessage());
+        }
         return ResponseEntity
                 .status(e.getStatusCode()).body(
                         new ExceptionDto(e.getStatusCode(), LocalDateTime.now().format(FORMATTER), e.getMessage())
@@ -38,7 +50,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ExceptionDto> illegalArgumentExceptionHandler(IllegalArgumentException e){
-
+        log.warn(e.getMessage());
         return ResponseEntity.status(BAD_REQUEST).body(
                 new ExceptionDto(BAD_REQUEST, LocalDateTime.now().format(FORMATTER), e.getMessage())
         );
@@ -46,7 +58,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ExceptionDto> dataIntegrityViolationExceptionHandler(DataIntegrityViolationException e){
-
+        log.warn(e.getMessage());
         return ResponseEntity.status(BAD_REQUEST).body(
                 new ExceptionDto(BAD_REQUEST, LocalDateTime.now().format(FORMATTER), e.getMessage())
         );
@@ -54,7 +66,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ExceptionDto> httpRequestMethodNotSupportedExceptionHandler(HttpRequestMethodNotSupportedException e){
-
+        log.warn("Método {} não suportado", e.getMethod());
         return ResponseEntity.status(BAD_REQUEST).body(
                 new ExceptionDto(BAD_REQUEST, LocalDateTime.now().format(FORMATTER), "Método " + e.getMethod() + " não suportado")
         );
@@ -72,7 +84,7 @@ public class GlobalExceptionHandler {
                     errors.put(error.getField(), error.getDefaultMessage())
             );
         }
-
+        log.warn("Validação falhou: {}", errors);
         return ResponseEntity.status(BAD_REQUEST).body(errors);
     }
 
