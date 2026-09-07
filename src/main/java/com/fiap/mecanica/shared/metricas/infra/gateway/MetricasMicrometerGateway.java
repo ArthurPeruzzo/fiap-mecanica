@@ -3,6 +3,7 @@ package com.fiap.mecanica.shared.metricas.infra.gateway;
 import com.fiap.mecanica.shared.metricas.core.domain.FaseOrdemDeServico;
 import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -29,7 +30,10 @@ public class MetricasMicrometerGateway implements MetricasGateway {
     @Override
     public void registrarDuracaoFase(FaseOrdemDeServico fase, Duration duracao) {
         if (duracao == null || duracao.isNegative()) return;
-        meterRegistry.timer(METRICA_OS_DURACAO, TAG_FASE, fase.name().toLowerCase(Locale.ROOT))
+        Timer.builder(METRICA_OS_DURACAO)
+                .tag(TAG_FASE, fase.name().toLowerCase(Locale.ROOT))
+                .publishPercentileHistogram()
+                .register(meterRegistry)
                 .record(duracao);
     }
 }
