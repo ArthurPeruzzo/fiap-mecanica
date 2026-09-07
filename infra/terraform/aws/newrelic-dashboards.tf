@@ -24,27 +24,31 @@ resource "newrelic_one_dashboard" "observabilidade_negocio" {
       }
     }
 
+    # Unidade em MINUTOS (não horas) e janela curta (1 dia, buckets de 15min) de propósito: as
+    # fases de uma OS de demonstração duram minutos, não dias. Com a janela antiga (30 dias,
+    # buckets de 1 dia) uma amostra recente virava uma fatia minúscula, praticamente invisível,
+    # na ponta de um gráfico majoritariamente vazio — mesmo com dado real chegando.
     widget_line {
-      title  = "Tempo médio de execução por fase (horas)"
+      title  = "Tempo médio de execução por fase (minutos)"
       row    = 4
       column = 1
       width  = 12
       height = 3
 
       nrql_query {
-        query = "SELECT average(os.duracao) / 3600000 AS 'Horas' FROM Metric WHERE service.name = '${local.newrelic_service_name}' FACET fase TIMESERIES 1 day SINCE 30 days ago"
+        query = "SELECT average(os.duracao) / 60000 AS 'Minutos' FROM Metric WHERE service.name = '${local.newrelic_service_name}' FACET fase TIMESERIES 15 minutes SINCE 1 day ago"
       }
     }
 
     widget_table {
-      title  = "Tempo médio por fase — detalhado"
+      title  = "Tempo médio por fase — detalhado (minutos)"
       row    = 7
       column = 1
       width  = 6
       height = 3
 
       nrql_query {
-        query = "SELECT average(os.duracao) / 3600000 AS 'Tempo médio (h)', max(os.duracao) / 3600000 AS 'Pior caso (h)', count(os.duracao) AS 'Amostras' FROM Metric WHERE service.name = '${local.newrelic_service_name}' FACET fase SINCE 30 days ago"
+        query = "SELECT average(os.duracao) / 60000 AS 'Tempo médio (min)', max(os.duracao) / 60000 AS 'Pior caso (min)', count(os.duracao) AS 'Amostras' FROM Metric WHERE service.name = '${local.newrelic_service_name}' FACET fase SINCE 1 day ago"
       }
     }
 
