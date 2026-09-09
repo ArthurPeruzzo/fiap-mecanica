@@ -24,10 +24,13 @@ resource "newrelic_one_dashboard" "observabilidade_negocio" {
       }
     }
 
-    # Unidade em MINUTOS (não horas) e janela curta (1 dia, buckets de 15min) de propósito: as
+    # Unidade em MINUTOS (não horas) e janela curta (3 dias, buckets de 30min) de propósito: as
     # fases de uma OS de demonstração duram minutos, não dias. Com a janela antiga (30 dias,
     # buckets de 1 dia) uma amostra recente virava uma fatia minúscula, praticamente invisível,
-    # na ponta de um gráfico majoritariamente vazio — mesmo com dado real chegando.
+    # na ponta de um gráfico majoritariamente vazio — mesmo com dado real chegando. 1 dia era
+    # curto demais: sem atividade nas últimas 24h o painel ficava vazio.
+    # o exporter usa aggregation-temporality=delta, então average()/count() aqui são a média e
+    # a contagem reais da janela (não o total acumulado desde o start do processo).
     widget_line {
       title  = "Tempo médio de execução por fase (minutos)"
       row    = 4
@@ -36,7 +39,7 @@ resource "newrelic_one_dashboard" "observabilidade_negocio" {
       height = 3
 
       nrql_query {
-        query = "SELECT average(os.duracao) / 60000 AS 'Minutos' FROM Metric WHERE service.name = '${local.newrelic_service_name}' FACET fase TIMESERIES 15 minutes SINCE 1 day ago"
+        query = "SELECT average(os.duracao) / 60000 AS 'Minutos' FROM Metric WHERE service.name = '${local.newrelic_service_name}' FACET fase TIMESERIES 30 minutes SINCE 3 days ago"
       }
     }
 
@@ -48,7 +51,7 @@ resource "newrelic_one_dashboard" "observabilidade_negocio" {
       height = 3
 
       nrql_query {
-        query = "SELECT average(os.duracao) / 60000 AS 'Tempo médio (min)', max(os.duracao) / 60000 AS 'Pior caso (min)', count(os.duracao) AS 'Amostras' FROM Metric WHERE service.name = '${local.newrelic_service_name}' FACET fase SINCE 1 day ago"
+        query = "SELECT average(os.duracao) / 60000 AS 'Tempo médio (min)', max(os.duracao) / 60000 AS 'Pior caso (min)', count(os.duracao) AS 'Amostras' FROM Metric WHERE service.name = '${local.newrelic_service_name}' FACET fase SINCE 3 days ago"
       }
     }
 
