@@ -112,6 +112,13 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
         aws-region: ${{ env.AWS_REGION }}
+    # O bucket do backend é criado pelo CD do fiap-mecanica-infra-k8s (que roda antes numa infra
+    # do zero). Passo idempotente aqui como rede de segurança: sem ele, um `terraform init` num
+    # bucket ainda inexistente derruba o pipeline do app inteiro.
+    - name: Garantir que o bucket do backend existe (idempotente)
+      run: |
+        aws s3api head-bucket --bucket fiap-mecanica --region ${{ env.AWS_REGION }} 2>/dev/null || \
+        aws s3api create-bucket --bucket fiap-mecanica --region ${{ env.AWS_REGION }}
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
     - name: Terraform init
@@ -124,18 +131,12 @@ jobs:
         echo "db_endpoint=$(terraform output -raw db_endpoint)" >> "$GITHUB_OUTPUT"
         echo "ecr_repo=$(terraform output -raw ecr_repository_url)" >> "$GITHUB_OUTPUT"
 
-  # Legado: o único recurso que ainda mora em infra/terraform/aws são os alertas/dashboards de
-  # New Relic (migração para app-infra adiada de propósito — ver README daquele módulo). VPC/EKS
-  # também têm arquivos .tf neste diretório (intocados, código idêntico ao do repositório
-  # fiap-mecanica-infra-k8s, que agora é quem de fato os gerencia), porque compartilham o MESMO
-  # backend key que aquele repositório usa — não há como "esvaziar" este diretório sem também
-  # apagar os arquivos de VPC/EKS, o que não foi feito ainda.
-  #
-  # Por isso todo apply aqui usa -target, restrito EXPLICITAMENTE aos 6 recursos newrelic_*.
-  # Isso é a garantia de segurança: mesmo que os arquivos de VPC/EKS aqui um dia divirjam do que
-  # o repositório fiap-mecanica-infra-k8s aplicar (drift), este job JAMAIS os tocaria — o
-  # -target torna estruturalmente impossível, não é uma questão de "hoje bate, então tá seguro".
-  newrelic-legacy-apply:
+  # Aplica infra/terraform/aws — que agora contém SÓ os 6 recursos newrelic_* (alertas +
+  # dashboard), com state próprio (tfstate/newrelic.tfstate). As cópias congeladas de VPC/EKS que
+  # dividiam esse diretório (e a chave de state do fiap-mecanica-infra-k8s) foram removidas em
+  # 2026-09-08, junto com o `-target` que existia aqui só para se proteger delas. `terraform
+  # apply` puro agora é seguro: o módulo não declara nenhum recurso de VPC/EKS/RDS.
+  newrelic-apply:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: producao
@@ -161,15 +162,8 @@ jobs:
       uses: hashicorp/setup-terraform@v3
     - name: Terraform init
       run: terraform init
-    - name: Terraform apply (restrito aos 6 recursos New Relic — nunca toca em VPC/EKS)
-      run: |
-        terraform apply -auto-approve \
-          -target=newrelic_alert_policy.os_falhas \
-          -target=newrelic_nrql_alert_condition.os_erros_500 \
-          -target=newrelic_notification_destination.email \
-          -target=newrelic_notification_channel.email \
-          -target=newrelic_workflow.os_falhas \
-          -target=newrelic_one_dashboard.observabilidade_negocio
+    - name: Terraform apply
+      run: terraform apply -auto-approve
 
   k8s-deploy:
     needs: [docker-build-push, app-infra-apply]

@@ -1,6 +1,6 @@
 # Manifests Kubernetes — fiap-mecanica
 
-Assume um cluster EKS já provisionado (`infra/terraform/aws/`) e o RDS MySQL já aplicado. A aplicação roda no cluster; o banco fica fora (RDS gerenciado).
+Assume um cluster EKS já provisionado (repositório `fiap-mecanica-infra-k8s`) e o RDS MySQL já aplicado (repositório `fiap-mecanica-infra-db`). A aplicação roda no cluster; o banco fica fora (RDS gerenciado).
 
 ## Fluxo (macro)
 
@@ -50,7 +50,7 @@ graph TB
 
 1. **Build + push da imagem para o ECR**. O host do ECR inclui o *account ID* da conta AWS (muda se a conta da Lab for trocada), então em vez de fixá-lo, pegue a URL do repositório do output do Terraform:
    ```bash
-   ECR=$(cd infra/terraform/aws && terraform output -raw ecr_repository_url)
+   ECR=$(cd infra/terraform/app-infra && terraform output -raw ecr_repository_url)
    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "${ECR%/*}"
    docker build -t "$ECR:latest" .
    docker push "$ECR:latest"
