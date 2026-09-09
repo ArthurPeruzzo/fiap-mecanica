@@ -158,6 +158,21 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
         aws-region: ${{ env.AWS_REGION }}
+    # O monitor de uptime da New Relic pinga o /actuator/health via API Gateway, cujo hostname
+    # muda a cada recriação. Descobre aqui e passa em TF_VAR_health_check_url. Numa infra do zero
+    # o gateway ainda não existe na 1ª passada deste job (é criado no apigw-apply, que roda por
+    # último) — aí a var fica vazia e o monitor/alerta de uptime não são criados; a próxima
+    # execução do CD os cria. Mesmo padrão da rota da Lambda no apigw-apply.
+    - name: Descobrir a URL do API Gateway (para o monitor de uptime)
+      run: |
+        URL=$(aws apigatewayv2 get-apis \
+          --query "Items[?Name=='fiap-mecanica-api'].ApiEndpoint | [0]" --output text 2>/dev/null || true)
+        if [ -n "$URL" ] && [ "$URL" != "None" ]; then
+          echo "TF_VAR_health_check_url=${URL}/actuator/health" >> "$GITHUB_ENV"
+          echo "Monitor de uptime -> ${URL}/actuator/health"
+        else
+          echo "::warning::API Gateway 'fiap-mecanica-api' ainda não existe — monitor de uptime não será criado nesta passada."
+        fi
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
     - name: Terraform init
