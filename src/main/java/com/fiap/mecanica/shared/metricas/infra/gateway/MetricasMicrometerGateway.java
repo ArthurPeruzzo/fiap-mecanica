@@ -4,11 +4,13 @@ import com.fiap.mecanica.shared.metricas.core.domain.FaseOrdemDeServico;
 import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.Locale;
 
+@Slf4j
 @Component
 public class MetricasMicrometerGateway implements MetricasGateway {
 
@@ -29,7 +31,14 @@ public class MetricasMicrometerGateway implements MetricasGateway {
 
     @Override
     public void registrarDuracaoFase(FaseOrdemDeServico fase, Duration duracao) {
-        if (duracao == null || duracao.isNegative()) return;
+        if (duracao == null || duracao.isZero() || duracao.isNegative()) {
+            // Amostra zerada/negativa distorce a media no dashboard e normalmente
+            // significa transicoes no mesmo instante; registra em log em vez de gravar.
+            log.warn("Duracao da fase {} invalida ({}); metrica {} nao registrada",
+                    fase, duracao, METRICA_OS_DURACAO);
+            return;
+        }
+        log.debug("Registrando {} para fase {}: {} ms", METRICA_OS_DURACAO, fase, duracao.toMillis());
         Timer.builder(METRICA_OS_DURACAO)
                 .tag(TAG_FASE, fase.name().toLowerCase(Locale.ROOT))
                 .publishPercentileHistogram()
