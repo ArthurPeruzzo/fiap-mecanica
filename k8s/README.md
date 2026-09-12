@@ -15,7 +15,7 @@ graph TB
             P1["Pod"]
             P2["Pod"]
         end
-        HPA["HPA<br/>CPU/mem 70% · 1–4 pods"]
+        HPA["HPA<br/>CPU 70% · 1–4 pods"]
         CM["ConfigMap<br/>DB_URL · URLs"]
         SEC["Secret<br/>DB cred · JWT"]
         MS["Metrics Server"]
@@ -115,6 +115,6 @@ instalação: ver o README de `fiap-mecanica-infra-k8s`.
 | `secret.yaml.example` | Template do Secret (credenciais DB, JWT). Copiar para `secret.yaml` e preencher — não commitar |
 | `deployment.yaml` | Deployment da app, probes de liveness/readiness via Actuator, requests/limits de CPU/memória |
 | `service.yaml` | Service `LoadBalancer`, expõe a porta 80 → 8080. É o alvo da integração `HTTP_PROXY` do API Gateway — o hostname do ELB é gerado pela AWS e **muda a cada recriação do Service**, por isso o `cd.yml` o descobre em runtime e repassa ao módulo `infra/terraform/apigateway` |
-| `hpa.yaml` | HorizontalPodAutoscaler (CPU e memória, 70%, 1–4 réplicas) |
+| `hpa.yaml` | HorizontalPodAutoscaler (CPU 70%, 1–4 réplicas) |
 
 > `metrics-server.yaml` e a integração Kubernetes da New Relic (`nri-bundle`) não têm mais arquivo/passo aqui — ver "Metrics Server e New Relic (Helm)" acima.
