@@ -2,83 +2,129 @@
 
 API REST para gestão de uma oficina mecânica, desenvolvida como projeto acadêmico na FIAP. O sistema cobre o ciclo completo de uma ordem de serviço — da abertura ao diagnóstico, orçamento, aprovação, execução e entrega — com controle de estoque de peças e insumos e autenticação baseada em perfis de acesso.
 
+Este é o repositório da **aplicação principal** (Fase 3): além do código da API, contém a infraestrutura específica da aplicação (ECR, API Gateway e alertas/dashboards New Relic) e o pipeline que builda, testa e faz o deploy no cluster Kubernetes. VPC/EKS, o banco gerenciado e a Function Lambda de autenticação vivem em [três repositórios separados](#estrutura-em-4-repositórios).
+
 ## Objetivos
 
 - Gerenciar clientes, veículos, mecânicos e atendentes
 - Controlar o ciclo de vida de ordens de serviço
 - Gerenciar estoque de peças e insumos com baixa e devolução automática ao vincular/desvincular de ordens
-- Restringir operações por perfil: administrador, atendente e mecânico
+- Restringir operações por perfil: administrador, atendente, mecânico e cliente
 
-### Fase 2 — Objetivo desta etapa
+### Fase 3 — Objetivo desta etapa
 
-Esta fase leva a aplicação a um ambiente produtivo real na AWS. Além de aplicar **Clean Architecture** no código — com separação estrita entre o núcleo de negócio (`core`) e os detalhes de framework, persistência e HTTP (`infra`), o que protege as regras de negócio e facilita testes e evolução —, a etapa entrega a operação da aplicação em produção: containerização via Docker, orquestração no Kubernetes (EKS), provisionamento de infraestrutura como código com Terraform e uma pipeline de CI/CD que builda, testa, publica a imagem e faz o deploy automaticamente a cada merge na `main`.
+Partindo da Fase 2 (Clean Architecture no código, containerização via Docker, orquestração no EKS, provisionamento com Terraform e CI/CD com deploy automático a cada merge na `main`), a Fase 3 adiciona:
+
+- **API Gateway** (AWS HTTP API v2) como porta de entrada única, com URL estável e TLS.
+- **Autenticação serverless por CPF**: uma AWS Lambda valida o CPF do cliente, confirma o cadastro na base de dados e devolve um JWT para consumo das rotas protegidas.
+- **Observabilidade ponta a ponta** com New Relic: traces e métricas via OTLP, consumo de CPU/memória do cluster, healthchecks, alertas e dashboards de negócio.
+- **Infraestrutura separada em 4 repositórios**, cada um com CI/CD próprio e deploy automático.
 
 ## Stack
 
-- Java 25
-- Spring Boot 4.0.5
-- Spring Web MVC
-- Spring Security + JWT (Auth0 `java-jwt`)
-- Spring Data JPA + Hibernate
-- Flyway
-- Lombok
-- SpringDoc OpenAPI (Swagger UI)
-- Testcontainers
-- MySQL 8.4
+**Aplicação**
 
-## Arquitetura
+- Java 25 · Spring Boot 4.0.5
+- Spring Web MVC · Spring Security + JWT (Auth0 `java-jwt`)
+- Spring Data JPA + Hibernate · Flyway · Lombok
+- SpringDoc OpenAPI (Swagger UI)
+- Micrometer + OpenTelemetry (exportação OTLP) · logs estruturados em JSON (formato ECS)
+- Testcontainers · MySQL 8.4
+
+**Plataforma**
+
+- Docker · Kubernetes (AWS EKS) com HorizontalPodAutoscaler
+- AWS API Gateway (HTTP API v2) · AWS Lambda (Node.js + TypeScript — repositório `fiap-mecanica-lambda`)
+- Amazon RDS for MySQL
+- Terraform (um root module por repositório de infra)
+- New Relic (APM via OTLP, integração Kubernetes `nri-bundle`, alertas e dashboards)
+- GitHub Actions (CI/CD)
+
+## Arquitetura de runtime
+
+```mermaid
+graph TD
+    Cli["Cliente / Swagger / Postman"]
+    APIGW["AWS API Gateway<br/>HTTP API v2 · ANY /{proxy+}"]
+    Lambda["AWS Lambda<br/>auth por CPF · repo fiap-mecanica-lambda"]
+
+    subgraph EKS["AWS EKS · namespace fiap-mecanica"]
+        ELB["Service LoadBalancer (ELB)<br/>:80 → 8080"]
+        Pods["Deployment · Pods<br/>HPA 1–4 (CPU 70%)"]
+        NRI["nri-bundle<br/>infra K8s + logs"]
+    end
+
+    RDS[("Amazon RDS<br/>MySQL")]
+    NR(["New Relic<br/>traces · métricas · logs · alertas"])
+
+    Cli -->|HTTPS| APIGW
+    APIGW -->|"HTTP_PROXY (ANY /{proxy+})"| ELB --> Pods
+    APIGW -->|"AWS_PROXY (POST /auth/cliente)"| Lambda
+    Lambda -->|GET /authenticate/cliente/status| ELB
+    Pods -->|JDBC| RDS
+    Pods -.->|OTLP| NR
+    NRI -.->|CPU/mem de nós e pods · logs| NR
+```
 
 A aplicação é um **monolito modular** organizado segundo os princípios da **Clean Architecture**. Cada módulo de negócio é dividido em duas camadas, com uma regra de dependência única: **as dependências apontam sempre para dentro**, em direção ao domínio — nunca o contrário.
 
 - **`core/` (domínio)** — regras de negócio em Java puro, sem nenhuma dependência de Spring, JPA ou HTTP. Concentra as entidades de domínio, os *use cases* (casos de uso), os DTOs e as **interfaces de gateway**. É o coração do sistema e não conhece frameworks nem banco de dados.
 - **`infra/` (infraestrutura)** — os detalhes que servem ao domínio: controllers HTTP, implementações dos gateways (persistência JPA), entidades de banco, segurança e serialização. Depende do `core`, jamais o inverso.
 
-#### Módulos de negócio
+### Módulos de negócio
 
 | Módulo | Responsabilidade |
 |---|---|
 | `gestao` | Clientes, veículos, mecânicos e atendentes |
 | `estoque` | Peças e insumos, com baixa e devolução automática de estoque |
 | `ordemdeservico` | Ciclo de vida da ordem de serviço, serviços, orçamento e notificações |
-| `shared` | Segurança/JWT, tratamento global de exceções, *value objects*, paginação e notificação |
+| `shared` | Segurança/JWT, tratamento global de exceções, *value objects*, paginação, notificação e métricas |
 
-### Fluxo de deploy (CI/CD)
+## Estrutura em 4 repositórios
 
-```mermaid
-graph LR
-    Dev["Push / PR na main"]
+A Fase 3 exige a infraestrutura dividida em quatro repositórios, cada um com CI/CD independente e deploy automático no push para a `main`.
 
-    subgraph CI["CI · ci.yml (em Pull Request)"]
-        direction TB
-        BT1["Build + Test"]
-        TP["terraform plan<br/>(aws + apigateway · não aplica)"]
-    end
+| Repositório | O que contém |
+|---|---|
+| **`fiap-mecanica`** (este) | Código da aplicação + `infra/terraform/app-infra` (ECR), `infra/terraform/apigateway` (API Gateway), `infra/terraform/aws` (alertas + dashboards New Relic). Pipeline de build, deploy no EKS e apply desses módulos. |
+| **`fiap-mecanica-infra-k8s`** | VPC, subnets, cluster EKS + node group e os add-ons de cluster (metrics-server, `nri-bundle` da New Relic). |
+| **`fiap-mecanica-infra-db`** | Amazon RDS for MySQL — instância, subnet group e security group. |
+| **`fiap-mecanica-lambda`** | Function Lambda de autenticação de cliente por CPF (Node.js + TypeScript) + seu Terraform. |
 
-    subgraph CD["CD · cd.yml (em push na main)"]
-        direction TB
-        BT2["Build + Test"]
-        TA["terraform apply<br/>(infra/terraform/aws)"]
-        DBP["docker build + push → ECR"]
-        KD["kubectl apply → EKS"]
-        RS["rollout status ✅"]
-        AG["terraform apply<br/>(infra/terraform/apigateway)"]
-    end
+**Dependência entre os states Terraform** (leitura via `terraform_remote_state` — mesmo bucket S3, chaves distintas):
 
-    Dev -->|abre PR| CI
-    Dev -->|merge / push| CD
-    BT2 --> TA --> DBP --> KD --> RS --> AG
-    TA --> KD
+```
+infra-k8s  ◄──  infra-db  ◄──  app-infra / apigateway
+                               lambda (state próprio, independente)
 ```
 
-Toda `pull request` para a `main` dispara o **CI** (`.github/workflows/ci.yml`): compila, roda os testes automatizados e mostra o que o Terraform mudaria (`terraform plan` nos dois root modules), sem aplicar nada. Ao dar merge, o **CD** (`.github/workflows/cd.yml`) builda e publica a imagem versionada no ECR, aplica a infraestrutura (`terraform apply`) e faz o deploy no cluster (`kubectl apply` dos manifestos + `kubectl set image` com a versão publicada + `kubectl rollout status`). Por último, o job `apigw-apply` aplica o **API Gateway** — ele roda no fim porque a integração precisa do hostname do LoadBalancer, que só existe depois do deploy no cluster. Detalhes de cada job em [`k8s/README.md`](k8s/README.md), [`infra/terraform/aws/README.md`](infra/terraform/aws/README.md) e [`infra/terraform/apigateway/README.md`](infra/terraform/apigateway/README.md).
+**Ordem de deploy numa infra do zero:** `infra-k8s` → `infra-db` → `lambda` → `fiap-mecanica`, esperando cada CD ficar verde antes do próximo. Como a Lambda já está no ar quando o `fiap-mecanica` roda, a rota `POST /auth/cliente` é criada na primeira passada. Não há gatilho automático entre os repositórios — cada CD dispara no push da própria `main`. (Só é preciso re-executar o CD do `fiap-mecanica` se ele rodar **antes** de a Lambda existir — o job `apigw-apply` detecta e avisa.)
 
-### Porta de entrada — API Gateway
+## Autenticação
 
-Em produção o acesso à API passa por um **AWS API Gateway (HTTP API v2)**, provisionado em [`infra/terraform/apigateway`](infra/terraform/apigateway/README.md). Ele publica uma URL estável e com TLS (`https://<id>.execute-api.us-east-1.amazonaws.com`) e encaminha todo o tráfego (`ANY /{proxy+}`, integração `HTTP_PROXY`) para o LoadBalancer do Service no EKS — cujo hostname é gerado pela AWS e muda a cada recriação, o que o pipeline resolve automaticamente.
+Duas formas de obter um token JWT (HS256):
 
-O gateway apenas **roteia**: a autenticação e a autorização continuam inteiramente na aplicação (`UserAuthenticationFilter` + `SecurityConfiguration`), e o header `Authorization` é repassado intacto. O stage é `$default`, sem prefixo de path, para que os matchers de rota do Spring Security continuem válidos. O módulo já está preparado para receber a Function Lambda de autenticação de cliente da Fase 3 como uma rota adicional (`POST /auth/cliente`), sem acoplamento: enquanto a variável `auth_lambda_name` estiver vazia, nada da Lambda é avaliado.
+**Funcionário** — `POST /authenticate/login` com `{ "cpf": "...", "password": "..." }`. A própria aplicação valida e assina o token com o perfil correspondente (`ROLE_ADMINISTRADOR`, `ROLE_ATENDENTE` ou `ROLE_MECANICO`).
 
----
+**Cliente (Fase 3)** — `POST /auth/cliente` (pelo API Gateway) com `{ "cpf": "..." }`. O gateway encaminha para a Lambda, que:
+
+1. valida o formato do CPF;
+2. chama `GET /authenticate/cliente/status?cpf=...` na aplicação, que confirma que o CPF pertence a um cliente cadastrado e cria um `User` com `ROLE_CLIENTE` na primeira vez;
+3. assina o JWT (HS256, segredo compartilhado com a aplicação, `sub` = id do usuário).
+
+O token vai no header `Authorization: Bearer <token>` nas demais requisições. O token de cliente dá acesso a `GET /ordem-servico/minhas-ordens`.
+
+O gateway apenas **roteia** (`ANY /{proxy+}` → ELB via `HTTP_PROXY`, header `Authorization` repassado intacto); a autorização por rota e perfil continua inteiramente na aplicação (`SecurityConfiguration` + `UserAuthenticationFilter`). Os trade-offs desta estratégia serão registrados em [`docs/`](docs/).
+
+## Observabilidade
+
+- **Traces e métricas** da aplicação são exportados via **OTLP** para a New Relic (Micrometer + OpenTelemetry). Métricas de negócio: `os.criadas`, `os.duracao{fase}`.
+- **Consumo do cluster** (CPU/memória de nós e pods) e **logs** chegam pela integração Kubernetes da New Relic (`nri-bundle`), instalada pelo CD do `fiap-mecanica-infra-k8s`.
+- **Logs estruturados em JSON** (formato ECS), com `trace.id` / `span.id` para correlação com os traces.
+- **Dashboards** (Terraform, `infra/terraform/aws/newrelic-dashboards.tf`):
+  - *Observabilidade de Negócio* — volume diário de OS, tempo médio por fase (diagnóstico / execução / entrega), taxa de erro, erros por rota, falhas de acesso ao banco.
+  - *Performance e Disponibilidade* — latência das APIs (p50/p90/p95/p99), uptime do healthcheck, CPU/memória dos pods.
+- **Alertas** (`infra/terraform/aws/newrelic-alerts.tf`) → e-mail: 5xx em rotas `/ordem-servico/**` e healthcheck do `/actuator/health` falhando.
 
 ## Rodando localmente
 
@@ -87,8 +133,6 @@ O gateway apenas **roteia**: a autenticação e a autorização continuam inteir
 | Pré-requisito |
 |---|
 | Docker + Docker Compose |
-
----
 
 ### Clone do repositório
 
@@ -147,41 +191,27 @@ docker compose down -v     # apaga os dados do banco também
 
 As migrations do Flyway rodam automaticamente na inicialização e criam todas as tabelas.
 
----
+## Deploy
 
-## Deploy em Kubernetes
+**Produção — automático.** Cada `pull request` para a `main` de qualquer um dos 4 repositórios dispara o **CI** (`ci.yml`: build + testes + `terraform plan`, sem aplicar nada). O merge dispara o **CD** (`cd.yml`), que faz o deploy na AWS. A branch `main` é protegida — merge só via pull request.
 
-Assume um cluster EKS e um RDS já provisionados (ver seção Terraform abaixo). Resumo dos comandos essenciais:
+CD deste repositório, na ordem de execução:
 
-```bash
-aws eks update-kubeconfig --name eks-fiap-mecanica --region us-east-1
+| Job | O que faz |
+|---|---|
+| `app-infra-apply` | `terraform apply` de `infra/terraform/app-infra` — cria o ECR; lê `db_endpoint` e `eks_cluster_name` dos outros repositórios via `terraform_remote_state`. |
+| `docker-build-push` | Builda a imagem versionada (versão do `pom.xml`) e publica no ECR. Falha se a tag já existir — faça o bump da versão antes do merge. |
+| `newrelic-apply` | `terraform apply` de `infra/terraform/aws` — alertas e dashboards New Relic; descobre a URL do API Gateway para o monitor de uptime. |
+| `k8s-deploy` | `kubectl apply` de namespace/secret/configmap/deployment/service/hpa, `kubectl set image` com a versão publicada e aguarda o rollout. Gera o ConfigMap com o `DB_URL` real (endpoint do RDS lido do job anterior). |
+| `apigw-apply` | `terraform apply` de `infra/terraform/apigateway` — roda por último porque a integração `HTTP_PROXY` precisa do hostname do ELB, criado no `k8s-deploy`. Habilita a rota `POST /auth/cliente` se a Lambda já existir. |
 
-cp k8s/secret.yaml.example k8s/secret.yaml   # preencher com credenciais reais, nunca commitar
+**Deploy manual / infra do zero:** ver os READMEs específicos — [`k8s/README.md`](k8s/README.md), [`infra/terraform/app-infra/README.md`](infra/terraform/app-infra/README.md), [`infra/terraform/apigateway/README.md`](infra/terraform/apigateway/README.md), [`infra/terraform/aws/README.md`](infra/terraform/aws/README.md) — e os repositórios `fiap-mecanica-infra-k8s`, `fiap-mecanica-infra-db` e `fiap-mecanica-lambda`.
 
-kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/configmap.yaml -f k8s/secret.yaml
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
-kubectl apply -f k8s/hpa.yaml
-```
-
-Guia completo (build/push da imagem, ordem de apply, ciclo de teste rápido, Metrics Server, troubleshooting) em [`k8s/README.md`](k8s/README.md).
-
-## Provisionamento da infraestrutura com Terraform
-
-```bash
-cd infra/terraform/aws
-terraform init
-terraform apply -var db_username=<usuario> -var db_password=<senha>
-```
-
-Provisiona VPC, cluster EKS, RDS MySQL e repositório ECR na AWS. Lista completa de recursos criados, variáveis, outputs e o passo de bootstrap do backend remoto em [`infra/terraform/aws/README.md`](infra/terraform/aws/README.md).
-
----
+**GitHub Secrets** (por repositório): credenciais AWS (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` — temporárias, rotacionam a cada sessão), além de `JWT_SECRET`, `NEW_RELIC_*` e `TF_VAR_DB_*` conforme o repo. O script `scripts/refresh-aws-secrets.sh` (na raiz do workspace) publica os secrets nos 4 repositórios de uma vez.
 
 ## Usuários padrão
 
-Criados automaticamente pelas migrations do Flyway. Todos compartilham a mesma senha:
+Funcionários criados automaticamente pelas migrations do Flyway. Todos compartilham a mesma senha:
 
 | CPF | Senha | Perfil |
 |---|---|---|
@@ -191,32 +221,37 @@ Criados automaticamente pelas migrations do Flyway. Todos compartilham a mesma s
 
 Use o token retornado no header `Authorization: Bearer <token>` nas demais requisições.
 
----
+**Clientes** não têm senha — autenticam por CPF via `POST /auth/cliente` (ver [Autenticação](#autenticação)). Os dados de exemplo incluem o cliente de CPF `65997627004`.
 
 ## Dados de exemplo
 
 A migration `V14` carrega um conjunto de dados iniciais com clientes, veículos, peças, insumos, serviços e ordens de serviço em todos os status possíveis, prontos para exploração imediata da API.
 
----
-
 ## Documentação da API
 
-Swagger UI, gerado automaticamente via SpringDoc OpenAPI. Em ambiente local o endereço é fixo:
+Swagger UI, gerado automaticamente via SpringDoc OpenAPI.
 
-`http://localhost:8080/swagger-ui.html`
+- **Local:** `http://localhost:8080/swagger-ui.html`
+- **Produção:** a porta de entrada é o **API Gateway**, com URL estável entre deploys. Descubra a URL atual com:
 
-**Ambiente deployado (AWS):** não há um endereço fixo. O `Service` do tipo `LoadBalancer` recebe um hostname atribuído dinamicamente pela AWS (ex.: `...elb.amazonaws.com`), e como o projeto não usa um DNS próprio, **esse hostname muda a cada recriação do Service** (ou da infra). Por isso não faz sentido versionar a URL aqui — descubra a atual com:
+  ```bash
+  cd infra/terraform/apigateway && terraform output -raw api_gateway_url
+  # → https://<id>.execute-api.us-east-1.amazonaws.com  (acrescente /swagger-ui.html)
+  ```
 
-```bash
-echo "http://$(kubectl get svc fiap-mecanica -n fiap-mecanica -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')/swagger-ui.html"
-```
+  Ela também aparece no resumo (*Summary*) da run do CD. Alternativa direta pelo ELB — o hostname muda a cada recriação do Service:
 
----
+  ```bash
+  echo "http://$(kubectl get svc fiap-mecanica -n fiap-mecanica -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')/swagger-ui.html"
+  ```
 
 ## Testes
+
 Os testes de integração usam Testcontainers e requerem Docker em execução.
 
----
+## Documentação da Arquitetura
+
+A documentação arquitetural da Fase 3 — diagramas de componentes e de sequência, RFCs, ADRs, justificativa da escolha do banco e modelo de dados (ER) — fica em [`docs/`](docs/).
 
 ## Linguagem Ubíqua
 
