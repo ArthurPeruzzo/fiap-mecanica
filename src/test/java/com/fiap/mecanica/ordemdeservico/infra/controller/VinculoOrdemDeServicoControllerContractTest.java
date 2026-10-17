@@ -9,8 +9,6 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.estoque.core.exception.EstoqueInsuficienteException;
-import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
-import com.fiap.mecanica.estoque.core.exception.InsumoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
@@ -317,11 +315,9 @@ class VinculoOrdemDeServicoControllerContractTest {
 
     @Test
     void shouldReturn404WhenPecaNotFoundOnDesvincularPeca() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnosticoComPeca(5)));
-        Mockito.doThrow(new PecaNaoEncontradaException())
-                .when(reservaEstoqueGateway).reservarPeca(Mockito.eq(1L), Mockito.anyLong(), Mockito.anyInt());
+        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/99")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_PECA_BODY))
                 .andExpect(status().isNotFound())
@@ -475,11 +471,9 @@ class VinculoOrdemDeServicoControllerContractTest {
 
     @Test
     void shouldReturn404WhenInsumoNotFoundOnDesvincularInsumo() throws Exception {
-        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnosticoComInsumo(5)));
-        Mockito.doThrow(new InsumoNaoEncontradoException())
-                .when(reservaEstoqueGateway).reservarInsumo(Mockito.eq(1L), Mockito.anyLong(), Mockito.anyInt());
+        Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
 
-        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
+        mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/99")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_INSUMO_BODY))
                 .andExpect(status().isNotFound())

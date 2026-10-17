@@ -43,7 +43,7 @@ public class VinculoOrdemDeServicoCleanController {
     }
 
     public void desvincularPeca(Long ordemServicoId, Long pecaId, Integer quantidade) {
-        new DesvincularPecaOrdemDeServicoUseCase(ordemDeServicoGateway, reservaEstoqueGateway)
+        new DesvincularPecaOrdemDeServicoUseCase(ordemDeServicoGateway, pecaGateway, reservaEstoqueGateway)
                 .desvincular(ordemServicoId, pecaId, quantidade);
     }
 
@@ -53,7 +53,7 @@ public class VinculoOrdemDeServicoCleanController {
     }
 
     public void desvincularInsumo(Long ordemServicoId, Long insumoId, Integer quantidade) {
-        new DesvincularInsumoOrdemDeServicoUseCase(ordemDeServicoGateway, reservaEstoqueGateway)
+        new DesvincularInsumoOrdemDeServicoUseCase(ordemDeServicoGateway, insumoGateway, reservaEstoqueGateway)
                 .desvincular(ordemServicoId, insumoId, quantidade);
     }
 }
