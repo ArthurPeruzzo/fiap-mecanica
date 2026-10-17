@@ -1,5 +1,5 @@
 -- ==============================================================
--- V14__seed_dados_iniciais.sql
+-- V16__seed_dados_iniciais.sql
 -- Carga inicial: clientes, veículos, peças, insumos, serviços
 -- e ordens de serviço em todos os status possíveis do sistema.
 -- ==============================================================
@@ -53,37 +53,40 @@ VALUES ((SELECT id FROM `cliente` WHERE cpf = '90196973074'), 'MLH8526', 'Renaul
 
 -- ==============================================================
 -- PEÇAS
--- Quantidades já refletem o estado atual do estoque, considerando
--- o consumo das ordens de serviço ativas e concluídas abaixo:
---   Filtro de Ar:          60 iniciais - 3 usados (OS3, OS6, OS8)    = 57
---   Correia Dentada:       30 iniciais - 1 usado  (OS4)               = 29
---   Amortecedor Traseiro:  20 iniciais - 1 usado  (OS6)               = 19
---   Pastilha de Freio:     50 iniciais - 4 usados (OS7)               = 46
---   Disco de Freio:        25 iniciais - 2 usados (OS7)               = 23
---   OS5 (CANCELADA): estoque devolvido pelo sistema ao cancelar.
+-- Quantidades já refletem as reservas das ordens de serviço abaixo:
+--   OS aprovadas (OS6, OS7, OS8): reserva CONFIRMADA, estoque baixado.
+--   OS abertas (OS3, OS4): reserva ATIVA, estoque intacto, conta em
+--   quantidade_reservada.
+--   OS5 (CANCELADA): reserva LIBERADA, estoque intacto.
+--
+--   Filtro de Ar:         60 iniciais; OS6 e OS8 confirmadas = 2 baixados -> 58; OS3 aberta reserva 1
+--   Correia Dentada:      30 iniciais; nada baixado                       -> 30; OS4 aberta reserva 1
+--   Amortecedor Traseiro: 20 iniciais; OS6 confirmada = 1 baixado          -> 19
+--   Pastilha de Freio:    50 iniciais; OS7 confirmada = 4 baixados         -> 46; OS5 liberou 2
+--   Disco de Freio:       25 iniciais; OS7 confirmada = 2 baixados         -> 23
 -- ==============================================================
 
-INSERT INTO `peca` (`nome`, `descricao`, `preco`, `quantidade_estoque`)
+INSERT INTO `peca` (`nome`, `descricao`, `preco`, `quantidade_estoque`, `quantidade_reservada`)
 VALUES
-    ('Pastilha de Freio Dianteira', 'Pastilha cerâmica de alta performance para eixo dianteiro',           89.90,  46),
-    ('Correia Dentada',             'Correia dentada reforçada compatível com motores 1.0 a 2.0',         145.00,  29),
-    ('Amortecedor Traseiro',        'Amortecedor a gás de dupla ação para eixo traseiro',                 320.00,  19),
-    ('Vela de Ignição',             'Vela iridium de alto desempenho para motores flex',                   35.50, 100),
-    ('Filtro de Ar',                'Filtro de ar esportivo lavável de alta filtragem',                    42.00,  57),
-    ('Disco de Freio Dianteiro',    'Disco ventilado para eixo dianteiro, compatível com veículos 1.0-2.0', 210.00, 23);
+    ('Pastilha de Freio Dianteira', 'Pastilha cerâmica de alta performance para eixo dianteiro',           89.90,  46, 0),
+    ('Correia Dentada',             'Correia dentada reforçada compatível com motores 1.0 a 2.0',         145.00,  30, 1),
+    ('Amortecedor Traseiro',        'Amortecedor a gás de dupla ação para eixo traseiro',                 320.00,  19, 0),
+    ('Vela de Ignição',             'Vela iridium de alto desempenho para motores flex',                   35.50, 100, 0),
+    ('Filtro de Ar',                'Filtro de ar esportivo lavável de alta filtragem',                    42.00,  58, 1),
+    ('Disco de Freio Dianteiro',    'Disco ventilado para eixo dianteiro, compatível com veículos 1.0-2.0', 210.00, 23, 0);
 
 -- ==============================================================
 -- INSUMOS
--- Quantidades já refletem o estado atual do estoque:
---   Óleo de Motor 5W30: 200 iniciais - 13 usados (OS3=4L, OS6=5L, OS8=4L) = 187
+-- Quantidades já refletem as reservas (mesma regra das peças):
+--   Óleo de Motor 5W30: 200 iniciais; OS6 (5L) e OS8 (4L) confirmadas = 9 baixados -> 191; OS3 aberta reserva 4
 -- ==============================================================
 
-INSERT INTO `insumo` (`nome`, `descricao`, `preco`, `quantidade_estoque`, `unidade_medida`)
+INSERT INTO `insumo` (`nome`, `descricao`, `preco`, `quantidade_estoque`, `quantidade_reservada`, `unidade_medida`)
 VALUES
-    ('Óleo de Motor 5W30',        'Óleo sintético para motor a gasolina e flex',              38.00, 187, 'LITRO'),
-    ('Fluido de Freio DOT4',      'Fluido de alta performance para sistemas de freio a disco', 25.00, 5000, 'ML'),
-    ('Graxa Automotiva',          'Graxa multiuso para articulações e rolamentos',             15.00,  80, 'UNIDADE'),
-    ('Líquido de Arrefecimento',  'Líquido refrigerante orgânico para radiador e bloco',      22.00, 150, 'LITRO');
+    ('Óleo de Motor 5W30',        'Óleo sintético para motor a gasolina e flex',              38.00, 191, 4, 'LITRO'),
+    ('Fluido de Freio DOT4',      'Fluido de alta performance para sistemas de freio a disco', 25.00, 5000, 0, 'ML'),
+    ('Graxa Automotiva',          'Graxa multiuso para articulações e rolamentos',             15.00,  80, 0, 'UNIDADE'),
+    ('Líquido de Arrefecimento',  'Líquido refrigerante orgânico para radiador e bloco',      22.00, 150, 0, 'LITRO');
 
 -- ==============================================================
 -- SERVIÇOS
@@ -202,6 +205,11 @@ VALUES (@os3_id, @p_filtro_ar, 1, 42.00);
 INSERT INTO `ordem_servico_insumo` (ordem_servico_id, insumo_id, quantidade, preco)
 VALUES (@os3_id, @i_oleo, 4, 38.00);
 
+INSERT INTO `reserva_estoque` (ordem_servico_id, tipo_item, item_id, quantidade, status)
+VALUES
+    (@os3_id, 'PECA',   @p_filtro_ar, 1, 'ATIVA'),
+    (@os3_id, 'INSUMO', @i_oleo,      4, 'ATIVA');
+
 -- ==============================================================
 -- OS 4 — AGUARDANDO_APROVACAO
 -- Chevrolet Onix de Ana Paula Costa.
@@ -230,11 +238,14 @@ VALUES (@os4_id, @s_correia_dentada, 200.00, 'NAO_INICIADO');
 INSERT INTO `ordem_servico_peca` (ordem_servico_id, peca_id, quantidade, preco)
 VALUES (@os4_id, @p_correia, 1, 145.00);
 
+INSERT INTO `reserva_estoque` (ordem_servico_id, tipo_item, item_id, quantidade, status)
+VALUES (@os4_id, 'PECA', @p_correia, 1, 'ATIVA');
+
 -- ==============================================================
 -- OS 5 — CANCELADA
 -- Fiat Ducato de Transportes Veloz.
 -- Cliente recusou o orçamento de reparo na suspensão dianteira.
--- Estoque das peças foi devolvido ao cancelar.
+-- Reserva das peças foi liberada ao cancelar.
 -- Orçamento calculado: R$ 329,80
 --   Serviços: Revisão de Freios (R$150)    = R$150
 --   Peças:    Pastilha Dianteira 2x R$89,90 = R$179,80
@@ -257,6 +268,9 @@ VALUES (@os5_id, @s_revisao_freios, 150.00, 'NAO_INICIADO');
 
 INSERT INTO `ordem_servico_peca` (ordem_servico_id, peca_id, quantidade, preco)
 VALUES (@os5_id, @p_pastilha, 2, 89.90);
+
+INSERT INTO `reserva_estoque` (ordem_servico_id, tipo_item, item_id, quantidade, status)
+VALUES (@os5_id, 'PECA', @p_pastilha, 2, 'LIBERADA');
 
 -- ==============================================================
 -- OS 6 — EM_EXECUCAO
@@ -294,6 +308,12 @@ VALUES
 INSERT INTO `ordem_servico_insumo` (ordem_servico_id, insumo_id, quantidade, preco)
 VALUES (@os6_id, @i_oleo, 5, 38.00);
 
+INSERT INTO `reserva_estoque` (ordem_servico_id, tipo_item, item_id, quantidade, status)
+VALUES
+    (@os6_id, 'PECA',   @p_filtro_ar,   1, 'CONFIRMADA'),
+    (@os6_id, 'PECA',   @p_amortecedor, 1, 'CONFIRMADA'),
+    (@os6_id, 'INSUMO', @i_oleo,        5, 'CONFIRMADA');
+
 -- ==============================================================
 -- OS 7 — FINALIZADA
 -- Volkswagen Gol de Roberto Alves Moreira.
@@ -329,6 +349,11 @@ INSERT INTO `ordem_servico_peca` (ordem_servico_id, peca_id, quantidade, preco)
 VALUES
     (@os7_id, @p_pastilha, 4, 89.90),
     (@os7_id, @p_disco,    2, 210.00);
+
+INSERT INTO `reserva_estoque` (ordem_servico_id, tipo_item, item_id, quantidade, status)
+VALUES
+    (@os7_id, 'PECA', @p_pastilha, 4, 'CONFIRMADA'),
+    (@os7_id, 'PECA', @p_disco,    2, 'CONFIRMADA');
 
 -- ==============================================================
 -- OS 8 — ENTREGUE
@@ -367,3 +392,8 @@ VALUES (@os8_id, @p_filtro_ar, 1, 42.00);
 
 INSERT INTO `ordem_servico_insumo` (ordem_servico_id, insumo_id, quantidade, preco)
 VALUES (@os8_id, @i_oleo, 4, 38.00);
+
+INSERT INTO `reserva_estoque` (ordem_servico_id, tipo_item, item_id, quantidade, status)
+VALUES
+    (@os8_id, 'PECA',   @p_filtro_ar, 1, 'CONFIRMADA'),
+    (@os8_id, 'INSUMO', @i_oleo,      4, 'CONFIRMADA');

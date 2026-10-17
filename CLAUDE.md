@@ -55,7 +55,7 @@ Seeded by Flyway migrations. All share the same password `MeCanica2026!@#`.
 | `33366699957` | `ROLE_ATENDENTE` |
 | `11144477735` | `ROLE_MECANICO` |
 
-Login via `POST /authenticate/login`. Migration `V14` seeds sample data (clients, vehicles, parts, supplies, services, orders in every status) for immediate API exploration. Swagger UI: `http://localhost:8080/swagger-ui.html`.
+Login via `POST /authenticate/login`. Migration `V16` seeds sample data (clients, vehicles, parts, supplies, services, orders in every status) for immediate API exploration. Swagger UI: `http://localhost:8080/swagger-ui.html`.
 
 ## Environment variables
 
@@ -270,17 +270,12 @@ OrdemDeServico.reconstituir(id, clienteId, veiculoId, atendenteId, mecanicoId, s
 
 The join tables `ordem_servico_peca` and `ordem_servico_insumo` each have a `UNIQUE KEY` on `(ordem_servico_id, {peca|insumo}_id)`, so duplicate rows are prevented at the DB level.
 
-**Use case flow for vincular** (same for peca and insumo):
-1. Load `OrdemDeServico` → validate status via domain (`vincularPeca/vincularInsumo` throws if not `EM_DIAGNOSTICO`).
-2. Load `Peca`/`Insumo` → call `baixarEstoque(quantidade)` (throws `EstoqueInsuficienteException` if insufficient).
-3. `pecaGateway/insumoGateway.atualizar(peca/insumo)` to persist the stock change.
-4. `ordemDeServicoGateway.vincularOuSomarPeca/vincularOuSomarInsumo(...)` to persist the link.
+**Use case flow for vincular/desvincular** (same for peca and insumo) — stock is reserved, not decremented:
+1. Load `OrdemDeServico` and `Peca`/`Insumo` (404 if missing) → `ordemDeServico.vincularPeca/desvincularPeca(...)` (domain validates status, presence and quantity).
+2. `ReservaEstoqueGateway.reservarPeca/reservarInsumo(osId, itemId, quantidadeTotal)` with the item's new total in the OS (0 after a full desvincular); throws `EstoqueInsuficienteException` if the available stock can't cover it.
+3. `ordemDeServicoGateway.vincularOuSomar.../desvincularOuSubtrair...(...)` to persist the link.
 
-**Use case flow for desvincular** (same for peca and insumo):
-1. Load `OrdemDeServico` → load `Peca`/`Insumo`.
-2. `peca/insumo.devolverEstoque(quantidade)` to restore stock.
-3. `ordemDeServico.desvincularPeca/desvincularInsumo(id, quantidade)` — domain validates status, presence, and quantity.
-4. `pecaGateway/insumoGateway.atualizar(...)` and `ordemDeServicoGateway.desvincularOuSubtrairPeca/desvincularOuSubtrairInsumo(...)`.
+Aprovar orçamento → `reservaEstoqueGateway.confirmarReservas(osId)` (stock is decremented). Recusar → `liberarReservas(osId)`. Reservations live in `reserva_estoque` (status `ATIVA`/`CONFIRMADA`/`LIBERADA`).
 
 **Use case flow for enviarOrcamento** (`POST /ordem-servico/orcamento/envio/{id}`, requires `ROLE_ATENDENTE`):
 1. Load `OrdemDeServico` → call `gravarEnvioOrcamento()` which delegates to `state.enviarOrcamento(this)` (only succeeds from `DIAGNOSTICO_CONCLUIDO`).
@@ -316,9 +311,9 @@ Both flows share a common abstract base (`OrcamentoAprovadoOrdemDeServicoUseCase
 
 ### Estoque domain
 
-`ItemEstoque` is an abstract base class for `Peca` and `Insumo`. It encapsulates stock quantity and exposes `baixarEstoque(qty)` (throws `EstoqueInsuficienteException` if insufficient) and `devolverEstoque(qty)`. Concrete subclasses call `ajustarQuantidade(qty)` (protected) from their `atualizar(...)` method.
+`ItemEstoque` is an abstract base class for `Peca` and `Insumo`. It holds `quantidadeEstoque` and `quantidadeReservada` and exposes `reservar(qty)` (throws `EstoqueInsuficienteException` if insufficient), `liberarReserva(qty)`, `confirmarBaixa(qty)` and `getEstoqueDisponivel()` (estoque − reservada). Concrete subclasses call `ajustarQuantidade(qty)` (protected) from their `atualizar(...)` method.
 
-`Peca.reconstituir` has 5 parameters `(id, nome, descricao, preco, quantidadeEstoque)` — no `UnidadeMedida`. `Insumo.reconstituir` has 6 parameters with `UnidadeMedida` as 5th.
+`Peca.reconstituir` has 5 parameters `(id, nome, descricao, preco, quantidadeEstoque)` — no `UnidadeMedida`. `Insumo.reconstituir` has 6 parameters with `UnidadeMedida` as 5th. Both have an overload with `quantidadeReservada` as the last parameter.
 
 ### Security filter flow
 
