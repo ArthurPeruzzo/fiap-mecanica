@@ -3,6 +3,7 @@ package com.fiap.mecanica.ordemdeservico.infra.controller;
 import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
 import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,9 +24,10 @@ public class VinculoOrdemDeServicoHttpController {
     public VinculoOrdemDeServicoHttpController(OrdemDeServicoGateway ordemDeServicoGateway,
                                                 ServicoGateway servicoGateway,
                                                 PecaGateway pecaGateway,
-                                                InsumoGateway insumoGateway) {
+                                                InsumoGateway insumoGateway,
+                                                ReservaEstoqueGateway reservaEstoqueGateway) {
         this.cleanController = new VinculoOrdemDeServicoCleanController(
-                ordemDeServicoGateway, servicoGateway, pecaGateway, insumoGateway
+                ordemDeServicoGateway, servicoGateway, pecaGateway, insumoGateway, reservaEstoqueGateway
         );
     }
 

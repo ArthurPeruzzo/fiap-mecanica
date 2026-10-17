@@ -1,6 +1,7 @@
 package com.fiap.mecanica.estoque.core.domain;
 
 import com.fiap.mecanica.estoque.core.exception.EstoqueInsuficienteException;
+import com.fiap.mecanica.estoque.core.exception.QuantidadeEstoqueMenorQueReservadaException;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -47,38 +48,6 @@ class InsumoUnitTest {
     }
 
     @Test
-    void baixarEstoque_shouldDecrementQuantidade() {
-        var insumo = new Insumo(NOME, DESCRICAO, PRECO, UNIDADE, 10);
-
-        insumo.baixarEstoque(4);
-
-        assertEquals(6, insumo.getEstoqueTotal());
-    }
-
-    @Test
-    void baixarEstoque_shouldAllowDrainToZero() {
-        var insumo = new Insumo(NOME, DESCRICAO, PRECO, UNIDADE, 3);
-
-        insumo.baixarEstoque(3);
-
-        assertEquals(0, insumo.getEstoqueTotal());
-    }
-
-    @Test
-    void baixarEstoque_shouldThrowEstoqueInsuficienteWhenQuantidadeExceedsEstoque() {
-        var insumo = new Insumo(NOME, DESCRICAO, PRECO, UNIDADE, 2);
-
-        assertThrows(EstoqueInsuficienteException.class, () -> insumo.baixarEstoque(3));
-    }
-
-    @Test
-    void baixarEstoque_shouldThrowEstoqueInsuficienteWhenEstoqueIsZero() {
-        var insumo = new Insumo(NOME, DESCRICAO, PRECO, UNIDADE, 0);
-
-        assertThrows(EstoqueInsuficienteException.class, () -> insumo.baixarEstoque(1));
-    }
-
-    @Test
     void atualizar_shouldChangeAllFields() {
         var insumo = new Insumo(NOME, DESCRICAO, PRECO, UNIDADE, 10);
 
@@ -101,11 +70,81 @@ class InsumoUnitTest {
     }
 
     @Test
-    void devolverEstoque_shouldIncrementQuantidade() {
+    void reservar_shouldIncrementReservadaSemAlterarTotal() {
+        var insumo = new Insumo(NOME, DESCRICAO, PRECO, UNIDADE, 10);
+
+        insumo.reservar(3);
+
+        assertEquals(10, insumo.getEstoqueTotal());
+        assertEquals(3, insumo.getQuantidadeReservada());
+        assertEquals(7, insumo.getEstoqueDisponivel());
+    }
+
+    @Test
+    void reservar_shouldAllowReservarTodoDisponivel() {
         var insumo = new Insumo(NOME, DESCRICAO, PRECO, UNIDADE, 5);
 
-        insumo.devolverEstoque(3);
+        insumo.reservar(5);
 
-        assertEquals(8, insumo.getEstoqueTotal());
+        assertEquals(0, insumo.getEstoqueDisponivel());
+    }
+
+    @Test
+    void reservar_shouldThrowEstoqueInsuficienteWhenQuantidadeExceedsDisponivel() {
+        var insumo = Insumo.reconstituir(1L, NOME, DESCRICAO, PRECO, UNIDADE, 10, 8);
+
+        assertThrows(EstoqueInsuficienteException.class, () -> insumo.reservar(3));
+    }
+
+    @Test
+    void reservar_shouldThrowEstoqueInsuficienteWhenEstoqueIsZero() {
+        var insumo = new Insumo(NOME, DESCRICAO, PRECO, UNIDADE, 0);
+
+        assertThrows(EstoqueInsuficienteException.class, () -> insumo.reservar(1));
+    }
+
+    @Test
+    void liberarReserva_shouldDecrementReservada() {
+        var insumo = Insumo.reconstituir(1L, NOME, DESCRICAO, PRECO, UNIDADE, 10, 5);
+
+        insumo.liberarReserva(3);
+
+        assertEquals(10, insumo.getEstoqueTotal());
+        assertEquals(2, insumo.getQuantidadeReservada());
+    }
+
+    @Test
+    void liberarReserva_shouldNotGoBelowZero() {
+        var insumo = Insumo.reconstituir(1L, NOME, DESCRICAO, PRECO, UNIDADE, 10, 2);
+
+        insumo.liberarReserva(5);
+
+        assertEquals(0, insumo.getQuantidadeReservada());
+    }
+
+    @Test
+    void confirmarBaixa_shouldDecrementTotalAndReservada() {
+        var insumo = Insumo.reconstituir(1L, NOME, DESCRICAO, PRECO, UNIDADE, 10, 4);
+
+        insumo.confirmarBaixa(4);
+
+        assertEquals(6, insumo.getEstoqueTotal());
+        assertEquals(0, insumo.getQuantidadeReservada());
+        assertEquals(6, insumo.getEstoqueDisponivel());
+    }
+
+    @Test
+    void atualizar_shouldThrowWhenQuantidadeMenorQueReservada() {
+        var insumo = Insumo.reconstituir(1L, NOME, DESCRICAO, PRECO, UNIDADE, 10, 6);
+
+        assertThrows(QuantidadeEstoqueMenorQueReservadaException.class,
+                () -> insumo.atualizar(NOME, DESCRICAO, PRECO, UNIDADE, 5));
+    }
+
+    @Test
+    void novo_shouldStartWithReservadaZero() {
+        var insumo = new Insumo(NOME, DESCRICAO, PRECO, UNIDADE, 7);
+
+        assertEquals(0, insumo.getQuantidadeReservada());
     }
 }

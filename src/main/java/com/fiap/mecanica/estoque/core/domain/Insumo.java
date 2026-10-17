@@ -28,8 +28,20 @@ public class Insumo extends ItemEstoque {
 		ajustarQuantidade(quantidadeEstoque);
 	}
 
+	private Insumo(String nome, String descricao, BigDecimal preco, UnidadeMedida unidadeMedida, Integer quantidadeEstoque, Integer quantidadeReservada) {
+		super(quantidadeEstoque, quantidadeReservada);
+		this.nome = nome;
+		this.descricao = descricao;
+		this.preco = preco;
+		this.unidadeMedida = unidadeMedida;
+	}
+
 	public static Insumo reconstituir(Long id, String nome, String descricao, BigDecimal preco, UnidadeMedida unidadeMedida, Integer quantidadeEstoque) {
-		var insumo = new Insumo(nome, descricao, preco, unidadeMedida, quantidadeEstoque);
+		return reconstituir(id, nome, descricao, preco, unidadeMedida, quantidadeEstoque, 0);
+	}
+
+	public static Insumo reconstituir(Long id, String nome, String descricao, BigDecimal preco, UnidadeMedida unidadeMedida, Integer quantidadeEstoque, Integer quantidadeReservada) {
+		var insumo = new Insumo(nome, descricao, preco, unidadeMedida, quantidadeEstoque, quantidadeReservada);
 		insumo.id = id;
 		return insumo;
 	}

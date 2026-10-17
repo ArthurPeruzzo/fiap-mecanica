@@ -29,6 +29,7 @@ public class PecaDatabaseGateway implements PecaGateway {
 					.descricao(peca.getDescricao())
 					.preco(peca.getPreco())
 					.quantidadeEstoque(peca.getEstoqueTotal())
+					.quantidadeReservada(peca.getQuantidadeReservada())
 					.build());
 		} catch (Exception e) {
 			log.error("Erro ao criar peca", e);
@@ -40,7 +41,7 @@ public class PecaDatabaseGateway implements PecaGateway {
 	public Optional<Peca> buscarPorId(Long id) {
 		try {
 			return pecaRepository.findById(id)
-					.map(e -> Peca.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getQuantidadeEstoque()));
+					.map(e -> Peca.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getQuantidadeEstoque(), e.getQuantidadeReservada()));
 		} catch (Exception e) {
 			log.error("Erro ao buscar peca por id: {}", id, e);
 			throw new ErroAcessoBaseDeDadosException();
@@ -56,6 +57,7 @@ public class PecaDatabaseGateway implements PecaGateway {
 					.descricao(peca.getDescricao())
 					.preco(peca.getPreco())
 					.quantidadeEstoque(peca.getEstoqueTotal())
+					.quantidadeReservada(peca.getQuantidadeReservada())
 					.build());
 		} catch (Exception e) {
 			log.error("Erro ao atualizar peca", e);
@@ -78,7 +80,7 @@ public class PecaDatabaseGateway implements PecaGateway {
 		try {
 			var resultado = pecaRepository.findAll(PageRequest.of(page, size));
 			var pecas = resultado.getContent().stream()
-					.map(e -> Peca.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getQuantidadeEstoque()))
+					.map(e -> Peca.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getQuantidadeEstoque(), e.getQuantidadeReservada()))
 					.toList();
 			return new Pagina<>(pecas, resultado.getNumber(), resultado.getSize(), resultado.getTotalElements(), resultado.getTotalPages());
 		} catch (Exception e) {
@@ -92,7 +94,7 @@ public class PecaDatabaseGateway implements PecaGateway {
 		try {
 			return pecaRepository.findAllById(pecasIds)
 					.stream()
-					.map(e -> Peca.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getQuantidadeEstoque()))
+					.map(e -> Peca.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getQuantidadeEstoque(), e.getQuantidadeReservada()))
 					.toList();
 		} catch (Exception e) {
 			log.error("Erro ao listar pecas por ids: {}", pecasIds, e);

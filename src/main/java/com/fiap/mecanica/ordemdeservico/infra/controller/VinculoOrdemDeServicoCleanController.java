@@ -3,6 +3,7 @@ package com.fiap.mecanica.ordemdeservico.infra.controller;
 import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
 import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
 
@@ -12,15 +13,18 @@ public class VinculoOrdemDeServicoCleanController {
     private final ServicoGateway servicoGateway;
     private final PecaGateway pecaGateway;
     private final InsumoGateway insumoGateway;
+    private final ReservaEstoqueGateway reservaEstoqueGateway;
 
     public VinculoOrdemDeServicoCleanController(OrdemDeServicoGateway ordemDeServicoGateway,
                                                  ServicoGateway servicoGateway,
                                                  PecaGateway pecaGateway,
-                                                 InsumoGateway insumoGateway) {
+                                                 InsumoGateway insumoGateway,
+                                                 ReservaEstoqueGateway reservaEstoqueGateway) {
         this.ordemDeServicoGateway = ordemDeServicoGateway;
         this.servicoGateway = servicoGateway;
         this.pecaGateway = pecaGateway;
         this.insumoGateway = insumoGateway;
+        this.reservaEstoqueGateway = reservaEstoqueGateway;
     }
 
     public void vincularServico(Long ordemServicoId, Long servicoId) {
@@ -34,22 +38,22 @@ public class VinculoOrdemDeServicoCleanController {
     }
 
     public void vincularPeca(Long ordemServicoId, Long pecaId, Integer quantidade) {
-        new VincularPecaOrdemDeServicoUseCase(ordemDeServicoGateway, pecaGateway)
+        new VincularPecaOrdemDeServicoUseCase(ordemDeServicoGateway, pecaGateway, reservaEstoqueGateway)
                 .vincular(ordemServicoId, pecaId, quantidade);
     }
 
     public void desvincularPeca(Long ordemServicoId, Long pecaId, Integer quantidade) {
-        new DesvincularPecaOrdemDeServicoUseCase(ordemDeServicoGateway, pecaGateway)
+        new DesvincularPecaOrdemDeServicoUseCase(ordemDeServicoGateway, reservaEstoqueGateway)
                 .desvincular(ordemServicoId, pecaId, quantidade);
     }
 
     public void vincularInsumo(Long ordemServicoId, Long insumoId, Integer quantidade) {
-        new VincularInsumoOrdemDeServicoUseCase(ordemDeServicoGateway, insumoGateway)
+        new VincularInsumoOrdemDeServicoUseCase(ordemDeServicoGateway, insumoGateway, reservaEstoqueGateway)
                 .vincular(ordemServicoId, insumoId, quantidade);
     }
 
     public void desvincularInsumo(Long ordemServicoId, Long insumoId, Integer quantidade) {
-        new DesvincularInsumoOrdemDeServicoUseCase(ordemDeServicoGateway, insumoGateway)
+        new DesvincularInsumoOrdemDeServicoUseCase(ordemDeServicoGateway, reservaEstoqueGateway)
                 .desvincular(ordemServicoId, insumoId, quantidade);
     }
 }

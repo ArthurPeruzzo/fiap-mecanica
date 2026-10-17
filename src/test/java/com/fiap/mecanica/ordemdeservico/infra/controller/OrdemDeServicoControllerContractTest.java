@@ -14,7 +14,9 @@ import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
 import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
+import com.fiap.mecanica.estoque.core.exception.EstoqueInsuficienteException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
@@ -67,6 +69,7 @@ class OrdemDeServicoControllerContractTest {
     @MockitoBean private ServicoGateway servicoGateway;
     @MockitoBean private PecaGateway pecaGateway;
     @MockitoBean private InsumoGateway insumoGateway;
+    @MockitoBean private ReservaEstoqueGateway reservaEstoqueGateway;
     @MockitoBean private NotificacaoGateway notificacaoGateway;
     @MockitoBean private MetricasGateway metricasGateway;
     @MockitoBean private UserGateway userGateway;
@@ -350,6 +353,8 @@ class OrdemDeServicoControllerContractTest {
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(1L);
         Mockito.when(pecaGateway.listarPorIds(Mockito.anyList()))
                 .thenReturn(List.of(Peca.reconstituir(5L, "Peca", "desc", BigDecimal.TEN, 0)));
+        Mockito.doThrow(new EstoqueInsuficienteException())
+                .when(reservaEstoqueGateway).reservarPeca(Mockito.eq(1L), Mockito.eq(5L), Mockito.anyInt());
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
                         .contentType(MediaType.APPLICATION_JSON)

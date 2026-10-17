@@ -26,6 +26,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaV
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.notificacao.core.domain.MensagemParams;
@@ -47,6 +48,7 @@ public class CriarOrdemDeServicoUseCase {
 	private final ServicoGateway servicoGateway;
 	private final PecaGateway pecaGateway;
 	private final InsumoGateway insumoGateway;
+	private final ReservaEstoqueGateway reservaEstoqueGateway;
 	private final NotificacaoGateway notificacaoGateway;
 	private final MetricasGateway metricasGateway;
 	private final CriarOrdemDeServicoOutputPort outputPort;
@@ -59,6 +61,7 @@ public class CriarOrdemDeServicoUseCase {
 									   ServicoGateway servicoGateway,
 									   PecaGateway pecaGateway,
 									   InsumoGateway insumoGateway,
+									   ReservaEstoqueGateway reservaEstoqueGateway,
 									   NotificacaoGateway notificacaoGateway,
 									   MetricasGateway metricasGateway,
 									   CriarOrdemDeServicoOutputPort outputPort) {
@@ -70,6 +73,7 @@ public class CriarOrdemDeServicoUseCase {
 		this.servicoGateway = servicoGateway;
 		this.pecaGateway = pecaGateway;
 		this.insumoGateway = insumoGateway;
+		this.reservaEstoqueGateway = reservaEstoqueGateway;
 		this.notificacaoGateway = notificacaoGateway;
 		this.metricasGateway = metricasGateway;
 		this.outputPort = outputPort;
@@ -155,9 +159,8 @@ public class CriarOrdemDeServicoUseCase {
 
 		pecas.forEach(dto -> {
 			Peca peca = pecasPorId.get(dto.id());
-			peca.baixarEstoque(dto.quantidade());
-			pecaGateway.atualizar(peca);
 			ordemDeServico.vincularPeca(peca.getId(), dto.quantidade(), peca.getPreco());
+			reservaEstoqueGateway.reservarPeca(ordemDeServico.getId(), peca.getId(), ordemDeServico.getTotalQuantidadePecasMapeadasPorId().get(peca.getId()));
 			ordemDeServicoGateway.vincularOuSomarPeca(ordemDeServico.getId(), peca.getId(), dto.quantidade(), peca.getPreco());
 		});
 	}
@@ -175,9 +178,8 @@ public class CriarOrdemDeServicoUseCase {
 
 		insumos.forEach(dto -> {
 			Insumo insumo = insumosPorId.get(dto.id());
-			insumo.baixarEstoque(dto.quantidade());
-			insumoGateway.atualizar(insumo);
 			ordemDeServico.vincularInsumo(insumo.getId(), dto.quantidade(), insumo.getPreco());
+			reservaEstoqueGateway.reservarInsumo(ordemDeServico.getId(), insumo.getId(), ordemDeServico.getTotalQuantidadeInsumosMapeadosPorId().get(insumo.getId()));
 			ordemDeServicoGateway.vincularOuSomarInsumo(ordemDeServico.getId(), insumo.getId(), dto.quantidade(), insumo.getPreco());
 		});
 	}

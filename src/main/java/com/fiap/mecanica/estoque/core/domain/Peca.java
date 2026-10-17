@@ -25,8 +25,19 @@ public class Peca extends ItemEstoque {
 		ajustarQuantidade(quantidadeEstoque);
 	}
 
+	private Peca(String nome, String descricao, BigDecimal preco, Integer quantidadeEstoque, Integer quantidadeReservada) {
+		super(quantidadeEstoque, quantidadeReservada);
+		this.nome = nome;
+		this.descricao = descricao;
+		this.preco = preco;
+	}
+
 	public static Peca reconstituir(Long id, String nome, String descricao, BigDecimal preco, Integer quantidadeEstoque) {
-		var peca = new Peca(nome, descricao, preco, quantidadeEstoque);
+		return reconstituir(id, nome, descricao, preco, quantidadeEstoque, 0);
+	}
+
+	public static Peca reconstituir(Long id, String nome, String descricao, BigDecimal preco, Integer quantidadeEstoque, Integer quantidadeReservada) {
+		var peca = new Peca(nome, descricao, preco, quantidadeEstoque, quantidadeReservada);
 		peca.id = id;
 		return peca;
 	}

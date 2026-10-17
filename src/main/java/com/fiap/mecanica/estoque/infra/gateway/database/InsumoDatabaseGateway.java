@@ -29,6 +29,7 @@ public class InsumoDatabaseGateway implements InsumoGateway {
 					.descricao(insumo.getDescricao())
 					.preco(insumo.getPreco())
 					.quantidadeEstoque(insumo.getEstoqueTotal())
+					.quantidadeReservada(insumo.getQuantidadeReservada())
 					.unidadeMedida(insumo.getUnidadeMedida())
 					.build());
 		} catch (Exception e) {
@@ -41,7 +42,7 @@ public class InsumoDatabaseGateway implements InsumoGateway {
 	public Optional<Insumo> buscarPorId(Long id) {
 		try {
 			return insumoRepository.findById(id)
-					.map(e -> Insumo.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getUnidadeMedida(), e.getQuantidadeEstoque()));
+					.map(e -> Insumo.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getUnidadeMedida(), e.getQuantidadeEstoque(), e.getQuantidadeReservada()));
 		} catch (Exception e) {
 			log.error("Erro ao buscar insumo por id: {}", id, e);
 			throw new ErroAcessoBaseDeDadosException();
@@ -57,6 +58,7 @@ public class InsumoDatabaseGateway implements InsumoGateway {
 					.descricao(insumo.getDescricao())
 					.preco(insumo.getPreco())
 					.quantidadeEstoque(insumo.getEstoqueTotal())
+					.quantidadeReservada(insumo.getQuantidadeReservada())
 					.unidadeMedida(insumo.getUnidadeMedida())
 					.build());
 		} catch (Exception e) {
@@ -80,7 +82,7 @@ public class InsumoDatabaseGateway implements InsumoGateway {
 		try {
 			var resultado = insumoRepository.findAll(PageRequest.of(page, size));
 			var insumos = resultado.getContent().stream()
-					.map(e -> Insumo.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getUnidadeMedida(), e.getQuantidadeEstoque()))
+					.map(e -> Insumo.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getUnidadeMedida(), e.getQuantidadeEstoque(), e.getQuantidadeReservada()))
 					.toList();
 			return new Pagina<>(insumos, resultado.getNumber(), resultado.getSize(), resultado.getTotalElements(), resultado.getTotalPages());
 		} catch (Exception e) {
@@ -94,7 +96,7 @@ public class InsumoDatabaseGateway implements InsumoGateway {
 		try {
 			return insumoRepository.findAllById(insumosIds)
 					.stream()
-					.map(e -> Insumo.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getUnidadeMedida(), e.getQuantidadeEstoque()))
+					.map(e -> Insumo.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getUnidadeMedida(), e.getQuantidadeEstoque(), e.getQuantidadeReservada()))
 					.toList();
 		} catch (Exception e) {
 			log.error("Erro ao listar insumos por ids: {}", insumosIds, e);

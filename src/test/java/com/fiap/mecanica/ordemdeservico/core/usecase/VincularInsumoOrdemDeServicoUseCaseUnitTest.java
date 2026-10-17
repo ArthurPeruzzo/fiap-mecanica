@@ -12,6 +12,7 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDe
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VinculoInsumoNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.VincularInsumoOrdemDeServicoUseCase;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,6 +40,9 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
 
     @Mock
     private InsumoGateway insumoGateway;
+
+    @Mock
+    private ReservaEstoqueGateway reservaEstoqueGateway;
 
     private static final Long ORDEM_ID = 1L;
     private static final Long INSUMO_ID = 30L;
@@ -91,7 +95,7 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
 
         vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE);
 
-        Mockito.verify(insumoGateway).atualizar(Mockito.any());
+        Mockito.verify(reservaEstoqueGateway).reservarInsumo(ORDEM_ID, INSUMO_ID, QUANTIDADE);
         Mockito.verify(ordemDeServicoGateway).vincularOuSomarInsumo(ORDEM_ID, INSUMO_ID, QUANTIDADE, PRECO);
     }
 
@@ -102,7 +106,7 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
 
         vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE);
 
-        Mockito.verify(insumoGateway).atualizar(Mockito.any());
+        Mockito.verify(reservaEstoqueGateway).reservarInsumo(ORDEM_ID, INSUMO_ID, 8);
         Mockito.verify(ordemDeServicoGateway).vincularOuSomarInsumo(ORDEM_ID, INSUMO_ID, QUANTIDADE, PRECO);
     }
 
@@ -113,7 +117,7 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
         assertThrows(OrdemDeServicoNaoEncontradaException.class,
                 () -> vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
 
-        Mockito.verifyNoInteractions(insumoGateway);
+        Mockito.verifyNoInteractions(insumoGateway, reservaEstoqueGateway);
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
@@ -125,7 +129,7 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
         assertThrows(InsumoNaoEncontradoException.class,
                 () -> vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
 
-        Mockito.verify(insumoGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(reservaEstoqueGateway);
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
@@ -133,11 +137,12 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
     void shouldThrowWhenEstoqueInsuficiente() {
         stubOrdem(ordemEmDiagnostico(List.of()));
         stubInsumo(insumoComEstoque(0));
+        Mockito.doThrow(new EstoqueInsuficienteException())
+                .when(reservaEstoqueGateway).reservarInsumo(ORDEM_ID, INSUMO_ID, QUANTIDADE);
 
         assertThrows(EstoqueInsuficienteException.class,
                 () -> vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
 
-        Mockito.verify(insumoGateway, Mockito.never()).atualizar(Mockito.any());
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
@@ -171,7 +176,7 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
         assertThrows(VinculoInsumoNaoAutorizadaException.class,
                 () -> vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
 
-        Mockito.verify(insumoGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(reservaEstoqueGateway);
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 }
