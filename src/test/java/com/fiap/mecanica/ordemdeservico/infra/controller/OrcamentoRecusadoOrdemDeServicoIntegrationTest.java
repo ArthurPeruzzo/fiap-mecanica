@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
 
@@ -54,25 +55,25 @@ class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServ
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + qtdPeca1 + "}")
+                .body(Map.of("quantidade", qtdPeca1))
                 .when().put("/ordem-servico/" + ordemId + "/pecas/" + peca1Id)
                 .then().statusCode(204);
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + qtdPeca2 + "}")
+                .body(Map.of("quantidade", qtdPeca2))
                 .when().put("/ordem-servico/" + ordemId + "/pecas/" + peca2Id)
                 .then().statusCode(204);
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + qtdInsumo1 + "}")
+                .body(Map.of("quantidade", qtdInsumo1))
                 .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumo1Id)
                 .then().statusCode(204);
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + qtdInsumo2 + "}")
+                .body(Map.of("quantidade", qtdInsumo2))
                 .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumo2Id)
                 .then().statusCode(204);
 

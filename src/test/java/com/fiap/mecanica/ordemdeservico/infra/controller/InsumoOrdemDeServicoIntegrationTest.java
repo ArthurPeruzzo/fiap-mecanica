@@ -45,7 +45,7 @@ class InsumoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrat
     private void vincularInsumo(String tokenMecanico, Long ordemId, Long insumoId, int quantidade, int statusEsperado) {
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + quantidade + "}")
+                .body(Map.of("quantidade", quantidade))
                 .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
                 .then().statusCode(statusEsperado);
     }
@@ -53,7 +53,7 @@ class InsumoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrat
     private void desvincularInsumo(String tokenMecanico, Long ordemId, Long insumoId, int quantidade) {
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + quantidade + "}")
+                .body(Map.of("quantidade", quantidade))
                 .when().delete("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
                 .then().statusCode(204);
     }

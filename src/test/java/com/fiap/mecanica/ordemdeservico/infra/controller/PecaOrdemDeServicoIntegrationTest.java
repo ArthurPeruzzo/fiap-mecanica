@@ -45,7 +45,7 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
     private void vincularPeca(String tokenMecanico, Long ordemId, Long pecaId, int quantidade, int statusEsperado) {
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + quantidade + "}")
+                .body(Map.of("quantidade", quantidade))
                 .when().put("/ordem-servico/" + ordemId + "/pecas/" + pecaId)
                 .then().statusCode(statusEsperado);
     }
@@ -53,7 +53,7 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
     private void desvincularPeca(String tokenMecanico, Long ordemId, Long pecaId, int quantidade) {
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + quantidade + "}")
+                .body(Map.of("quantidade", quantidade))
                 .when().delete("/ordem-servico/" + ordemId + "/pecas/" + pecaId)
                 .then().statusCode(204);
     }

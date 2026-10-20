@@ -35,6 +35,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @ActiveProfiles("integration-test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -164,13 +165,13 @@ abstract class AbstractOrdemDeServicoIntegrationTest extends AbstractContainer {
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + qtdPeca + "}")
+                .body(Map.of("quantidade", qtdPeca))
                 .when().put("/ordem-servico/" + ordemId + "/pecas/" + pecaId)
                 .then().statusCode(204);
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + qtdInsumo + "}")
+                .body(Map.of("quantidade", qtdInsumo))
                 .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
                 .then().statusCode(204);
 
