@@ -156,6 +156,42 @@ abstract class AbstractOrdemDeServicoIntegrationTest extends AbstractContainer {
         return ordemId;
     }
 
+    protected Long criarOrdemAguardandoAprovacaoComPecaEInsumoERetornarId(String tokenAtendente, String tokenMecanico,
+                                                                           Long pecaId, int qtdPeca,
+                                                                           Long insumoId, int qtdInsumo) {
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(tokenAtendente, tokenMecanico);
+        Long servicoId = criarServicoERetornarId();
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":" + qtdPeca + "}")
+                .when().put("/ordem-servico/" + ordemId + "/pecas/" + pecaId)
+                .then().statusCode(204);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body("{\"quantidade\":" + qtdInsumo + "}")
+                .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(204);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().put("/ordem-servico/" + ordemId + "/servicos/" + servicoId)
+                .then().statusCode(204);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().patch("/ordem-servico/" + ordemId + "/diagnostico/conclusao")
+                .then().statusCode(204);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenAtendente)
+                .when().post("/ordem-servico/orcamento/envio/" + ordemId)
+                .then().statusCode(204);
+
+        return ordemId;
+    }
+
     protected Long criarServicoERetornarId() {
         return servicoRepository.saveAndFlush(ServicoEntity.builder()
                 .nome("Troca de óleo")

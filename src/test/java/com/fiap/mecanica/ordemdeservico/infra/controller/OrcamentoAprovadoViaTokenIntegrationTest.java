@@ -8,9 +8,25 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 class OrcamentoAprovadoViaTokenIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
+
+    private Integer obterEstoqueNoBanco(String tabela, Long id) {
+        return jdbcTemplate.queryForObject(
+                "SELECT quantidade_estoque FROM " + tabela + " WHERE id = ?", Integer.class, id);
+    }
+
+    private Integer obterReservadaNoBanco(String tabela, Long id) {
+        return jdbcTemplate.queryForObject(
+                "SELECT quantidade_reservada FROM " + tabela + " WHERE id = ?", Integer.class, id);
+    }
+
+    private List<String> obterStatusReservasNoBanco(Long ordemId) {
+        return jdbcTemplate.queryForList(
+                "SELECT status FROM reserva_estoque WHERE ordem_servico_id = ?", String.class, ordemId);
+    }
 
     private String obterTokenLinkDeOrdemAguardandoAprovacao(Long ordemId) {
         return linkAprovacaoOrcamentoRepository.findByOrdemServicoId(ordemId)
@@ -75,5 +91,26 @@ class OrcamentoAprovadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
         RestAssured.given()
                 .when().get("/ordem-servico/orcamento/externo/aprovar/" + token)
                 .then().statusCode(410);
+    }
+
+    @Test
+    void shouldBaixarEstoqueEConfirmarReservasAoAprovarViaToken() {
+        String tokenAtendente = obterTokenAtendente();
+        String tokenMecanico = obterTokenMecanico();
+        Long pecaId = criarPecaERetornarId(10);
+        Long insumoId = criarInsumoERetornarId(10);
+        Long ordemId = criarOrdemAguardandoAprovacaoComPecaEInsumoERetornarId(
+                tokenAtendente, tokenMecanico, pecaId, 3, insumoId, 2);
+        String token = obterTokenLinkDeOrdemAguardandoAprovacao(ordemId);
+
+        RestAssured.given()
+                .when().get("/ordem-servico/orcamento/externo/aprovar/" + token)
+                .then().statusCode(204);
+
+        Assertions.assertEquals(7, obterEstoqueNoBanco("peca", pecaId));
+        Assertions.assertEquals(0, obterReservadaNoBanco("peca", pecaId));
+        Assertions.assertEquals(8, obterEstoqueNoBanco("insumo", insumoId));
+        Assertions.assertEquals(0, obterReservadaNoBanco("insumo", insumoId));
+        Assertions.assertEquals(List.of("CONFIRMADA", "CONFIRMADA"), obterStatusReservasNoBanco(ordemId));
     }
 }
