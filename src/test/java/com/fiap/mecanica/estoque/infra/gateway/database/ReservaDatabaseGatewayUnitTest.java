@@ -54,7 +54,7 @@ class ReservaDatabaseGatewayUnitTest {
 
     @Test
     void salvar_shouldPersistAllFields() {
-        var reserva = Reserva.reconstituir(7L, 1L, TipoItemReserva.INSUMO, 30L, 4, StatusReserva.CONFIRMADA);
+        var reserva = Reserva.builder().id(7L).ordemServicoId(1L).tipoItem(TipoItemReserva.INSUMO).itemId(30L).quantidade(4).status(StatusReserva.CONFIRMADA).build();
         var captor = ArgumentCaptor.forClass(ReservaEntity.class);
 
         gateway.salvar(reserva);

@@ -26,7 +26,7 @@ class DeletarPecaUseCaseUnitTest {
 
     @Test
     void shouldCallDeleteWhenPecaExists() {
-        var peca = Peca.reconstituir(1L, "Filtro", "Desc", new BigDecimal("20.00"), 5);
+        var peca = Peca.builder().id(1L).nome("Filtro").descricao("Desc").preco(new BigDecimal("20.00")).quantidadeEstoque(5).build();
         Mockito.when(pecaGateway.buscarPorId(1L)).thenReturn(Optional.of(peca));
 
         deletarPecaUseCase.deletar(1L);

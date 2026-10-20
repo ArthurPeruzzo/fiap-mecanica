@@ -28,7 +28,7 @@ class ReservaUnitTest {
 
     @Test
     void definirQuantidade_shouldReativarReservaLiberada() {
-        var reserva = Reserva.reconstituir(9L, 1L, TipoItemReserva.INSUMO, 5L, 2, StatusReserva.LIBERADA);
+        var reserva = Reserva.builder().id(9L).ordemServicoId(1L).tipoItem(TipoItemReserva.INSUMO).itemId(5L).quantidade(2).status(StatusReserva.LIBERADA).build();
 
         reserva.definirQuantidade(4);
 
@@ -38,14 +38,14 @@ class ReservaUnitTest {
 
     @Test
     void definirQuantidade_shouldThrowWhenConfirmada() {
-        var reserva = Reserva.reconstituir(9L, 1L, TipoItemReserva.PECA, 5L, 2, StatusReserva.CONFIRMADA);
+        var reserva = Reserva.builder().id(9L).ordemServicoId(1L).tipoItem(TipoItemReserva.PECA).itemId(5L).quantidade(2).status(StatusReserva.CONFIRMADA).build();
 
         assertThrows(ReservaJaConfirmadaException.class, () -> reserva.definirQuantidade(3));
     }
 
     @Test
     void quantidadeAtiva_shouldBeZeroWhenConfirmada() {
-        var reserva = Reserva.reconstituir(9L, 1L, TipoItemReserva.PECA, 5L, 2, StatusReserva.ATIVA);
+        var reserva = Reserva.builder().id(9L).ordemServicoId(1L).tipoItem(TipoItemReserva.PECA).itemId(5L).quantidade(2).status(StatusReserva.ATIVA).build();
 
         reserva.confirmar();
 

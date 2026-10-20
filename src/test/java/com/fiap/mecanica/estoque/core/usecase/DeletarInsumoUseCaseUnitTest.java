@@ -27,7 +27,7 @@ class DeletarInsumoUseCaseUnitTest {
 
     @Test
     void shouldCallDeleteWhenInsumoExists() {
-        var insumo = Insumo.reconstituir(1L, "Óleo", "Desc", new BigDecimal("30.00"), UnidadeMedida.LITRO, 5);
+        var insumo = Insumo.builder().id(1L).nome("Óleo").descricao("Desc").preco(new BigDecimal("30.00")).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(5).build();
         Mockito.when(insumoGateway.buscarPorId(1L)).thenReturn(Optional.of(insumo));
 
         deletarInsumoUseCase.deletar(1L);

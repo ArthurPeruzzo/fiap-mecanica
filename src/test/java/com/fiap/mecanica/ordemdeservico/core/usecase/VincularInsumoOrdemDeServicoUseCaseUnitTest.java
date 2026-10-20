@@ -76,8 +76,7 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
     }
 
     private Insumo insumoComEstoque(Integer estoque) {
-        return Insumo.reconstituir(INSUMO_ID, "Óleo motor 5W30", "Óleo sintético", BigDecimal.TEN,
-                UnidadeMedida.LITRO, estoque);
+        return Insumo.builder().id(INSUMO_ID).nome("Óleo motor 5W30").descricao("Óleo sintético").preco(BigDecimal.TEN).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(estoque).build();
     }
 
     private void stubOrdem(OrdemDeServico os) {

@@ -42,7 +42,7 @@ public class InsumoDatabaseGateway implements InsumoGateway {
 	public Optional<Insumo> buscarPorId(Long id) {
 		try {
 			return insumoRepository.findById(id)
-					.map(e -> Insumo.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getUnidadeMedida(), e.getQuantidadeEstoque(), e.getQuantidadeReservada()));
+					.map(this::paraDominio);
 		} catch (Exception e) {
 			log.error("Erro ao buscar insumo por id: {}", id, e);
 			throw new ErroAcessoBaseDeDadosException();
@@ -82,7 +82,7 @@ public class InsumoDatabaseGateway implements InsumoGateway {
 		try {
 			var resultado = insumoRepository.findAll(PageRequest.of(page, size));
 			var insumos = resultado.getContent().stream()
-					.map(e -> Insumo.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getUnidadeMedida(), e.getQuantidadeEstoque(), e.getQuantidadeReservada()))
+					.map(this::paraDominio)
 					.toList();
 			return new Pagina<>(insumos, resultado.getNumber(), resultado.getSize(), resultado.getTotalElements(), resultado.getTotalPages());
 		} catch (Exception e) {
@@ -96,11 +96,15 @@ public class InsumoDatabaseGateway implements InsumoGateway {
 		try {
 			return insumoRepository.findAllById(insumosIds)
 					.stream()
-					.map(e -> Insumo.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getUnidadeMedida(), e.getQuantidadeEstoque(), e.getQuantidadeReservada()))
+					.map(this::paraDominio)
 					.toList();
 		} catch (Exception e) {
 			log.error("Erro ao listar insumos por ids: {}", insumosIds, e);
 			throw new ErroAcessoBaseDeDadosException();
 		}
+	}
+
+	private Insumo paraDominio(InsumoEntity e) {
+		return Insumo.builder().id(e.getId()).nome(e.getNome()).descricao(e.getDescricao()).preco(e.getPreco()).unidadeMedida(e.getUnidadeMedida()).quantidadeEstoque(e.getQuantidadeEstoque()).quantidadeReservada(e.getQuantidadeReservada()).build();
 	}
 }

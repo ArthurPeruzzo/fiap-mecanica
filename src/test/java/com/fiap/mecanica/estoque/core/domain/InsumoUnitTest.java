@@ -29,7 +29,7 @@ class InsumoUnitTest {
 
     @Test
     void reconstituir_shouldSetIdAndPreserveFields() {
-        var insumo = Insumo.reconstituir(1L, NOME, DESCRICAO, PRECO, UNIDADE, 5);
+        var insumo = Insumo.builder().id(1L).nome(NOME).descricao(DESCRICAO).preco(PRECO).unidadeMedida(UNIDADE).quantidadeEstoque(5).build();
 
         assertEquals(1L, insumo.getId());
         assertEquals(NOME, insumo.getNome());
@@ -41,7 +41,7 @@ class InsumoUnitTest {
 
     @Test
     void reconstituir_shouldWorkWithDifferentUnidadeMedida() {
-        var insumo = Insumo.reconstituir(2L, NOME, DESCRICAO, PRECO, UnidadeMedida.ML, 500);
+        var insumo = Insumo.builder().id(2L).nome(NOME).descricao(DESCRICAO).preco(PRECO).unidadeMedida(UnidadeMedida.ML).quantidadeEstoque(500).build();
 
         assertEquals(UnidadeMedida.ML, insumo.getUnidadeMedida());
         assertEquals(500, insumo.getEstoqueTotal());
@@ -91,7 +91,7 @@ class InsumoUnitTest {
 
     @Test
     void reservar_shouldThrowEstoqueInsuficienteWhenQuantidadeExceedsDisponivel() {
-        var insumo = Insumo.reconstituir(1L, NOME, DESCRICAO, PRECO, UNIDADE, 10, 8);
+        var insumo = Insumo.builder().id(1L).nome(NOME).descricao(DESCRICAO).preco(PRECO).unidadeMedida(UNIDADE).quantidadeEstoque(10).quantidadeReservada(8).build();
 
         assertThrows(EstoqueInsuficienteException.class, () -> insumo.reservar(3));
     }
@@ -105,7 +105,7 @@ class InsumoUnitTest {
 
     @Test
     void liberarReserva_shouldDecrementReservada() {
-        var insumo = Insumo.reconstituir(1L, NOME, DESCRICAO, PRECO, UNIDADE, 10, 5);
+        var insumo = Insumo.builder().id(1L).nome(NOME).descricao(DESCRICAO).preco(PRECO).unidadeMedida(UNIDADE).quantidadeEstoque(10).quantidadeReservada(5).build();
 
         insumo.liberarReserva(3);
 
@@ -115,7 +115,7 @@ class InsumoUnitTest {
 
     @Test
     void liberarReserva_shouldNotGoBelowZero() {
-        var insumo = Insumo.reconstituir(1L, NOME, DESCRICAO, PRECO, UNIDADE, 10, 2);
+        var insumo = Insumo.builder().id(1L).nome(NOME).descricao(DESCRICAO).preco(PRECO).unidadeMedida(UNIDADE).quantidadeEstoque(10).quantidadeReservada(2).build();
 
         insumo.liberarReserva(5);
 
@@ -124,7 +124,7 @@ class InsumoUnitTest {
 
     @Test
     void confirmarBaixa_shouldDecrementTotalAndReservada() {
-        var insumo = Insumo.reconstituir(1L, NOME, DESCRICAO, PRECO, UNIDADE, 10, 4);
+        var insumo = Insumo.builder().id(1L).nome(NOME).descricao(DESCRICAO).preco(PRECO).unidadeMedida(UNIDADE).quantidadeEstoque(10).quantidadeReservada(4).build();
 
         insumo.confirmarBaixa(4);
 
@@ -135,7 +135,7 @@ class InsumoUnitTest {
 
     @Test
     void atualizar_shouldThrowWhenQuantidadeMenorQueReservada() {
-        var insumo = Insumo.reconstituir(1L, NOME, DESCRICAO, PRECO, UNIDADE, 10, 6);
+        var insumo = Insumo.builder().id(1L).nome(NOME).descricao(DESCRICAO).preco(PRECO).unidadeMedida(UNIDADE).quantidadeEstoque(10).quantidadeReservada(6).build();
 
         assertThrows(QuantidadeEstoqueMenorQueReservadaException.class,
                 () -> insumo.atualizar(NOME, DESCRICAO, PRECO, UNIDADE, 5));

@@ -31,10 +31,10 @@ class ConfirmarELiberarReservasUseCaseUnitTest {
     private Reserva reservaInsumo;
 
     private void stubReservasAtivas() {
-        peca = Peca.reconstituir(5L, "Filtro", "desc", BigDecimal.TEN, 10, 3);
-        insumo = Insumo.reconstituir(30L, "Óleo", "desc", BigDecimal.TEN, UnidadeMedida.LITRO, 20, 4);
-        reservaPeca = Reserva.reconstituir(1L, ORDEM_ID, TipoItemReserva.PECA, 5L, 3, StatusReserva.ATIVA);
-        reservaInsumo = Reserva.reconstituir(2L, ORDEM_ID, TipoItemReserva.INSUMO, 30L, 4, StatusReserva.ATIVA);
+        peca = Peca.builder().id(5L).nome("Filtro").descricao("desc").preco(BigDecimal.TEN).quantidadeEstoque(10).quantidadeReservada(3).build();
+        insumo = Insumo.builder().id(30L).nome("Óleo").descricao("desc").preco(BigDecimal.TEN).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(20).quantidadeReservada(4).build();
+        reservaPeca = Reserva.builder().id(1L).ordemServicoId(ORDEM_ID).tipoItem(TipoItemReserva.PECA).itemId(5L).quantidade(3).status(StatusReserva.ATIVA).build();
+        reservaInsumo = Reserva.builder().id(2L).ordemServicoId(ORDEM_ID).tipoItem(TipoItemReserva.INSUMO).itemId(30L).quantidade(4).status(StatusReserva.ATIVA).build();
         Mockito.when(reservaGateway.listarAtivasPorOrdemDeServico(ORDEM_ID)).thenReturn(List.of(reservaPeca, reservaInsumo));
         Mockito.when(pecaGateway.buscarPorId(5L)).thenReturn(Optional.of(peca));
         Mockito.when(insumoGateway.buscarPorId(30L)).thenReturn(Optional.of(insumo));

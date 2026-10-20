@@ -2,10 +2,14 @@ package com.fiap.mecanica.estoque.core.domain;
 
 import com.fiap.mecanica.estoque.core.exception.EstoqueInsuficienteException;
 import com.fiap.mecanica.estoque.core.exception.QuantidadeEstoqueMenorQueReservadaException;
+import lombok.Builder;
+import lombok.experimental.SuperBuilder;
 
+@SuperBuilder
 public abstract class ItemEstoque {
 	private Integer quantidadeEstoque;
-	private Integer quantidadeReservada;
+	@Builder.Default
+	private Integer quantidadeReservada = 0;
 
 	protected ItemEstoque(Integer quantidadeEstoque) {
 		this(quantidadeEstoque, 0);

@@ -41,7 +41,7 @@ public class PecaDatabaseGateway implements PecaGateway {
 	public Optional<Peca> buscarPorId(Long id) {
 		try {
 			return pecaRepository.findById(id)
-					.map(e -> Peca.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getQuantidadeEstoque(), e.getQuantidadeReservada()));
+					.map(this::paraDominio);
 		} catch (Exception e) {
 			log.error("Erro ao buscar peca por id: {}", id, e);
 			throw new ErroAcessoBaseDeDadosException();
@@ -80,7 +80,7 @@ public class PecaDatabaseGateway implements PecaGateway {
 		try {
 			var resultado = pecaRepository.findAll(PageRequest.of(page, size));
 			var pecas = resultado.getContent().stream()
-					.map(e -> Peca.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getQuantidadeEstoque(), e.getQuantidadeReservada()))
+					.map(this::paraDominio)
 					.toList();
 			return new Pagina<>(pecas, resultado.getNumber(), resultado.getSize(), resultado.getTotalElements(), resultado.getTotalPages());
 		} catch (Exception e) {
@@ -94,11 +94,15 @@ public class PecaDatabaseGateway implements PecaGateway {
 		try {
 			return pecaRepository.findAllById(pecasIds)
 					.stream()
-					.map(e -> Peca.reconstituir(e.getId(), e.getNome(), e.getDescricao(), e.getPreco(), e.getQuantidadeEstoque(), e.getQuantidadeReservada()))
+					.map(this::paraDominio)
 					.toList();
 		} catch (Exception e) {
 			log.error("Erro ao listar pecas por ids: {}", pecasIds, e);
 			throw new ErroAcessoBaseDeDadosException();
 		}
+	}
+
+	private Peca paraDominio(PecaEntity e) {
+		return Peca.builder().id(e.getId()).nome(e.getNome()).descricao(e.getDescricao()).preco(e.getPreco()).quantidadeEstoque(e.getQuantidadeEstoque()).quantidadeReservada(e.getQuantidadeReservada()).build();
 	}
 }

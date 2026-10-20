@@ -44,7 +44,7 @@ class ListarInsumosUseCaseUnitTest {
 
     @Test
     void shouldCallOutputPortWithPaginaFromGateway() {
-        var insumo = Insumo.reconstituir(1L, "Óleo", "Desc", new BigDecimal("30.00"), UnidadeMedida.LITRO, 5);
+        var insumo = Insumo.builder().id(1L).nome("Óleo").descricao("Desc").preco(new BigDecimal("30.00")).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(5).build();
         var pagina = new Pagina<>(List.of(insumo), 0, 10, 1L, 1);
         Mockito.when(insumoGateway.listar(0, 10)).thenReturn(pagina);
 

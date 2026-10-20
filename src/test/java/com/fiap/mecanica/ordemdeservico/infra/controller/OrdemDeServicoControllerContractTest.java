@@ -168,9 +168,9 @@ class OrdemDeServicoControllerContractTest {
         Mockito.when(servicoGateway.listarPorIds(List.of(10L)))
                 .thenReturn(List.of(Servico.reconstituir(10L, "Serviço", "desc", BigDecimal.TEN)));
         Mockito.when(pecaGateway.listarPorIds(List.of(5L)))
-                .thenReturn(List.of(Peca.reconstituir(5L, "Peca", "desc", BigDecimal.TEN, 10)));
+                .thenReturn(List.of(Peca.builder().id(5L).nome("Peca").descricao("desc").preco(BigDecimal.TEN).quantidadeEstoque(10).build()));
         Mockito.when(insumoGateway.listarPorIds(List.of(30L)))
-                .thenReturn(List.of(Insumo.reconstituir(30L, "Insumo", "desc", BigDecimal.TEN, UnidadeMedida.LITRO, 10)));
+                .thenReturn(List.of(Insumo.builder().id(30L).nome("Insumo").descricao("desc").preco(BigDecimal.TEN).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(10).build()));
 
         String bodyWithLinks = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"," +
                 "\"servicosIds\":[10],\"pecas\":[{\"id\":5,\"quantidade\":2}],\"insumos\":[{\"id\":30,\"quantidade\":1}]}";
@@ -352,7 +352,7 @@ class OrdemDeServicoControllerContractTest {
         Mockito.when(ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(VEICULO_ID)).thenReturn(false);
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(1L);
         Mockito.when(pecaGateway.listarPorIds(Mockito.anyList()))
-                .thenReturn(List.of(Peca.reconstituir(5L, "Peca", "desc", BigDecimal.TEN, 0)));
+                .thenReturn(List.of(Peca.builder().id(5L).nome("Peca").descricao("desc").preco(BigDecimal.TEN).quantidadeEstoque(0).build()));
         Mockito.doThrow(new EstoqueInsuficienteException())
                 .when(reservaEstoqueGateway).reservarPeca(Mockito.eq(1L), Mockito.eq(5L), Mockito.anyInt());
 

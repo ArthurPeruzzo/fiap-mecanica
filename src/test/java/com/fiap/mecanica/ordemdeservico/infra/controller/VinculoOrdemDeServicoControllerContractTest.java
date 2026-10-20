@@ -103,11 +103,11 @@ class VinculoOrdemDeServicoControllerContractTest {
     }
 
     private Peca pecaComEstoque(int estoque) {
-        return Peca.reconstituir(5L, "Peca", "desc", BigDecimal.TEN, estoque);
+        return Peca.builder().id(5L).nome("Peca").descricao("desc").preco(BigDecimal.TEN).quantidadeEstoque(estoque).build();
     }
 
     private Insumo insumoComEstoque(int estoque) {
-        return Insumo.reconstituir(30L, "Insumo", "desc", BigDecimal.TEN, UnidadeMedida.LITRO, estoque);
+        return Insumo.builder().id(30L).nome("Insumo").descricao("desc").preco(BigDecimal.TEN).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(estoque).build();
     }
 
     // ---- vincularServico ----

@@ -266,7 +266,7 @@ class CriarOrdemDeServicoUseCaseUnitTest {
         stubAtendente();
         stubClienteEVeiculo();
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(5L);
-        var peca = Peca.reconstituir(20L, "Filtro", "desc", BigDecimal.TEN, 10);
+        var peca = Peca.builder().id(20L).nome("Filtro").descricao("desc").preco(BigDecimal.TEN).quantidadeEstoque(10).build();
         Mockito.when(pecaGateway.listarPorIds(List.of(20L))).thenReturn(List.of(peca));
 
         criarOrdemDeServicoUseCase.criar(new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID, null,
@@ -281,7 +281,7 @@ class CriarOrdemDeServicoUseCaseUnitTest {
         stubAtendente();
         stubClienteEVeiculo();
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(5L);
-        var insumo = Insumo.reconstituir(30L, "Óleo", "desc", BigDecimal.TEN, UnidadeMedida.LITRO, 10);
+        var insumo = Insumo.builder().id(30L).nome("Óleo").descricao("desc").preco(BigDecimal.TEN).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(10).build();
         Mockito.when(insumoGateway.listarPorIds(List.of(30L))).thenReturn(List.of(insumo));
 
         criarOrdemDeServicoUseCase.criar(new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID, null, null,
@@ -328,7 +328,7 @@ class CriarOrdemDeServicoUseCaseUnitTest {
         stubAtendente();
         stubClienteEVeiculo();
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(5L);
-        var pecaSemEstoque = Peca.reconstituir(20L, "Filtro", "desc", BigDecimal.TEN, 0);
+        var pecaSemEstoque = Peca.builder().id(20L).nome("Filtro").descricao("desc").preco(BigDecimal.TEN).quantidadeEstoque(0).build();
         Mockito.when(pecaGateway.listarPorIds(List.of(20L))).thenReturn(List.of(pecaSemEstoque));
         Mockito.doThrow(new EstoqueInsuficienteException()).when(reservaEstoqueGateway).reservarPeca(5L, 20L, 3);
         CriarOrdemDeServicoDto dto = new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID, null,
@@ -341,7 +341,7 @@ class CriarOrdemDeServicoUseCaseUnitTest {
         stubAtendente();
         stubClienteEVeiculo();
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(5L);
-        var insumoSemEstoque = Insumo.reconstituir(30L, "Óleo", "desc", BigDecimal.TEN, UnidadeMedida.LITRO, 0);
+        var insumoSemEstoque = Insumo.builder().id(30L).nome("Óleo").descricao("desc").preco(BigDecimal.TEN).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(0).build();
         Mockito.when(insumoGateway.listarPorIds(List.of(30L))).thenReturn(List.of(insumoSemEstoque));
         Mockito.doThrow(new EstoqueInsuficienteException()).when(reservaEstoqueGateway).reservarInsumo(5L, 30L, 3);
 

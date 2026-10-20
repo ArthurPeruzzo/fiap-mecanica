@@ -1,9 +1,14 @@
 package com.fiap.mecanica.estoque.core.domain;
 
 import com.fiap.mecanica.estoque.core.exception.ReservaJaConfirmadaException;
+import lombok.Builder;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @Getter
+@Builder
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Reserva {
 	private Long id;
 	private final Long ordemServicoId;
@@ -18,15 +23,6 @@ public class Reserva {
 		this.itemId = itemId;
 		this.quantidade = 0;
 		this.status = StatusReserva.ATIVA;
-	}
-
-	public static Reserva reconstituir(Long id, Long ordemServicoId, TipoItemReserva tipoItem, Long itemId,
-									   Integer quantidade, StatusReserva status) {
-		var reserva = new Reserva(ordemServicoId, tipoItem, itemId);
-		reserva.id = id;
-		reserva.quantidade = quantidade;
-		reserva.status = status;
-		return reserva;
 	}
 
 	public boolean isAtiva() {

@@ -82,7 +82,7 @@ class InsumoControllerContractTest {
 
     @Test
     void shouldReturn200WithInsumosMappedToResponseJson() throws Exception {
-        var insumo = Insumo.reconstituir(1L, "Óleo", "5W30", new BigDecimal("45.90"), UnidadeMedida.LITRO, 10);
+        var insumo = Insumo.builder().id(1L).nome("Óleo").descricao("5W30").preco(new BigDecimal("45.90")).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(10).build();
         Mockito.when(insumoGateway.listar(0, 10)).thenReturn(new Pagina<>(List.of(insumo), 0, 10, 1L, 1));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/insumo")
@@ -97,7 +97,7 @@ class InsumoControllerContractTest {
 
     @Test
     void shouldReturn204WhenValidUpdate() throws Exception {
-        var insumo = Insumo.reconstituir(1L, "Óleo", "5W30", new BigDecimal("45.90"), UnidadeMedida.LITRO, 10);
+        var insumo = Insumo.builder().id(1L).nome("Óleo").descricao("5W30").preco(new BigDecimal("45.90")).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(10).build();
         Mockito.when(insumoGateway.buscarPorId(1L)).thenReturn(Optional.of(insumo));
 
         mockMvc.perform(MockMvcRequestBuilders.put("/insumo/1")
@@ -132,7 +132,7 @@ class InsumoControllerContractTest {
 
     @Test
     void shouldReturn204WhenDeletarInsumoSuccessfully() throws Exception {
-        var insumo = Insumo.reconstituir(1L, "Óleo", "5W30", new BigDecimal("45.90"), UnidadeMedida.LITRO, 10);
+        var insumo = Insumo.builder().id(1L).nome("Óleo").descricao("5W30").preco(new BigDecimal("45.90")).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(10).build();
         Mockito.when(insumoGateway.buscarPorId(1L)).thenReturn(Optional.of(insumo));
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/insumo/1"))

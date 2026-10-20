@@ -75,7 +75,7 @@ class DesvincularPecaOrdemDeServicoUseCaseUnitTest {
     }
 
     private Peca pecaComEstoque(Integer estoque) {
-        return Peca.reconstituir(PECA_ID, "Pastilha de freio", "Pastilha dianteira", BigDecimal.TEN, estoque);
+        return Peca.builder().id(PECA_ID).nome("Pastilha de freio").descricao("Pastilha dianteira").preco(BigDecimal.TEN).quantidadeEstoque(estoque).build();
     }
 
     private void stubOrdem(OrdemDeServico os) {

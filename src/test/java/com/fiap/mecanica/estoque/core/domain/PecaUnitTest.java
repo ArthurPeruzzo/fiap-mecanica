@@ -27,7 +27,7 @@ class PecaUnitTest {
 
     @Test
     void reconstituir_shouldSetIdAndPreserveFields() {
-        var peca = Peca.reconstituir(1L, NOME, DESCRICAO, PRECO, 5);
+        var peca = Peca.builder().id(1L).nome(NOME).descricao(DESCRICAO).preco(PRECO).quantidadeEstoque(5).build();
 
         assertEquals(1L, peca.getId());
         assertEquals(NOME, peca.getNome());
@@ -79,7 +79,7 @@ class PecaUnitTest {
 
     @Test
     void reservar_shouldThrowEstoqueInsuficienteWhenQuantidadeExceedsDisponivel() {
-        var peca = Peca.reconstituir(1L, NOME, DESCRICAO, PRECO, 10, 8);
+        var peca = Peca.builder().id(1L).nome(NOME).descricao(DESCRICAO).preco(PRECO).quantidadeEstoque(10).quantidadeReservada(8).build();
 
         assertThrows(EstoqueInsuficienteException.class, () -> peca.reservar(3));
     }
@@ -93,7 +93,7 @@ class PecaUnitTest {
 
     @Test
     void liberarReserva_shouldDecrementReservada() {
-        var peca = Peca.reconstituir(1L, NOME, DESCRICAO, PRECO, 10, 5);
+        var peca = Peca.builder().id(1L).nome(NOME).descricao(DESCRICAO).preco(PRECO).quantidadeEstoque(10).quantidadeReservada(5).build();
 
         peca.liberarReserva(3);
 
@@ -103,7 +103,7 @@ class PecaUnitTest {
 
     @Test
     void liberarReserva_shouldNotGoBelowZero() {
-        var peca = Peca.reconstituir(1L, NOME, DESCRICAO, PRECO, 10, 2);
+        var peca = Peca.builder().id(1L).nome(NOME).descricao(DESCRICAO).preco(PRECO).quantidadeEstoque(10).quantidadeReservada(2).build();
 
         peca.liberarReserva(5);
 
@@ -112,7 +112,7 @@ class PecaUnitTest {
 
     @Test
     void confirmarBaixa_shouldDecrementTotalAndReservada() {
-        var peca = Peca.reconstituir(1L, NOME, DESCRICAO, PRECO, 10, 4);
+        var peca = Peca.builder().id(1L).nome(NOME).descricao(DESCRICAO).preco(PRECO).quantidadeEstoque(10).quantidadeReservada(4).build();
 
         peca.confirmarBaixa(4);
 
@@ -123,7 +123,7 @@ class PecaUnitTest {
 
     @Test
     void atualizar_shouldThrowWhenQuantidadeMenorQueReservada() {
-        var peca = Peca.reconstituir(1L, NOME, DESCRICAO, PRECO, 10, 6);
+        var peca = Peca.builder().id(1L).nome(NOME).descricao(DESCRICAO).preco(PRECO).quantidadeEstoque(10).quantidadeReservada(6).build();
 
         assertThrows(QuantidadeEstoqueMenorQueReservadaException.class,
                 () -> peca.atualizar(NOME, DESCRICAO, PRECO, 5));

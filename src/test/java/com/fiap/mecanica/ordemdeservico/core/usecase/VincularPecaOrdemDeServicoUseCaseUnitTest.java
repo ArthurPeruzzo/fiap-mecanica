@@ -75,7 +75,7 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
     }
 
     private Peca pecaComEstoque(Integer estoque) {
-        return Peca.reconstituir(PECA_ID, "Filtro de óleo", "Filtro original", BigDecimal.TEN, estoque);
+        return Peca.builder().id(PECA_ID).nome("Filtro de óleo").descricao("Filtro original").preco(BigDecimal.TEN).quantidadeEstoque(estoque).build();
     }
 
     private void stubOrdem(OrdemDeServico os) {

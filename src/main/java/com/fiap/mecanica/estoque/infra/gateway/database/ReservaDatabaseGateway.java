@@ -63,6 +63,6 @@ public class ReservaDatabaseGateway implements ReservaGateway {
 	}
 
 	private Reserva toDomain(ReservaEntity e) {
-		return Reserva.reconstituir(e.getId(), e.getOrdemServicoId(), e.getTipoItem(), e.getItemId(), e.getQuantidade(), e.getStatus());
+		return Reserva.builder().id(e.getId()).ordemServicoId(e.getOrdemServicoId()).tipoItem(e.getTipoItem()).itemId(e.getItemId()).quantidade(e.getQuantidade()).status(e.getStatus()).build();
 	}
 }

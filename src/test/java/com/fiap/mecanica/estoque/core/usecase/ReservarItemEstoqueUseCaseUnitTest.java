@@ -39,7 +39,7 @@ class ReservarItemEstoqueUseCaseUnitTest {
     }
 
     private Peca peca(int estoque, int reservada) {
-        return Peca.reconstituir(PECA_ID, "Filtro", "desc", BigDecimal.TEN, estoque, reservada);
+        return Peca.builder().id(PECA_ID).nome("Filtro").descricao("desc").preco(BigDecimal.TEN).quantidadeEstoque(estoque).quantidadeReservada(reservada).build();
     }
 
     @Test
@@ -64,7 +64,7 @@ class ReservarItemEstoqueUseCaseUnitTest {
         var peca = peca(10, 2);
         Mockito.when(pecaGateway.buscarPorId(PECA_ID)).thenReturn(Optional.of(peca));
         Mockito.when(reservaGateway.buscar(ORDEM_ID, TipoItemReserva.PECA, PECA_ID)).thenReturn(Optional.of(
-                Reserva.reconstituir(7L, ORDEM_ID, TipoItemReserva.PECA, PECA_ID, 2, StatusReserva.ATIVA)));
+                Reserva.builder().id(7L).ordemServicoId(ORDEM_ID).tipoItem(TipoItemReserva.PECA).itemId(PECA_ID).quantidade(2).status(StatusReserva.ATIVA).build()));
 
         useCase.reservar(ORDEM_ID, TipoItemReserva.PECA, PECA_ID, 5);
 
@@ -76,7 +76,7 @@ class ReservarItemEstoqueUseCaseUnitTest {
         var peca = peca(10, 5);
         Mockito.when(pecaGateway.buscarPorId(PECA_ID)).thenReturn(Optional.of(peca));
         Mockito.when(reservaGateway.buscar(ORDEM_ID, TipoItemReserva.PECA, PECA_ID)).thenReturn(Optional.of(
-                Reserva.reconstituir(7L, ORDEM_ID, TipoItemReserva.PECA, PECA_ID, 5, StatusReserva.ATIVA)));
+                Reserva.builder().id(7L).ordemServicoId(ORDEM_ID).tipoItem(TipoItemReserva.PECA).itemId(PECA_ID).quantidade(5).status(StatusReserva.ATIVA).build()));
 
         useCase.reservar(ORDEM_ID, TipoItemReserva.PECA, PECA_ID, 0);
 
@@ -90,7 +90,7 @@ class ReservarItemEstoqueUseCaseUnitTest {
     void shouldSerIdempotenteQuandoTotalNaoMuda() {
         Mockito.when(pecaGateway.buscarPorId(PECA_ID)).thenReturn(Optional.of(peca(10, 3)));
         Mockito.when(reservaGateway.buscar(ORDEM_ID, TipoItemReserva.PECA, PECA_ID)).thenReturn(Optional.of(
-                Reserva.reconstituir(7L, ORDEM_ID, TipoItemReserva.PECA, PECA_ID, 3, StatusReserva.ATIVA)));
+                Reserva.builder().id(7L).ordemServicoId(ORDEM_ID).tipoItem(TipoItemReserva.PECA).itemId(PECA_ID).quantidade(3).status(StatusReserva.ATIVA).build()));
 
         useCase.reservar(ORDEM_ID, TipoItemReserva.PECA, PECA_ID, 3);
 
@@ -112,7 +112,7 @@ class ReservarItemEstoqueUseCaseUnitTest {
 
     @Test
     void shouldReservarInsumo() {
-        var insumo = Insumo.reconstituir(INSUMO_ID, "Óleo", "desc", BigDecimal.TEN, UnidadeMedida.LITRO, 20, 0);
+        var insumo = Insumo.builder().id(INSUMO_ID).nome("Óleo").descricao("desc").preco(BigDecimal.TEN).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(20).quantidadeReservada(0).build();
         Mockito.when(insumoGateway.buscarPorId(INSUMO_ID)).thenReturn(Optional.of(insumo));
         Mockito.when(reservaGateway.buscar(ORDEM_ID, TipoItemReserva.INSUMO, INSUMO_ID)).thenReturn(Optional.empty());
 
