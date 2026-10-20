@@ -1,4 +1,4 @@
-package com.fiap.mecanica.estoque.core.usecase;
+package com.fiap.mecanica.estoque.infra.gateway.database;
 
 import com.fiap.mecanica.estoque.core.domain.Insumo;
 import com.fiap.mecanica.estoque.core.domain.ItemEstoque;
@@ -7,26 +7,28 @@ import com.fiap.mecanica.estoque.core.domain.TipoItemReserva;
 import com.fiap.mecanica.estoque.core.exception.InsumoNaoEncontradoException;
 import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
 import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
+import com.fiap.mecanica.estoque.core.gateway.ItemEstoqueGateway;
 import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
-class ItensEstoque {
+@Component
+@RequiredArgsConstructor
+public class ItemEstoqueDatabaseGateway implements ItemEstoqueGateway {
 
 	private final PecaGateway pecaGateway;
 	private final InsumoGateway insumoGateway;
 
-	ItensEstoque(PecaGateway pecaGateway, InsumoGateway insumoGateway) {
-		this.pecaGateway = pecaGateway;
-		this.insumoGateway = insumoGateway;
-	}
-
-	ItemEstoque buscar(TipoItemReserva tipoItem, Long itemId) {
+	@Override
+	public ItemEstoque buscar(TipoItemReserva tipoItem, Long itemId) {
 		return switch (tipoItem) {
 			case PECA -> pecaGateway.buscarPorId(itemId).orElseThrow(PecaNaoEncontradaException::new);
 			case INSUMO -> insumoGateway.buscarPorId(itemId).orElseThrow(InsumoNaoEncontradoException::new);
 		};
 	}
 
-	void atualizar(ItemEstoque item) {
+	@Override
+	public void atualizar(ItemEstoque item) {
 		switch (item) {
 			case Peca peca -> pecaGateway.atualizar(peca);
 			case Insumo insumo -> insumoGateway.atualizar(insumo);

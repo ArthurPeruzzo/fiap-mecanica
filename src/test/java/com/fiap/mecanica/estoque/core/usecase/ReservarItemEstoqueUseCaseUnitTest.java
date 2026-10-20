@@ -4,8 +4,7 @@ import com.fiap.mecanica.estoque.core.domain.*;
 import com.fiap.mecanica.estoque.core.exception.EstoqueInsuficienteException;
 import com.fiap.mecanica.estoque.core.exception.InsumoNaoEncontradoException;
 import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
+import com.fiap.mecanica.estoque.core.gateway.ItemEstoqueGateway;
 import com.fiap.mecanica.estoque.core.gateway.ReservaGateway;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,8 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @ExtendWith(MockitoExtension.class)
 class ReservarItemEstoqueUseCaseUnitTest {
 
-    @Mock private PecaGateway pecaGateway;
-    @Mock private InsumoGateway insumoGateway;
+    @Mock private ItemEstoqueGateway itemEstoqueGateway;
     @Mock private ReservaGateway reservaGateway;
 
     private ReservarItemEstoqueUseCase useCase;
@@ -35,7 +33,7 @@ class ReservarItemEstoqueUseCaseUnitTest {
 
     @BeforeEach
     void setUp() {
-        useCase = new ReservarItemEstoqueUseCase(pecaGateway, insumoGateway, reservaGateway);
+        useCase = new ReservarItemEstoqueUseCase(itemEstoqueGateway, reservaGateway);
     }
 
     private Peca peca(int estoque, int reservada) {
@@ -45,14 +43,14 @@ class ReservarItemEstoqueUseCaseUnitTest {
     @Test
     void shouldCriarReservaENaoAlterarEstoqueTotal() {
         var peca = peca(10, 0);
-        Mockito.when(pecaGateway.buscarPorId(PECA_ID)).thenReturn(Optional.of(peca));
+        Mockito.when(itemEstoqueGateway.buscar(TipoItemReserva.PECA, PECA_ID)).thenReturn(peca);
         Mockito.when(reservaGateway.buscar(ORDEM_ID, TipoItemReserva.PECA, PECA_ID)).thenReturn(Optional.empty());
 
         useCase.reservar(ORDEM_ID, TipoItemReserva.PECA, PECA_ID, 3);
 
         assertEquals(10, peca.getEstoqueTotal());
         assertEquals(3, peca.getQuantidadeReservada());
-        Mockito.verify(pecaGateway).atualizar(peca);
+        Mockito.verify(itemEstoqueGateway).atualizar(peca);
         var captor = ArgumentCaptor.forClass(Reserva.class);
         Mockito.verify(reservaGateway).salvar(captor.capture());
         assertEquals(3, captor.getValue().getQuantidade());
@@ -62,7 +60,7 @@ class ReservarItemEstoqueUseCaseUnitTest {
     @Test
     void shouldReservarSomenteADiferencaQuandoTotalAumenta() {
         var peca = peca(10, 2);
-        Mockito.when(pecaGateway.buscarPorId(PECA_ID)).thenReturn(Optional.of(peca));
+        Mockito.when(itemEstoqueGateway.buscar(TipoItemReserva.PECA, PECA_ID)).thenReturn(peca);
         Mockito.when(reservaGateway.buscar(ORDEM_ID, TipoItemReserva.PECA, PECA_ID)).thenReturn(Optional.of(
                 Reserva.builder().id(7L).ordemServicoId(ORDEM_ID).tipoItem(TipoItemReserva.PECA).itemId(PECA_ID).quantidade(2).status(StatusReserva.ATIVA).build()));
 
@@ -74,7 +72,7 @@ class ReservarItemEstoqueUseCaseUnitTest {
     @Test
     void shouldLiberarADiferencaQuandoTotalDiminui() {
         var peca = peca(10, 5);
-        Mockito.when(pecaGateway.buscarPorId(PECA_ID)).thenReturn(Optional.of(peca));
+        Mockito.when(itemEstoqueGateway.buscar(TipoItemReserva.PECA, PECA_ID)).thenReturn(peca);
         Mockito.when(reservaGateway.buscar(ORDEM_ID, TipoItemReserva.PECA, PECA_ID)).thenReturn(Optional.of(
                 Reserva.builder().id(7L).ordemServicoId(ORDEM_ID).tipoItem(TipoItemReserva.PECA).itemId(PECA_ID).quantidade(5).status(StatusReserva.ATIVA).build()));
 
@@ -88,44 +86,44 @@ class ReservarItemEstoqueUseCaseUnitTest {
 
     @Test
     void shouldSerIdempotenteQuandoTotalNaoMuda() {
-        Mockito.when(pecaGateway.buscarPorId(PECA_ID)).thenReturn(Optional.of(peca(10, 3)));
+        Mockito.when(itemEstoqueGateway.buscar(TipoItemReserva.PECA, PECA_ID)).thenReturn(peca(10, 3));
         Mockito.when(reservaGateway.buscar(ORDEM_ID, TipoItemReserva.PECA, PECA_ID)).thenReturn(Optional.of(
                 Reserva.builder().id(7L).ordemServicoId(ORDEM_ID).tipoItem(TipoItemReserva.PECA).itemId(PECA_ID).quantidade(3).status(StatusReserva.ATIVA).build()));
 
         useCase.reservar(ORDEM_ID, TipoItemReserva.PECA, PECA_ID, 3);
 
-        Mockito.verify(pecaGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verify(itemEstoqueGateway, Mockito.never()).atualizar(Mockito.any());
         Mockito.verify(reservaGateway, Mockito.never()).salvar(Mockito.any());
     }
 
     @Test
     void shouldThrowEstoqueInsuficienteSemPersistir() {
-        Mockito.when(pecaGateway.buscarPorId(PECA_ID)).thenReturn(Optional.of(peca(10, 9)));
+        Mockito.when(itemEstoqueGateway.buscar(TipoItemReserva.PECA, PECA_ID)).thenReturn(peca(10, 9));
         Mockito.when(reservaGateway.buscar(ORDEM_ID, TipoItemReserva.PECA, PECA_ID)).thenReturn(Optional.empty());
 
         assertThrows(EstoqueInsuficienteException.class,
                 () -> useCase.reservar(ORDEM_ID, TipoItemReserva.PECA, PECA_ID, 2));
 
-        Mockito.verify(pecaGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verify(itemEstoqueGateway, Mockito.never()).atualizar(Mockito.any());
         Mockito.verify(reservaGateway, Mockito.never()).salvar(Mockito.any());
     }
 
     @Test
     void shouldReservarInsumo() {
         var insumo = Insumo.builder().id(INSUMO_ID).nome("Óleo").descricao("desc").preco(BigDecimal.TEN).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(20).quantidadeReservada(0).build();
-        Mockito.when(insumoGateway.buscarPorId(INSUMO_ID)).thenReturn(Optional.of(insumo));
+        Mockito.when(itemEstoqueGateway.buscar(TipoItemReserva.INSUMO, INSUMO_ID)).thenReturn(insumo);
         Mockito.when(reservaGateway.buscar(ORDEM_ID, TipoItemReserva.INSUMO, INSUMO_ID)).thenReturn(Optional.empty());
 
         useCase.reservar(ORDEM_ID, TipoItemReserva.INSUMO, INSUMO_ID, 4);
 
         assertEquals(4, insumo.getQuantidadeReservada());
-        Mockito.verify(insumoGateway).atualizar(insumo);
-        Mockito.verifyNoInteractions(pecaGateway);
+        Mockito.verify(itemEstoqueGateway).atualizar(insumo);
+        Mockito.verify(itemEstoqueGateway, Mockito.never()).buscar(Mockito.eq(TipoItemReserva.PECA), Mockito.any());
     }
 
     @Test
     void shouldThrowWhenPecaNotFound() {
-        Mockito.when(pecaGateway.buscarPorId(PECA_ID)).thenReturn(Optional.empty());
+        Mockito.when(itemEstoqueGateway.buscar(TipoItemReserva.PECA, PECA_ID)).thenThrow(new PecaNaoEncontradaException());
 
         assertThrows(PecaNaoEncontradaException.class,
                 () -> useCase.reservar(ORDEM_ID, TipoItemReserva.PECA, PECA_ID, 1));
@@ -134,7 +132,7 @@ class ReservarItemEstoqueUseCaseUnitTest {
 
     @Test
     void shouldThrowWhenInsumoNotFound() {
-        Mockito.when(insumoGateway.buscarPorId(INSUMO_ID)).thenReturn(Optional.empty());
+        Mockito.when(itemEstoqueGateway.buscar(TipoItemReserva.INSUMO, INSUMO_ID)).thenThrow(new InsumoNaoEncontradoException());
 
         assertThrows(InsumoNaoEncontradoException.class,
                 () -> useCase.reservar(ORDEM_ID, TipoItemReserva.INSUMO, INSUMO_ID, 1));

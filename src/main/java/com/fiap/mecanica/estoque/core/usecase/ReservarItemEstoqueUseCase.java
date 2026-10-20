@@ -2,9 +2,9 @@ package com.fiap.mecanica.estoque.core.usecase;
 
 import com.fiap.mecanica.estoque.core.domain.ItemEstoque;
 import com.fiap.mecanica.estoque.core.domain.Reserva;
+import com.fiap.mecanica.estoque.core.domain.ReservaDeEstoque;
 import com.fiap.mecanica.estoque.core.domain.TipoItemReserva;
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
+import com.fiap.mecanica.estoque.core.gateway.ItemEstoqueGateway;
 import com.fiap.mecanica.estoque.core.gateway.ReservaGateway;
 
 /**
@@ -13,30 +13,23 @@ import com.fiap.mecanica.estoque.core.gateway.ReservaGateway;
  */
 public class ReservarItemEstoqueUseCase {
 
-	private final ItensEstoque itensEstoque;
+	private final ItemEstoqueGateway itemEstoqueGateway;
 	private final ReservaGateway reservaGateway;
+	private final ReservaDeEstoque reservaDeEstoque = new ReservaDeEstoque();
 
-	public ReservarItemEstoqueUseCase(PecaGateway pecaGateway, InsumoGateway insumoGateway, ReservaGateway reservaGateway) {
-		this.itensEstoque = new ItensEstoque(pecaGateway, insumoGateway);
+	public ReservarItemEstoqueUseCase(ItemEstoqueGateway itemEstoqueGateway, ReservaGateway reservaGateway) {
+		this.itemEstoqueGateway = itemEstoqueGateway;
 		this.reservaGateway = reservaGateway;
 	}
 
 	public void reservar(Long ordemServicoId, TipoItemReserva tipoItem, Long itemId, Integer quantidadeTotal) {
-		ItemEstoque item = itensEstoque.buscar(tipoItem, itemId);
+		ItemEstoque item = itemEstoqueGateway.buscar(tipoItem, itemId);
 		Reserva reserva = reservaGateway.buscar(ordemServicoId, tipoItem, itemId)
 				.orElseGet(() -> new Reserva(ordemServicoId, tipoItem, itemId));
 
-		int diferenca = quantidadeTotal - reserva.quantidadeAtiva();
-		if (diferenca == 0) return;
+		if (!reservaDeEstoque.definirQuantidade(item, reserva, quantidadeTotal)) return;
 
-		reserva.definirQuantidade(quantidadeTotal);
-		if (diferenca > 0) {
-			item.reservar(diferenca);
-		} else if (diferenca < 0) {
-			item.liberarReserva(-diferenca);
-		}
-
-		itensEstoque.atualizar(item);
+		itemEstoqueGateway.atualizar(item);
 		reservaGateway.salvar(reserva);
 	}
 }

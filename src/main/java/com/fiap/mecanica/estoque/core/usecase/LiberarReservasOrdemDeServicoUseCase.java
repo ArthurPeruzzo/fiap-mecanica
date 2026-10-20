@@ -1,8 +1,7 @@
 package com.fiap.mecanica.estoque.core.usecase;
 
 import com.fiap.mecanica.estoque.core.domain.ItemEstoque;
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
+import com.fiap.mecanica.estoque.core.gateway.ItemEstoqueGateway;
 import com.fiap.mecanica.estoque.core.gateway.ReservaGateway;
 
 /**
@@ -10,20 +9,20 @@ import com.fiap.mecanica.estoque.core.gateway.ReservaGateway;
  */
 public class LiberarReservasOrdemDeServicoUseCase {
 
-	private final ItensEstoque itensEstoque;
+	private final ItemEstoqueGateway itemEstoqueGateway;
 	private final ReservaGateway reservaGateway;
 
-	public LiberarReservasOrdemDeServicoUseCase(PecaGateway pecaGateway, InsumoGateway insumoGateway, ReservaGateway reservaGateway) {
-		this.itensEstoque = new ItensEstoque(pecaGateway, insumoGateway);
+	public LiberarReservasOrdemDeServicoUseCase(ItemEstoqueGateway itemEstoqueGateway, ReservaGateway reservaGateway) {
+		this.itemEstoqueGateway = itemEstoqueGateway;
 		this.reservaGateway = reservaGateway;
 	}
 
 	public void liberar(Long ordemServicoId) {
 		reservaGateway.listarAtivasPorOrdemDeServico(ordemServicoId).forEach(reserva -> {
-			ItemEstoque item = itensEstoque.buscar(reserva.getTipoItem(), reserva.getItemId());
+			ItemEstoque item = itemEstoqueGateway.buscar(reserva.getTipoItem(), reserva.getItemId());
 			item.liberarReserva(reserva.getQuantidade());
 			reserva.liberar();
-			itensEstoque.atualizar(item);
+			itemEstoqueGateway.atualizar(item);
 			reservaGateway.salvar(reserva);
 		});
 	}

@@ -1,8 +1,7 @@
 package com.fiap.mecanica.estoque.core.usecase;
 
 import com.fiap.mecanica.estoque.core.domain.*;
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
+import com.fiap.mecanica.estoque.core.gateway.ItemEstoqueGateway;
 import com.fiap.mecanica.estoque.core.gateway.ReservaGateway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,8 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @ExtendWith(MockitoExtension.class)
 class ConfirmarELiberarReservasUseCaseUnitTest {
 
-    @Mock private PecaGateway pecaGateway;
-    @Mock private InsumoGateway insumoGateway;
+    @Mock private ItemEstoqueGateway itemEstoqueGateway;
     @Mock private ReservaGateway reservaGateway;
 
     private static final Long ORDEM_ID = 1L;
@@ -36,15 +34,15 @@ class ConfirmarELiberarReservasUseCaseUnitTest {
         reservaPeca = Reserva.builder().id(1L).ordemServicoId(ORDEM_ID).tipoItem(TipoItemReserva.PECA).itemId(5L).quantidade(3).status(StatusReserva.ATIVA).build();
         reservaInsumo = Reserva.builder().id(2L).ordemServicoId(ORDEM_ID).tipoItem(TipoItemReserva.INSUMO).itemId(30L).quantidade(4).status(StatusReserva.ATIVA).build();
         Mockito.when(reservaGateway.listarAtivasPorOrdemDeServico(ORDEM_ID)).thenReturn(List.of(reservaPeca, reservaInsumo));
-        Mockito.when(pecaGateway.buscarPorId(5L)).thenReturn(Optional.of(peca));
-        Mockito.when(insumoGateway.buscarPorId(30L)).thenReturn(Optional.of(insumo));
+        Mockito.when(itemEstoqueGateway.buscar(TipoItemReserva.PECA, 5L)).thenReturn(peca);
+        Mockito.when(itemEstoqueGateway.buscar(TipoItemReserva.INSUMO, 30L)).thenReturn(insumo);
     }
 
     @Test
     void confirmar_shouldBaixarEstoqueEConfirmarReservas() {
         stubReservasAtivas();
 
-        new ConfirmarReservasOrdemDeServicoUseCase(pecaGateway, insumoGateway, reservaGateway).confirmar(ORDEM_ID);
+        new ConfirmarReservasOrdemDeServicoUseCase(itemEstoqueGateway, reservaGateway).confirmar(ORDEM_ID);
 
         assertEquals(7, peca.getEstoqueTotal());
         assertEquals(0, peca.getQuantidadeReservada());
@@ -52,8 +50,8 @@ class ConfirmarELiberarReservasUseCaseUnitTest {
         assertEquals(0, insumo.getQuantidadeReservada());
         assertEquals(StatusReserva.CONFIRMADA, reservaPeca.getStatus());
         assertEquals(StatusReserva.CONFIRMADA, reservaInsumo.getStatus());
-        Mockito.verify(pecaGateway).atualizar(peca);
-        Mockito.verify(insumoGateway).atualizar(insumo);
+        Mockito.verify(itemEstoqueGateway).atualizar(peca);
+        Mockito.verify(itemEstoqueGateway).atualizar(insumo);
         Mockito.verify(reservaGateway, Mockito.times(2)).salvar(Mockito.any());
     }
 
@@ -61,7 +59,7 @@ class ConfirmarELiberarReservasUseCaseUnitTest {
     void liberar_shouldDevolverAoDisponivelSemAlterarTotal() {
         stubReservasAtivas();
 
-        new LiberarReservasOrdemDeServicoUseCase(pecaGateway, insumoGateway, reservaGateway).liberar(ORDEM_ID);
+        new LiberarReservasOrdemDeServicoUseCase(itemEstoqueGateway, reservaGateway).liberar(ORDEM_ID);
 
         assertEquals(10, peca.getEstoqueTotal());
         assertEquals(0, peca.getQuantidadeReservada());
@@ -76,10 +74,10 @@ class ConfirmarELiberarReservasUseCaseUnitTest {
     void shouldNaoFazerNadaQuandoNaoHaReservasAtivas() {
         Mockito.when(reservaGateway.listarAtivasPorOrdemDeServico(ORDEM_ID)).thenReturn(List.of());
 
-        new ConfirmarReservasOrdemDeServicoUseCase(pecaGateway, insumoGateway, reservaGateway).confirmar(ORDEM_ID);
-        new LiberarReservasOrdemDeServicoUseCase(pecaGateway, insumoGateway, reservaGateway).liberar(ORDEM_ID);
+        new ConfirmarReservasOrdemDeServicoUseCase(itemEstoqueGateway, reservaGateway).confirmar(ORDEM_ID);
+        new LiberarReservasOrdemDeServicoUseCase(itemEstoqueGateway, reservaGateway).liberar(ORDEM_ID);
 
-        Mockito.verifyNoInteractions(pecaGateway, insumoGateway);
+        Mockito.verifyNoInteractions(itemEstoqueGateway);
         Mockito.verify(reservaGateway, Mockito.never()).salvar(Mockito.any());
     }
 }
