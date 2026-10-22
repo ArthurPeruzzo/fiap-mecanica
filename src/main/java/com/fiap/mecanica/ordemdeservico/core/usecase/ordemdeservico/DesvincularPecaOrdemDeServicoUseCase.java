@@ -1,23 +1,23 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico;
 
-import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.exception.PecaNaoEncontradaNoCatalogoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
+import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 
 public class DesvincularPecaOrdemDeServicoUseCase {
 
 	private final OrdemDeServicoGateway ordemDeServicoGateway;
-	private final PecaGateway pecaGateway;
+	private final CatalogoEstoqueGateway catalogoEstoqueGateway;
 	private final ReservaEstoqueGateway reservaEstoqueGateway;
 
 	public DesvincularPecaOrdemDeServicoUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
-												 PecaGateway pecaGateway,
+												 CatalogoEstoqueGateway catalogoEstoqueGateway,
 												 ReservaEstoqueGateway reservaEstoqueGateway) {
 		this.ordemDeServicoGateway = ordemDeServicoGateway;
-		this.pecaGateway = pecaGateway;
+		this.catalogoEstoqueGateway = catalogoEstoqueGateway;
 		this.reservaEstoqueGateway = reservaEstoqueGateway;
 	}
 
@@ -25,7 +25,7 @@ public class DesvincularPecaOrdemDeServicoUseCase {
 		OrdemDeServico ordemDeServico = ordemDeServicoGateway.buscarPorId(ordemServicoId)
 				.orElseThrow(OrdemDeServicoNaoEncontradaException::new);
 
-		pecaGateway.buscarPorId(pecaId).orElseThrow(PecaNaoEncontradaException::new);
+		catalogoEstoqueGateway.buscarPeca(pecaId).orElseThrow(PecaNaoEncontradaNoCatalogoException::new);
 
 		ordemDeServico.desvincularPeca(pecaId, quantidade);
 

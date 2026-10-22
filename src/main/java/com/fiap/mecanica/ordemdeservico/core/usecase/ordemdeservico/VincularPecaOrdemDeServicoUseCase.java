@@ -1,24 +1,24 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico;
 
-import com.fiap.mecanica.estoque.core.domain.Peca;
-import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.dto.ItemCatalogo;
+import com.fiap.mecanica.ordemdeservico.core.exception.PecaNaoEncontradaNoCatalogoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
+import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 
 public class VincularPecaOrdemDeServicoUseCase {
 
 	private final OrdemDeServicoGateway ordemDeServicoGateway;
-	private final PecaGateway pecaGateway;
+	private final CatalogoEstoqueGateway catalogoEstoqueGateway;
 	private final ReservaEstoqueGateway reservaEstoqueGateway;
 
 	public VincularPecaOrdemDeServicoUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
-											  PecaGateway pecaGateway,
+											  CatalogoEstoqueGateway catalogoEstoqueGateway,
 										  ReservaEstoqueGateway reservaEstoqueGateway) {
 		this.ordemDeServicoGateway = ordemDeServicoGateway;
-		this.pecaGateway = pecaGateway;
+		this.catalogoEstoqueGateway = catalogoEstoqueGateway;
 		this.reservaEstoqueGateway = reservaEstoqueGateway;
 	}
 
@@ -26,11 +26,11 @@ public class VincularPecaOrdemDeServicoUseCase {
 		OrdemDeServico ordemDeServico = ordemDeServicoGateway.buscarPorId(ordemServicoId)
 				.orElseThrow(OrdemDeServicoNaoEncontradaException::new);
 
-		Peca peca = pecaGateway.buscarPorId(pecaId).orElseThrow(PecaNaoEncontradaException::new);
+		ItemCatalogo peca = catalogoEstoqueGateway.buscarPeca(pecaId).orElseThrow(PecaNaoEncontradaNoCatalogoException::new);
 
-		ordemDeServico.vincularPeca(pecaId, quantidade, peca.getPreco());
+		ordemDeServico.vincularPeca(pecaId, quantidade, peca.preco());
 
 		reservaEstoqueGateway.reservarPeca(ordemServicoId, pecaId, ordemDeServico.getTotalQuantidadePecasMapeadasPorId().get(pecaId));
-		ordemDeServicoGateway.vincularOuSomarPeca(ordemServicoId, pecaId, quantidade, peca.getPreco());
+		ordemDeServicoGateway.vincularOuSomarPeca(ordemServicoId, pecaId, quantidade, peca.preco());
 	}
 }

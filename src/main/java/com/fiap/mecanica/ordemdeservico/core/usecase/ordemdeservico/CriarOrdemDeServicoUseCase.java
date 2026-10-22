@@ -1,11 +1,5 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico;
 
-import com.fiap.mecanica.estoque.core.domain.Insumo;
-import com.fiap.mecanica.estoque.core.domain.Peca;
-import com.fiap.mecanica.estoque.core.exception.InsumoNaoEncontradoException;
-import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.gestao.core.domain.Atendente;
 import com.fiap.mecanica.gestao.core.domain.Cliente;
 import com.fiap.mecanica.gestao.core.domain.Veiculo;
@@ -21,10 +15,14 @@ import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
 import com.fiap.mecanica.ordemdeservico.core.dto.InsumoVinculadoCriarDto;
+import com.fiap.mecanica.ordemdeservico.core.dto.ItemCatalogo;
 import com.fiap.mecanica.ordemdeservico.core.dto.PecaVinculadaCriarDto;
+import com.fiap.mecanica.ordemdeservico.core.exception.InsumoNaoEncontradoNoCatalogoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaVeiculoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.PecaNaoEncontradaNoCatalogoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
+import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
@@ -46,8 +44,7 @@ public class CriarOrdemDeServicoUseCase {
 	private final VeiculoGateway veiculoGateway;
 	private final ClienteGateway clienteGateway;
 	private final ServicoGateway servicoGateway;
-	private final PecaGateway pecaGateway;
-	private final InsumoGateway insumoGateway;
+	private final CatalogoEstoqueGateway catalogoEstoqueGateway;
 	private final ReservaEstoqueGateway reservaEstoqueGateway;
 	private final NotificacaoGateway notificacaoGateway;
 	private final MetricasGateway metricasGateway;
@@ -59,8 +56,7 @@ public class CriarOrdemDeServicoUseCase {
 									   VeiculoGateway veiculoGateway,
 									   ClienteGateway clienteGateway,
 									   ServicoGateway servicoGateway,
-									   PecaGateway pecaGateway,
-									   InsumoGateway insumoGateway,
+									   CatalogoEstoqueGateway catalogoEstoqueGateway,
 									   ReservaEstoqueGateway reservaEstoqueGateway,
 									   NotificacaoGateway notificacaoGateway,
 									   MetricasGateway metricasGateway,
@@ -71,8 +67,7 @@ public class CriarOrdemDeServicoUseCase {
 		this.veiculoGateway = veiculoGateway;
 		this.clienteGateway = clienteGateway;
 		this.servicoGateway = servicoGateway;
-		this.pecaGateway = pecaGateway;
-		this.insumoGateway = insumoGateway;
+		this.catalogoEstoqueGateway = catalogoEstoqueGateway;
 		this.reservaEstoqueGateway = reservaEstoqueGateway;
 		this.notificacaoGateway = notificacaoGateway;
 		this.metricasGateway = metricasGateway;
@@ -150,18 +145,18 @@ public class CriarOrdemDeServicoUseCase {
 		if (pecas == null || pecas.isEmpty()) return;
 
 		List<Long> pecasIds = pecas.stream().map(PecaVinculadaCriarDto::id).toList();
-		Map<Long, Peca> pecasPorId = pecaGateway.listarPorIds(pecasIds).stream()
-				.collect(Collectors.toMap(Peca::getId, Function.identity()));
+		Map<Long, ItemCatalogo> pecasPorId = catalogoEstoqueGateway.listarPecasPorIds(pecasIds).stream()
+				.collect(Collectors.toMap(ItemCatalogo::id, Function.identity()));
 
 		if (pecasPorId.size() != pecasIds.size()) {
-			throw new PecaNaoEncontradaException();
+			throw new PecaNaoEncontradaNoCatalogoException();
 		}
 
 		pecas.forEach(dto -> {
-			Peca peca = pecasPorId.get(dto.id());
-			ordemDeServico.vincularPeca(peca.getId(), dto.quantidade(), peca.getPreco());
-			reservaEstoqueGateway.reservarPeca(ordemDeServico.getId(), peca.getId(), ordemDeServico.getTotalQuantidadePecasMapeadasPorId().get(peca.getId()));
-			ordemDeServicoGateway.vincularOuSomarPeca(ordemDeServico.getId(), peca.getId(), dto.quantidade(), peca.getPreco());
+			ItemCatalogo peca = pecasPorId.get(dto.id());
+			ordemDeServico.vincularPeca(peca.id(), dto.quantidade(), peca.preco());
+			reservaEstoqueGateway.reservarPeca(ordemDeServico.getId(), peca.id(), ordemDeServico.getTotalQuantidadePecasMapeadasPorId().get(peca.id()));
+			ordemDeServicoGateway.vincularOuSomarPeca(ordemDeServico.getId(), peca.id(), dto.quantidade(), peca.preco());
 		});
 	}
 
@@ -169,18 +164,18 @@ public class CriarOrdemDeServicoUseCase {
 		if (insumos == null || insumos.isEmpty()) return;
 
 		List<Long> insumosIds = insumos.stream().map(InsumoVinculadoCriarDto::id).toList();
-		Map<Long, Insumo> insumosPorId = insumoGateway.listarPorIds(insumosIds).stream()
-				.collect(Collectors.toMap(Insumo::getId, Function.identity()));
+		Map<Long, ItemCatalogo> insumosPorId = catalogoEstoqueGateway.listarInsumosPorIds(insumosIds).stream()
+				.collect(Collectors.toMap(ItemCatalogo::id, Function.identity()));
 
 		if (insumosPorId.size() != insumosIds.size()) {
-			throw new InsumoNaoEncontradoException();
+			throw new InsumoNaoEncontradoNoCatalogoException();
 		}
 
 		insumos.forEach(dto -> {
-			Insumo insumo = insumosPorId.get(dto.id());
-			ordemDeServico.vincularInsumo(insumo.getId(), dto.quantidade(), insumo.getPreco());
-			reservaEstoqueGateway.reservarInsumo(ordemDeServico.getId(), insumo.getId(), ordemDeServico.getTotalQuantidadeInsumosMapeadosPorId().get(insumo.getId()));
-			ordemDeServicoGateway.vincularOuSomarInsumo(ordemDeServico.getId(), insumo.getId(), dto.quantidade(), insumo.getPreco());
+			ItemCatalogo insumo = insumosPorId.get(dto.id());
+			ordemDeServico.vincularInsumo(insumo.id(), dto.quantidade(), insumo.preco());
+			reservaEstoqueGateway.reservarInsumo(ordemDeServico.getId(), insumo.id(), ordemDeServico.getTotalQuantidadeInsumosMapeadosPorId().get(insumo.id()));
+			ordemDeServicoGateway.vincularOuSomarInsumo(ordemDeServico.getId(), insumo.id(), dto.quantidade(), insumo.preco());
 		});
 	}
 

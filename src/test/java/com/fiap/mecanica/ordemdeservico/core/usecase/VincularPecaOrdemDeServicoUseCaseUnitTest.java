@@ -1,9 +1,9 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase;
 
-import com.fiap.mecanica.estoque.core.domain.Peca;
-import com.fiap.mecanica.estoque.core.exception.EstoqueInsuficienteException;
-import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
+import com.fiap.mecanica.ordemdeservico.core.dto.ItemCatalogo;
+import com.fiap.mecanica.ordemdeservico.core.exception.EstoqueInsuficienteParaOrdemException;
+import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
+import com.fiap.mecanica.ordemdeservico.core.exception.PecaNaoEncontradaNoCatalogoException;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServicoStateFactory;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.PecaVinculada;
@@ -38,7 +38,7 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
     private OrdemDeServicoGateway ordemDeServicoGateway;
 
     @Mock
-    private PecaGateway pecaGateway;
+    private CatalogoEstoqueGateway catalogoEstoqueGateway;
 
     @Mock
     private ReservaEstoqueGateway reservaEstoqueGateway;
@@ -74,22 +74,22 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
                 .build();
     }
 
-    private Peca pecaComEstoque(Integer estoque) {
-        return Peca.builder().id(PECA_ID).nome("Filtro de óleo").descricao("Filtro original").preco(BigDecimal.TEN).quantidadeEstoque(estoque).build();
+    private ItemCatalogo pecaNoCatalogo() {
+        return new ItemCatalogo(PECA_ID, BigDecimal.TEN);
     }
 
     private void stubOrdem(OrdemDeServico os) {
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(os));
     }
 
-    private void stubPeca(Peca peca) {
-        Mockito.when(pecaGateway.buscarPorId(PECA_ID)).thenReturn(Optional.of(peca));
+    private void stubPeca(ItemCatalogo peca) {
+        Mockito.when(catalogoEstoqueGateway.buscarPeca(PECA_ID)).thenReturn(Optional.of(peca));
     }
 
     @Test
     void shouldVincularPecaSuccessfully() {
         stubOrdem(ordemEmDiagnostico(List.of()));
-        stubPeca(pecaComEstoque(10));
+        stubPeca(pecaNoCatalogo());
 
         vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE);
 
@@ -101,7 +101,7 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
     void shouldSomarQuantidadeWhenPecaAlreadyLinked() {
         BigDecimal preco = new BigDecimal(10);
         stubOrdem(ordemEmDiagnostico(List.of(new PecaVinculada(PECA_ID, 3, preco))));
-        stubPeca(pecaComEstoque(10));
+        stubPeca(pecaNoCatalogo());
 
         vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE);
 
@@ -116,16 +116,16 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
         assertThrows(OrdemDeServicoNaoEncontradaException.class,
                 () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));
 
-        Mockito.verifyNoInteractions(pecaGateway, reservaEstoqueGateway);
+        Mockito.verifyNoInteractions(catalogoEstoqueGateway, reservaEstoqueGateway);
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
     void shouldThrowWhenPecaNotFound() {
         stubOrdem(ordemEmDiagnostico(List.of()));
-        Mockito.when(pecaGateway.buscarPorId(PECA_ID)).thenReturn(Optional.empty());
+        Mockito.when(catalogoEstoqueGateway.buscarPeca(PECA_ID)).thenReturn(Optional.empty());
 
-        assertThrows(PecaNaoEncontradaException.class,
+        assertThrows(PecaNaoEncontradaNoCatalogoException.class,
                 () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));
 
         Mockito.verifyNoInteractions(reservaEstoqueGateway);
@@ -135,11 +135,11 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
     @Test
     void shouldThrowWhenEstoqueInsuficiente() {
         stubOrdem(ordemEmDiagnostico(List.of()));
-        stubPeca(pecaComEstoque(0));
-        Mockito.doThrow(new EstoqueInsuficienteException())
+        stubPeca(pecaNoCatalogo());
+        Mockito.doThrow(new EstoqueInsuficienteParaOrdemException())
                 .when(reservaEstoqueGateway).reservarPeca(ORDEM_ID, PECA_ID, QUANTIDADE);
 
-        assertThrows(EstoqueInsuficienteException.class,
+        assertThrows(EstoqueInsuficienteParaOrdemException.class,
                 () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
@@ -170,7 +170,7 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
                 .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO))
                 .build();
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemDiagnosticoConcluido));
-        stubPeca(pecaComEstoque(10));
+        stubPeca(pecaNoCatalogo());
 
         assertThrows(VinculoPecaNaoAutorizadaException.class,
                 () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));

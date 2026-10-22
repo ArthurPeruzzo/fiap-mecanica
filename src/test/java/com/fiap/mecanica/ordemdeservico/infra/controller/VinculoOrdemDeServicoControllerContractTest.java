@@ -1,14 +1,11 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
-import com.fiap.mecanica.estoque.core.domain.Insumo;
-import com.fiap.mecanica.estoque.core.domain.Peca;
-import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
-import com.fiap.mecanica.estoque.core.exception.EstoqueInsuficienteException;
+import com.fiap.mecanica.ordemdeservico.core.dto.ItemCatalogo;
+import com.fiap.mecanica.ordemdeservico.core.exception.EstoqueInsuficienteParaOrdemException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
@@ -45,8 +42,7 @@ class VinculoOrdemDeServicoControllerContractTest {
 
     @MockitoBean private OrdemDeServicoGateway ordemDeServicoGateway;
     @MockitoBean private ServicoGateway servicoGateway;
-    @MockitoBean private PecaGateway pecaGateway;
-    @MockitoBean private InsumoGateway insumoGateway;
+    @MockitoBean private CatalogoEstoqueGateway catalogoEstoqueGateway;
     @MockitoBean private ReservaEstoqueGateway reservaEstoqueGateway;
 
     private static final Long MECANICO_ID = 5L;
@@ -102,12 +98,12 @@ class VinculoOrdemDeServicoControllerContractTest {
         return Servico.reconstituir(10L, "Serviço", "desc", BigDecimal.TEN);
     }
 
-    private Peca pecaComEstoque(int estoque) {
-        return Peca.builder().id(5L).nome("Peca").descricao("desc").preco(BigDecimal.TEN).quantidadeEstoque(estoque).build();
+    private ItemCatalogo pecaNoCatalogo() {
+        return new ItemCatalogo(5L, BigDecimal.TEN);
     }
 
-    private Insumo insumoComEstoque(int estoque) {
-        return Insumo.builder().id(30L).nome("Insumo").descricao("desc").preco(BigDecimal.TEN).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(estoque).build();
+    private ItemCatalogo insumoNoCatalogo() {
+        return new ItemCatalogo(30L, BigDecimal.TEN);
     }
 
     // ---- vincularServico ----
@@ -209,7 +205,7 @@ class VinculoOrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn204WhenVincularPecaSuccess() throws Exception {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
-        Mockito.when(pecaGateway.buscarPorId(5L)).thenReturn(Optional.of(pecaComEstoque(10)));
+        Mockito.when(catalogoEstoqueGateway.buscarPeca(5L)).thenReturn(Optional.of(pecaNoCatalogo()));
 
         mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/pecas/5")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -254,8 +250,8 @@ class VinculoOrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn422WhenEstoqueInsuficienteOnVincularPeca() throws Exception {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
-        Mockito.when(pecaGateway.buscarPorId(5L)).thenReturn(Optional.of(pecaComEstoque(0)));
-        Mockito.doThrow(new EstoqueInsuficienteException())
+        Mockito.when(catalogoEstoqueGateway.buscarPeca(5L)).thenReturn(Optional.of(pecaNoCatalogo()));
+        Mockito.doThrow(new EstoqueInsuficienteParaOrdemException())
                 .when(reservaEstoqueGateway).reservarPeca(Mockito.eq(1L), Mockito.eq(5L), Mockito.anyInt());
 
         mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/pecas/5")
@@ -268,7 +264,7 @@ class VinculoOrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn422WhenOrdemNaoEmDiagnosticoOnVincularPeca() throws Exception {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmExecucaoSemServicos()));
-        Mockito.when(pecaGateway.buscarPorId(5L)).thenReturn(Optional.of(pecaComEstoque(10)));
+        Mockito.when(catalogoEstoqueGateway.buscarPeca(5L)).thenReturn(Optional.of(pecaNoCatalogo()));
 
         mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/pecas/5")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -282,7 +278,7 @@ class VinculoOrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn204WhenDesvincularPecaSuccess() throws Exception {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnosticoComPeca(5)));
-        Mockito.when(pecaGateway.buscarPorId(5L)).thenReturn(Optional.of(pecaComEstoque(10)));
+        Mockito.when(catalogoEstoqueGateway.buscarPeca(5L)).thenReturn(Optional.of(pecaNoCatalogo()));
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -327,7 +323,7 @@ class VinculoOrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn422WhenOrdemNaoEmDiagnosticoOnDesvincularPeca() throws Exception {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
-        Mockito.when(pecaGateway.buscarPorId(5L)).thenReturn(Optional.of(pecaComEstoque(10)));
+        Mockito.when(catalogoEstoqueGateway.buscarPeca(5L)).thenReturn(Optional.of(pecaNoCatalogo()));
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -339,7 +335,7 @@ class VinculoOrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn422WhenPecaNaoVinculadaOnDesvincularPeca() throws Exception {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnostico()));
-        Mockito.when(pecaGateway.buscarPorId(5L)).thenReturn(Optional.of(pecaComEstoque(10)));
+        Mockito.when(catalogoEstoqueGateway.buscarPeca(5L)).thenReturn(Optional.of(pecaNoCatalogo()));
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -351,7 +347,7 @@ class VinculoOrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn422WhenQuantidadeDesvincularInvalidaOnDesvincularPeca() throws Exception {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnosticoComPeca(1)));
-        Mockito.when(pecaGateway.buscarPorId(5L)).thenReturn(Optional.of(pecaComEstoque(10)));
+        Mockito.when(catalogoEstoqueGateway.buscarPeca(5L)).thenReturn(Optional.of(pecaNoCatalogo()));
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/pecas/5")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -365,7 +361,7 @@ class VinculoOrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn204WhenVincularInsumoSuccess() throws Exception {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
-        Mockito.when(insumoGateway.buscarPorId(30L)).thenReturn(Optional.of(insumoComEstoque(10)));
+        Mockito.when(catalogoEstoqueGateway.buscarInsumo(30L)).thenReturn(Optional.of(insumoNoCatalogo()));
 
         mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/insumos/30")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -410,8 +406,8 @@ class VinculoOrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn422WhenEstoqueInsuficienteOnVincularInsumo() throws Exception {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
-        Mockito.when(insumoGateway.buscarPorId(30L)).thenReturn(Optional.of(insumoComEstoque(0)));
-        Mockito.doThrow(new EstoqueInsuficienteException())
+        Mockito.when(catalogoEstoqueGateway.buscarInsumo(30L)).thenReturn(Optional.of(insumoNoCatalogo()));
+        Mockito.doThrow(new EstoqueInsuficienteParaOrdemException())
                 .when(reservaEstoqueGateway).reservarInsumo(Mockito.eq(1L), Mockito.eq(30L), Mockito.anyInt());
 
         mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/insumos/30")
@@ -424,7 +420,7 @@ class VinculoOrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn422WhenOrdemNaoEmDiagnosticoOnVincularInsumo() throws Exception {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmExecucaoSemServicos()));
-        Mockito.when(insumoGateway.buscarPorId(30L)).thenReturn(Optional.of(insumoComEstoque(10)));
+        Mockito.when(catalogoEstoqueGateway.buscarInsumo(30L)).thenReturn(Optional.of(insumoNoCatalogo()));
 
         mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/insumos/30")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -438,7 +434,7 @@ class VinculoOrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn204WhenDesvincularInsumoSuccess() throws Exception {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnosticoComInsumo(5)));
-        Mockito.when(insumoGateway.buscarPorId(30L)).thenReturn(Optional.of(insumoComEstoque(10)));
+        Mockito.when(catalogoEstoqueGateway.buscarInsumo(30L)).thenReturn(Optional.of(insumoNoCatalogo()));
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -483,7 +479,7 @@ class VinculoOrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn422WhenOrdemNaoEmDiagnosticoOnDesvincularInsumo() throws Exception {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
-        Mockito.when(insumoGateway.buscarPorId(30L)).thenReturn(Optional.of(insumoComEstoque(10)));
+        Mockito.when(catalogoEstoqueGateway.buscarInsumo(30L)).thenReturn(Optional.of(insumoNoCatalogo()));
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -495,7 +491,7 @@ class VinculoOrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn422WhenInsumoNaoVinculadoOnDesvincularInsumo() throws Exception {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnostico()));
-        Mockito.when(insumoGateway.buscarPorId(30L)).thenReturn(Optional.of(insumoComEstoque(10)));
+        Mockito.when(catalogoEstoqueGateway.buscarInsumo(30L)).thenReturn(Optional.of(insumoNoCatalogo()));
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -507,7 +503,7 @@ class VinculoOrdemDeServicoControllerContractTest {
     @Test
     void shouldReturn422WhenQuantidadeDesvincularInvalidaOnDesvincularInsumo() throws Exception {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemEmDiagnosticoComInsumo(1)));
-        Mockito.when(insumoGateway.buscarPorId(30L)).thenReturn(Optional.of(insumoComEstoque(10)));
+        Mockito.when(catalogoEstoqueGateway.buscarInsumo(30L)).thenReturn(Optional.of(insumoNoCatalogo()));
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/ordem-servico/1/insumos/30")
                         .contentType(MediaType.APPLICATION_JSON)

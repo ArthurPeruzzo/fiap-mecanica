@@ -1,9 +1,9 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase;
 
-import com.fiap.mecanica.estoque.core.domain.Insumo;
 import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
-import com.fiap.mecanica.estoque.core.exception.InsumoNaoEncontradoException;
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
+import com.fiap.mecanica.ordemdeservico.core.dto.ItemCatalogo;
+import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
+import com.fiap.mecanica.ordemdeservico.core.exception.InsumoNaoEncontradoNoCatalogoException;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.InsumoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServicoStateFactory;
@@ -40,7 +40,7 @@ class DesvincularInsumoOrdemDeServicoUseCaseUnitTest {
     private OrdemDeServicoGateway ordemDeServicoGateway;
 
     @Mock
-    private InsumoGateway insumoGateway;
+    private CatalogoEstoqueGateway catalogoEstoqueGateway;
 
     @Mock
     private ReservaEstoqueGateway reservaEstoqueGateway;
@@ -75,22 +75,22 @@ class DesvincularInsumoOrdemDeServicoUseCaseUnitTest {
                 .build();
     }
 
-    private Insumo insumoComEstoque(Integer estoque) {
-        return Insumo.builder().id(INSUMO_ID).nome("Óleo motor 5W30").descricao("Óleo sintético").preco(BigDecimal.TEN).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(estoque).build();
+    private ItemCatalogo insumoNoCatalogo() {
+        return new ItemCatalogo(INSUMO_ID, BigDecimal.TEN);
     }
 
     private void stubOrdem(OrdemDeServico os) {
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(os));
     }
 
-    private void stubInsumo(Insumo insumo) {
-        Mockito.when(insumoGateway.buscarPorId(INSUMO_ID)).thenReturn(Optional.of(insumo));
+    private void stubInsumo(ItemCatalogo insumo) {
+        Mockito.when(catalogoEstoqueGateway.buscarInsumo(INSUMO_ID)).thenReturn(Optional.of(insumo));
     }
 
     @Test
     void shouldDesvincularInsumoSuccessfully() {
         stubOrdem(ordemEmDiagnosticoComInsumo(5));
-        stubInsumo(insumoComEstoque(3));
+        stubInsumo(insumoNoCatalogo());
 
         desvincularInsumoOrdemDeServicoUseCase.desvincular(ORDEM_ID, INSUMO_ID, QUANTIDADE);
 
@@ -101,7 +101,7 @@ class DesvincularInsumoOrdemDeServicoUseCaseUnitTest {
     @Test
     void shouldDesvincularIntegralmenteWhenQuantidadeIgualAVinculada() {
         stubOrdem(ordemEmDiagnosticoComInsumo(QUANTIDADE));
-        stubInsumo(insumoComEstoque(0));
+        stubInsumo(insumoNoCatalogo());
 
         desvincularInsumoOrdemDeServicoUseCase.desvincular(ORDEM_ID, INSUMO_ID, QUANTIDADE);
 
@@ -116,16 +116,16 @@ class DesvincularInsumoOrdemDeServicoUseCaseUnitTest {
         assertThrows(OrdemDeServicoNaoEncontradaException.class,
                 () -> desvincularInsumoOrdemDeServicoUseCase.desvincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
 
-        Mockito.verifyNoInteractions(insumoGateway, reservaEstoqueGateway);
+        Mockito.verifyNoInteractions(catalogoEstoqueGateway, reservaEstoqueGateway);
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).desvincularOuSubtrairInsumo(Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
     void shouldThrowWhenInsumoNotFound() {
         stubOrdem(ordemEmDiagnosticoComInsumo(5));
-        Mockito.when(insumoGateway.buscarPorId(INSUMO_ID)).thenReturn(Optional.empty());
+        Mockito.when(catalogoEstoqueGateway.buscarInsumo(INSUMO_ID)).thenReturn(Optional.empty());
 
-        assertThrows(InsumoNaoEncontradoException.class,
+        assertThrows(InsumoNaoEncontradoNoCatalogoException.class,
                 () -> desvincularInsumoOrdemDeServicoUseCase.desvincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
 
         Mockito.verifyNoInteractions(reservaEstoqueGateway);
@@ -157,7 +157,7 @@ class DesvincularInsumoOrdemDeServicoUseCaseUnitTest {
                 .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.RECEBIDA))
                 .build();
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemRecebida));
-        stubInsumo(insumoComEstoque(3));
+        stubInsumo(insumoNoCatalogo());
 
         assertThrows(DesvincularInsumoNaoAutorizadaException.class,
                 () -> desvincularInsumoOrdemDeServicoUseCase.desvincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
@@ -191,7 +191,7 @@ class DesvincularInsumoOrdemDeServicoUseCaseUnitTest {
                 .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
                 .build();
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemSemInsumo));
-        stubInsumo(insumoComEstoque(3));
+        stubInsumo(insumoNoCatalogo());
 
         assertThrows(InsumoNaoVinculadoException.class,
                 () -> desvincularInsumoOrdemDeServicoUseCase.desvincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
@@ -203,7 +203,7 @@ class DesvincularInsumoOrdemDeServicoUseCaseUnitTest {
     @Test
     void shouldThrowWhenQuantidadeMaiorQueVinculada() {
         stubOrdem(ordemEmDiagnosticoComInsumo(1));
-        stubInsumo(insumoComEstoque(3));
+        stubInsumo(insumoNoCatalogo());
 
         assertThrows(QuantidadeDesvincularInvalidaException.class,
                 () -> desvincularInsumoOrdemDeServicoUseCase.desvincular(ORDEM_ID, INSUMO_ID, 5));

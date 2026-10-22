@@ -3,6 +3,7 @@ package com.fiap.mecanica.ordemdeservico.infra.gateway.estoque;
 import com.fiap.mecanica.estoque.core.domain.Insumo;
 import com.fiap.mecanica.estoque.core.domain.Peca;
 import com.fiap.mecanica.estoque.core.domain.TipoItemReserva;
+import com.fiap.mecanica.ordemdeservico.core.exception.EstoqueInsuficienteParaOrdemException;
 import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
 import com.fiap.mecanica.estoque.core.gateway.ItemEstoqueGateway;
 import com.fiap.mecanica.estoque.core.gateway.ReservaGateway;
@@ -55,5 +56,14 @@ class ReservaEstoqueLocalGatewayUnitTest {
         gateway.liberarReservas(1L);
 
         Mockito.verify(reservaGateway, Mockito.times(2)).listarAtivasPorOrdemDeServico(1L);
+    }
+
+    @Test
+    void reservarPeca_shouldTraduzirEstoqueInsuficienteParaExcecaoDaOrdem() {
+        Mockito.when(itemEstoqueGateway.buscar(TipoItemReserva.PECA, 5L)).thenReturn(Peca.builder().id(5L).nome("P").descricao("d").preco(BigDecimal.ONE).quantidadeEstoque(1).quantidadeReservada(0).build());
+        Mockito.when(reservaGateway.buscar(1L, TipoItemReserva.PECA, 5L)).thenReturn(Optional.empty());
+
+        org.junit.jupiter.api.Assertions.assertThrows(EstoqueInsuficienteParaOrdemException.class,
+                () -> gateway.reservarPeca(1L, 5L, 2));
     }
 }
