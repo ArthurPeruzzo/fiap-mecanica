@@ -40,7 +40,7 @@ class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
     }
 
     @Test
-    void shouldDevolverEstoqueAoRecusarViaToken() {
+    void shouldLiberarReservaAoRecusarViaToken() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
 
@@ -71,7 +71,8 @@ class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
                 .then().statusCode(204);
 
         PecaEntity pecaAntes = pecaRepository.findById(pecaId).orElseThrow();
-        Assertions.assertEquals(7, pecaAntes.getQuantidadeEstoque());
+        Assertions.assertEquals(10, pecaAntes.getQuantidadeEstoque());
+        Assertions.assertEquals(3, pecaAntes.getQuantidadeReservada());
 
         String token = obterTokenLinkDeOrdemAguardandoAprovacao(ordemId);
         RestAssured.given()
@@ -80,6 +81,7 @@ class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
 
         PecaEntity pecaDepois = pecaRepository.findById(pecaId).orElseThrow();
         Assertions.assertEquals(10, pecaDepois.getQuantidadeEstoque());
+        Assertions.assertEquals(0, pecaDepois.getQuantidadeReservada());
     }
 
     @Test

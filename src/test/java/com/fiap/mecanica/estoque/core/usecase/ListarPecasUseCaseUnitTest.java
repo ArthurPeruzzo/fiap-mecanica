@@ -43,7 +43,7 @@ class ListarPecasUseCaseUnitTest {
 
     @Test
     void shouldCallOutputPortWithPaginaFromGateway() {
-        var peca = Peca.reconstituir(1L, "Filtro", "Desc", new BigDecimal("20.00"), 5);
+        var peca = Peca.builder().id(1L).nome("Filtro").descricao("Desc").preco(new BigDecimal("20.00")).quantidadeEstoque(5).build();
         var pagina = new Pagina<>(List.of(peca), 0, 10, 1L, 1);
         Mockito.when(pecaGateway.listar(0, 10)).thenReturn(pagina);
 

@@ -32,6 +32,10 @@ public class InsumoEntity {
 	@Column(name = "quantidade_estoque", nullable = false)
 	private Integer quantidadeEstoque;
 
+	@Column(name = "quantidade_reservada", nullable = false)
+	@Builder.Default
+	private Integer quantidadeReservada = 0;
+
 	@Column(name = "unidade_medida", nullable = false)
 	@Enumerated(EnumType.STRING)
 	private UnidadeMedida unidadeMedida;

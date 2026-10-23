@@ -30,7 +30,7 @@ class AtualizarInsumoUseCaseUnitTest {
 
     @Test
     void shouldUpdateInsumoWithNewValues() {
-        var insumo = Insumo.reconstituir(1L, "Óleo velho", "Desc antiga", new BigDecimal("30.00"), UnidadeMedida.LITRO, 5);
+        var insumo = Insumo.builder().id(1L).nome("Óleo velho").descricao("Desc antiga").preco(new BigDecimal("30.00")).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(5).build();
         Mockito.when(insumoGateway.buscarPorId(1L)).thenReturn(Optional.of(insumo));
         var dto = new AtualizarInsumoDto(1L, "Óleo novo", "Desc nova", new BigDecimal("50.00"), UnidadeMedida.ML, 20);
         var captor = ArgumentCaptor.forClass(Insumo.class);

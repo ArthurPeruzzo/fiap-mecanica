@@ -29,7 +29,7 @@ class AtualizarPecaUseCaseUnitTest {
 
     @Test
     void shouldUpdatePecaWithNewValues() {
-        var peca = Peca.reconstituir(1L, "Filtro velho", "Desc antiga", new BigDecimal("20.00"), 5);
+        var peca = Peca.builder().id(1L).nome("Filtro velho").descricao("Desc antiga").preco(new BigDecimal("20.00")).quantidadeEstoque(5).build();
         Mockito.when(pecaGateway.buscarPorId(1L)).thenReturn(Optional.of(peca));
         var dto = new AtualizarPecaDto(1L, "Filtro novo", "Desc nova", new BigDecimal("35.00"), 10);
         var captor = ArgumentCaptor.forClass(Peca.class);

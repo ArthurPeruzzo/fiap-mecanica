@@ -1,13 +1,10 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase;
 
-import com.fiap.mecanica.estoque.core.domain.Insumo;
-import com.fiap.mecanica.estoque.core.domain.Peca;
-import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
-import com.fiap.mecanica.estoque.core.exception.EstoqueInsuficienteException;
-import com.fiap.mecanica.estoque.core.exception.InsumoNaoEncontradoException;
-import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
+import com.fiap.mecanica.ordemdeservico.core.exception.EstoqueInsuficienteParaOrdemException;
+import com.fiap.mecanica.ordemdeservico.core.exception.InsumoNaoEncontradoNoCatalogoException;
+import com.fiap.mecanica.ordemdeservico.core.exception.PecaNaoEncontradaNoCatalogoException;
+import com.fiap.mecanica.ordemdeservico.core.dto.ItemCatalogo;
+import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.gestao.core.domain.Atendente;
 import com.fiap.mecanica.gestao.core.domain.Cliente;
 import com.fiap.mecanica.gestao.core.domain.Veiculo;
@@ -28,6 +25,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaV
 import com.fiap.mecanica.ordemdeservico.core.exception.ServicoNaoEncontradoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VeiculoNaoPertenceAoClienteException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.CriarOrdemDeServicoOutputPort;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.CriarOrdemDeServicoUseCase;
@@ -73,10 +71,9 @@ class CriarOrdemDeServicoUseCaseUnitTest {
     private ServicoGateway servicoGateway;
 
     @Mock
-    private PecaGateway pecaGateway;
-
+    private CatalogoEstoqueGateway catalogoEstoqueGateway;
     @Mock
-    private InsumoGateway insumoGateway;
+    private ReservaEstoqueGateway reservaEstoqueGateway;
 
     @Mock
     private NotificacaoGateway notificacaoGateway;
@@ -91,8 +88,8 @@ class CriarOrdemDeServicoUseCaseUnitTest {
     void setUp() {
         criarOrdemDeServicoUseCase = new CriarOrdemDeServicoUseCase(
                 atendenteGateway, tokenGateway, ordemDeServicoGateway,
-                veiculoGateway, clienteGateway, servicoGateway, pecaGateway,
-                insumoGateway, notificacaoGateway, metricasGateway, outputPort);
+                veiculoGateway, clienteGateway, servicoGateway, catalogoEstoqueGateway,
+                reservaEstoqueGateway, notificacaoGateway, metricasGateway, outputPort);
     }
 
     private static final Long USER_ID = 10L;
@@ -262,13 +259,13 @@ class CriarOrdemDeServicoUseCaseUnitTest {
         stubAtendente();
         stubClienteEVeiculo();
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(5L);
-        var peca = Peca.reconstituir(20L, "Filtro", "desc", BigDecimal.TEN, 10);
-        Mockito.when(pecaGateway.listarPorIds(List.of(20L))).thenReturn(List.of(peca));
+        var peca = new ItemCatalogo(20L, BigDecimal.TEN);
+        Mockito.when(catalogoEstoqueGateway.listarPecasPorIds(List.of(20L))).thenReturn(List.of(peca));
 
         criarOrdemDeServicoUseCase.criar(new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID, null,
                 List.of(new PecaVinculadaCriarDto(20L, 3)), null, DESCRICAO));
 
-        Mockito.verify(pecaGateway).atualizar(Mockito.any());
+        Mockito.verify(reservaEstoqueGateway).reservarPeca(5L, 20L, 3);
         Mockito.verify(ordemDeServicoGateway).vincularOuSomarPeca(5L, 20L, 3, BigDecimal.TEN);
     }
 
@@ -277,13 +274,13 @@ class CriarOrdemDeServicoUseCaseUnitTest {
         stubAtendente();
         stubClienteEVeiculo();
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(5L);
-        var insumo = Insumo.reconstituir(30L, "Óleo", "desc", BigDecimal.TEN, UnidadeMedida.LITRO, 10);
-        Mockito.when(insumoGateway.listarPorIds(List.of(30L))).thenReturn(List.of(insumo));
+        var insumo = new ItemCatalogo(30L, BigDecimal.TEN);
+        Mockito.when(catalogoEstoqueGateway.listarInsumosPorIds(List.of(30L))).thenReturn(List.of(insumo));
 
         criarOrdemDeServicoUseCase.criar(new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID, null, null,
                 List.of(new InsumoVinculadoCriarDto(30L, 4)), DESCRICAO));
 
-        Mockito.verify(insumoGateway).atualizar(Mockito.any());
+        Mockito.verify(reservaEstoqueGateway).reservarInsumo(5L, 30L, 4);
         Mockito.verify(ordemDeServicoGateway).vincularOuSomarInsumo(5L, 30L, 4, BigDecimal.TEN);
     }
 
@@ -302,10 +299,10 @@ class CriarOrdemDeServicoUseCaseUnitTest {
         stubAtendente();
         stubClienteEVeiculo();
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(5L);
-        Mockito.when(pecaGateway.listarPorIds(List.of(99L))).thenReturn(List.of());
+        Mockito.when(catalogoEstoqueGateway.listarPecasPorIds(List.of(99L))).thenReturn(List.of());
         CriarOrdemDeServicoDto dto = new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID, null,
                 List.of(new PecaVinculadaCriarDto(99L, 1)), null, DESCRICAO);
-        assertThrows(PecaNaoEncontradaException.class, () -> criarOrdemDeServicoUseCase.criar(dto));
+        assertThrows(PecaNaoEncontradaNoCatalogoException.class, () -> criarOrdemDeServicoUseCase.criar(dto));
     }
 
     @Test
@@ -313,10 +310,10 @@ class CriarOrdemDeServicoUseCaseUnitTest {
         stubAtendente();
         stubClienteEVeiculo();
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(5L);
-        Mockito.when(insumoGateway.listarPorIds(List.of(99L))).thenReturn(List.of());
+        Mockito.when(catalogoEstoqueGateway.listarInsumosPorIds(List.of(99L))).thenReturn(List.of());
         var dto = new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID, null, null,
                 List.of(new InsumoVinculadoCriarDto(99L, 1)), DESCRICAO);
-        assertThrows(InsumoNaoEncontradoException.class, () -> criarOrdemDeServicoUseCase.criar(dto));
+        assertThrows(InsumoNaoEncontradoNoCatalogoException.class, () -> criarOrdemDeServicoUseCase.criar(dto));
     }
 
     @Test
@@ -324,11 +321,12 @@ class CriarOrdemDeServicoUseCaseUnitTest {
         stubAtendente();
         stubClienteEVeiculo();
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(5L);
-        var pecaSemEstoque = Peca.reconstituir(20L, "Filtro", "desc", BigDecimal.TEN, 0);
-        Mockito.when(pecaGateway.listarPorIds(List.of(20L))).thenReturn(List.of(pecaSemEstoque));
+        var pecaSemEstoque = new ItemCatalogo(20L, BigDecimal.TEN);
+        Mockito.when(catalogoEstoqueGateway.listarPecasPorIds(List.of(20L))).thenReturn(List.of(pecaSemEstoque));
+        Mockito.doThrow(new EstoqueInsuficienteParaOrdemException()).when(reservaEstoqueGateway).reservarPeca(5L, 20L, 3);
         CriarOrdemDeServicoDto dto = new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID, null,
                 List.of(new PecaVinculadaCriarDto(20L, 3)), null, DESCRICAO);
-        assertThrows(EstoqueInsuficienteException.class, () -> criarOrdemDeServicoUseCase.criar(dto));
+        assertThrows(EstoqueInsuficienteParaOrdemException.class, () -> criarOrdemDeServicoUseCase.criar(dto));
     }
 
     @Test
@@ -336,11 +334,12 @@ class CriarOrdemDeServicoUseCaseUnitTest {
         stubAtendente();
         stubClienteEVeiculo();
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(5L);
-        var insumoSemEstoque = Insumo.reconstituir(30L, "Óleo", "desc", BigDecimal.TEN, UnidadeMedida.LITRO, 0);
-        Mockito.when(insumoGateway.listarPorIds(List.of(30L))).thenReturn(List.of(insumoSemEstoque));
+        var insumoSemEstoque = new ItemCatalogo(30L, BigDecimal.TEN);
+        Mockito.when(catalogoEstoqueGateway.listarInsumosPorIds(List.of(30L))).thenReturn(List.of(insumoSemEstoque));
+        Mockito.doThrow(new EstoqueInsuficienteParaOrdemException()).when(reservaEstoqueGateway).reservarInsumo(5L, 30L, 3);
 
         CriarOrdemDeServicoDto dto = new CriarOrdemDeServicoDto(CLIENTE_ID, VEICULO_ID, null, null,
                 List.of(new InsumoVinculadoCriarDto(30L, 3)), DESCRICAO);
-        assertThrows(EstoqueInsuficienteException.class, () -> criarOrdemDeServicoUseCase.criar(dto));
+        assertThrows(EstoqueInsuficienteParaOrdemException.class, () -> criarOrdemDeServicoUseCase.criar(dto));
     }
 }

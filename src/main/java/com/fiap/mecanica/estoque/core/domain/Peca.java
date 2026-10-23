@@ -1,10 +1,12 @@
 package com.fiap.mecanica.estoque.core.domain;
 
 import lombok.Getter;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 
 @Getter
+@SuperBuilder
 public class Peca extends ItemEstoque {
 	private Long id;
 	private String nome;
@@ -23,11 +25,5 @@ public class Peca extends ItemEstoque {
 		this.descricao = descricao;
 		this.preco = preco;
 		ajustarQuantidade(quantidadeEstoque);
-	}
-
-	public static Peca reconstituir(Long id, String nome, String descricao, BigDecimal preco, Integer quantidadeEstoque) {
-		var peca = new Peca(nome, descricao, preco, quantidadeEstoque);
-		peca.id = id;
-		return peca;
 	}
 }

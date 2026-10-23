@@ -1,13 +1,13 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.gestao.core.gateway.AtendenteGateway;
 import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
 import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
 import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
+import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.OrdemDeServicoResponseJson;
@@ -30,8 +30,8 @@ public class OrdemDeServicoCleanController {
     private final ClienteGateway clienteGateway;
     private final MecanicoGateway mecanicoGateway;
     private final ServicoGateway servicoGateway;
-    private final PecaGateway pecaGateway;
-    private final InsumoGateway insumoGateway;
+    private final CatalogoEstoqueGateway catalogoEstoqueGateway;
+    private final ReservaEstoqueGateway reservaEstoqueGateway;
     private final NotificacaoGateway notificacaoGateway;
     private final MetricasGateway metricasGateway;
     private final UserGateway userGateway;
@@ -43,8 +43,8 @@ public class OrdemDeServicoCleanController {
                                           ClienteGateway clienteGateway,
                                           MecanicoGateway mecanicoGateway,
                                           ServicoGateway servicoGateway,
-                                          PecaGateway pecaGateway,
-                                          InsumoGateway insumoGateway,
+                                          CatalogoEstoqueGateway catalogoEstoqueGateway,
+                                          ReservaEstoqueGateway reservaEstoqueGateway,
                                           NotificacaoGateway notificacaoGateway,
                                           MetricasGateway metricasGateway,
                                           UserGateway userGateway) {
@@ -55,8 +55,8 @@ public class OrdemDeServicoCleanController {
         this.clienteGateway = clienteGateway;
         this.mecanicoGateway = mecanicoGateway;
         this.servicoGateway = servicoGateway;
-        this.pecaGateway = pecaGateway;
-        this.insumoGateway = insumoGateway;
+        this.catalogoEstoqueGateway = catalogoEstoqueGateway;
+        this.reservaEstoqueGateway = reservaEstoqueGateway;
         this.notificacaoGateway = notificacaoGateway;
         this.metricasGateway = metricasGateway;
         this.userGateway = userGateway;
@@ -65,7 +65,7 @@ public class OrdemDeServicoCleanController {
     public Long criar(CriarOrdemDeServicoDto dto) {
         var presenter = new CriarOrdemDeServicoPresenter();
         new CriarOrdemDeServicoUseCase(atendenteGateway, tokenGateway, ordemDeServicoGateway,
-                veiculoGateway, clienteGateway, servicoGateway, pecaGateway, insumoGateway,
+                veiculoGateway, clienteGateway, servicoGateway, catalogoEstoqueGateway, reservaEstoqueGateway,
                 notificacaoGateway, metricasGateway, presenter).criar(dto);
         return presenter.getViewModel();
     }

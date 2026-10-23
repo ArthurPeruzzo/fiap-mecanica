@@ -1,10 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
-import com.fiap.mecanica.estoque.core.domain.Insumo;
-import com.fiap.mecanica.estoque.core.domain.Peca;
-import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.gestao.core.domain.Atendente;
 import com.fiap.mecanica.gestao.core.domain.Cliente;
 import com.fiap.mecanica.gestao.core.domain.Veiculo;
@@ -14,7 +10,10 @@ import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
 import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.Servico;
+import com.fiap.mecanica.ordemdeservico.core.dto.ItemCatalogo;
+import com.fiap.mecanica.ordemdeservico.core.exception.EstoqueInsuficienteParaOrdemException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
@@ -65,8 +64,8 @@ class OrdemDeServicoControllerContractTest {
     @MockitoBean private ClienteGateway clienteGateway;
     @MockitoBean private MecanicoGateway mecanicoGateway;
     @MockitoBean private ServicoGateway servicoGateway;
-    @MockitoBean private PecaGateway pecaGateway;
-    @MockitoBean private InsumoGateway insumoGateway;
+    @MockitoBean private CatalogoEstoqueGateway catalogoEstoqueGateway;
+    @MockitoBean private ReservaEstoqueGateway reservaEstoqueGateway;
     @MockitoBean private NotificacaoGateway notificacaoGateway;
     @MockitoBean private MetricasGateway metricasGateway;
     @MockitoBean private UserGateway userGateway;
@@ -164,10 +163,10 @@ class OrdemDeServicoControllerContractTest {
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(1L);
         Mockito.when(servicoGateway.listarPorIds(List.of(10L)))
                 .thenReturn(List.of(Servico.reconstituir(10L, "Serviço", "desc", BigDecimal.TEN)));
-        Mockito.when(pecaGateway.listarPorIds(List.of(5L)))
-                .thenReturn(List.of(Peca.reconstituir(5L, "Peca", "desc", BigDecimal.TEN, 10)));
-        Mockito.when(insumoGateway.listarPorIds(List.of(30L)))
-                .thenReturn(List.of(Insumo.reconstituir(30L, "Insumo", "desc", BigDecimal.TEN, UnidadeMedida.LITRO, 10)));
+        Mockito.when(catalogoEstoqueGateway.listarPecasPorIds(List.of(5L)))
+                .thenReturn(List.of(new ItemCatalogo(5L, BigDecimal.TEN)));
+        Mockito.when(catalogoEstoqueGateway.listarInsumosPorIds(List.of(30L)))
+                .thenReturn(List.of(new ItemCatalogo(30L, BigDecimal.TEN)));
 
         String bodyWithLinks = "{\"clienteId\":1,\"veiculoId\":2,\"descricao\":\"Barulho ao frear\"," +
                 "\"servicosIds\":[10],\"pecas\":[{\"id\":5,\"quantidade\":2}],\"insumos\":[{\"id\":30,\"quantidade\":1}]}";
@@ -284,7 +283,7 @@ class OrdemDeServicoControllerContractTest {
         Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(cliente()));
         Mockito.when(ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(VEICULO_ID)).thenReturn(false);
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(1L);
-        Mockito.when(pecaGateway.listarPorIds(Mockito.anyList())).thenReturn(List.of());
+        Mockito.when(catalogoEstoqueGateway.listarPecasPorIds(Mockito.anyList())).thenReturn(List.of());
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -301,7 +300,7 @@ class OrdemDeServicoControllerContractTest {
         Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(cliente()));
         Mockito.when(ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(VEICULO_ID)).thenReturn(false);
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(1L);
-        Mockito.when(insumoGateway.listarPorIds(Mockito.anyList())).thenReturn(List.of());
+        Mockito.when(catalogoEstoqueGateway.listarInsumosPorIds(Mockito.anyList())).thenReturn(List.of());
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -348,8 +347,10 @@ class OrdemDeServicoControllerContractTest {
         Mockito.when(clienteGateway.buscarPorId(CLIENTE_ID)).thenReturn(Optional.of(cliente()));
         Mockito.when(ordemDeServicoGateway.existeOrdemAbertaParaVeiculo(VEICULO_ID)).thenReturn(false);
         Mockito.when(ordemDeServicoGateway.criar(Mockito.any())).thenReturn(1L);
-        Mockito.when(pecaGateway.listarPorIds(Mockito.anyList()))
-                .thenReturn(List.of(Peca.reconstituir(5L, "Peca", "desc", BigDecimal.TEN, 0)));
+        Mockito.when(catalogoEstoqueGateway.listarPecasPorIds(Mockito.anyList()))
+                .thenReturn(List.of(new ItemCatalogo(5L, BigDecimal.TEN)));
+        Mockito.doThrow(new EstoqueInsuficienteParaOrdemException())
+                .when(reservaEstoqueGateway).reservarPeca(Mockito.eq(1L), Mockito.eq(5L), Mockito.anyInt());
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
                         .contentType(MediaType.APPLICATION_JSON)

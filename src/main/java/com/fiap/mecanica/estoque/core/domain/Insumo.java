@@ -1,10 +1,12 @@
 package com.fiap.mecanica.estoque.core.domain;
 
 import lombok.Getter;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 
 @Getter
+@SuperBuilder
 public class Insumo extends ItemEstoque {
 	private Long id;
 	private String nome;
@@ -26,11 +28,5 @@ public class Insumo extends ItemEstoque {
 		this.preco = preco;
 		this.unidadeMedida = unidadeMedida;
 		ajustarQuantidade(quantidadeEstoque);
-	}
-
-	public static Insumo reconstituir(Long id, String nome, String descricao, BigDecimal preco, UnidadeMedida unidadeMedida, Integer quantidadeEstoque) {
-		var insumo = new Insumo(nome, descricao, preco, unidadeMedida, quantidadeEstoque);
-		insumo.id = id;
-		return insumo;
 	}
 }

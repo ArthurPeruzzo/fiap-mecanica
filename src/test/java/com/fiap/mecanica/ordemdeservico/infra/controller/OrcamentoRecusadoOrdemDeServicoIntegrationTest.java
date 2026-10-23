@@ -6,6 +6,9 @@ import io.restassured.RestAssured;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+import java.util.Map;
+
 class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
 
     private Integer obterEstoquePecaNoBanco(Long pecaId) {
@@ -16,6 +19,16 @@ class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServ
     private Integer obterEstoqueInsumoNoBanco(Long insumoId) {
         return jdbcTemplate.queryForObject(
                 "SELECT quantidade_estoque FROM insumo WHERE id = ?", Integer.class, insumoId);
+    }
+
+    private Integer obterReservadaNoBanco(String tabela, Long id) {
+        return jdbcTemplate.queryForObject(
+                "SELECT quantidade_reservada FROM " + tabela + " WHERE id = ?", Integer.class, id);
+    }
+
+    private List<String> obterStatusReservasNoBanco(Long ordemId) {
+        return jdbcTemplate.queryForList(
+                "SELECT status FROM reserva_estoque WHERE ordem_servico_id = ?", String.class, ordemId);
     }
 
     private int contarVinculosPecaNoBanco(Long ordemId, Long pecaId) {
@@ -42,25 +55,25 @@ class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServ
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + qtdPeca1 + "}")
+                .body(Map.of("quantidade", qtdPeca1))
                 .when().put("/ordem-servico/" + ordemId + "/pecas/" + peca1Id)
                 .then().statusCode(204);
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + qtdPeca2 + "}")
+                .body(Map.of("quantidade", qtdPeca2))
                 .when().put("/ordem-servico/" + ordemId + "/pecas/" + peca2Id)
                 .then().statusCode(204);
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + qtdInsumo1 + "}")
+                .body(Map.of("quantidade", qtdInsumo1))
                 .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumo1Id)
                 .then().statusCode(204);
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + qtdInsumo2 + "}")
+                .body(Map.of("quantidade", qtdInsumo2))
                 .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumo2Id)
                 .then().statusCode(204);
 
@@ -110,6 +123,12 @@ class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServ
         Assertions.assertEquals(10, obterEstoquePecaNoBanco(peca2Id));
         Assertions.assertEquals(10, obterEstoqueInsumoNoBanco(insumo1Id));
         Assertions.assertEquals(10, obterEstoqueInsumoNoBanco(insumo2Id));
+
+        Assertions.assertEquals(0, obterReservadaNoBanco("peca", peca1Id));
+        Assertions.assertEquals(0, obterReservadaNoBanco("peca", peca2Id));
+        Assertions.assertEquals(0, obterReservadaNoBanco("insumo", insumo1Id));
+        Assertions.assertEquals(0, obterReservadaNoBanco("insumo", insumo2Id));
+        Assertions.assertEquals(List.of("LIBERADA", "LIBERADA", "LIBERADA", "LIBERADA"), obterStatusReservasNoBanco(ordemId));
 
         Assertions.assertEquals(1, contarVinculosPecaNoBanco(ordemId, peca1Id));
         Assertions.assertEquals(1, contarVinculosPecaNoBanco(ordemId, peca2Id));

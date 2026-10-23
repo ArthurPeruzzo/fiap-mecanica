@@ -98,7 +98,7 @@ class PecaControllerContractTest {
 
     @Test
     void shouldReturn200WithPecasMappedToResponseJson() throws Exception {
-        var peca = Peca.reconstituir(1L, "Filtro", "Desc", new BigDecimal("29.90"), 10);
+        var peca = Peca.builder().id(1L).nome("Filtro").descricao("Desc").preco(new BigDecimal("29.90")).quantidadeEstoque(10).build();
         Mockito.when(pecaGateway.listar(0, 10)).thenReturn(new Pagina<>(List.of(peca), 0, 10, 1L, 1));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/peca")
@@ -113,7 +113,7 @@ class PecaControllerContractTest {
 
     @Test
     void shouldReturn204WhenValidUpdate() throws Exception {
-        var peca = Peca.reconstituir(1L, "Filtro", "Desc", new BigDecimal("29.90"), 10);
+        var peca = Peca.builder().id(1L).nome("Filtro").descricao("Desc").preco(new BigDecimal("29.90")).quantidadeEstoque(10).build();
         Mockito.when(pecaGateway.buscarPorId(1L)).thenReturn(Optional.of(peca));
 
         mockMvc.perform(MockMvcRequestBuilders.put("/peca/1")
@@ -152,7 +152,7 @@ class PecaControllerContractTest {
 
     @Test
     void shouldReturn204WhenDeletarPecaSuccessfully() throws Exception {
-        var peca = Peca.reconstituir(1L, "Filtro", "Desc", new BigDecimal("29.90"), 10);
+        var peca = Peca.builder().id(1L).nome("Filtro").descricao("Desc").preco(new BigDecimal("29.90")).quantidadeEstoque(10).build();
         Mockito.when(pecaGateway.buscarPorId(1L)).thenReturn(Optional.of(peca));
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/peca/1"))

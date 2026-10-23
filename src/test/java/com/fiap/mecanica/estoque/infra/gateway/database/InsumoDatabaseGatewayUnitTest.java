@@ -95,7 +95,7 @@ class InsumoDatabaseGatewayUnitTest {
 
     @Test
     void atualizar_shouldSaveEntityWithId() {
-        var insumo = Insumo.reconstituir(1L, "Óleo novo", "Desc nova", new BigDecimal("50.00"), UnidadeMedida.ML, 20);
+        var insumo = Insumo.builder().id(1L).nome("Óleo novo").descricao("Desc nova").preco(new BigDecimal("50.00")).unidadeMedida(UnidadeMedida.ML).quantidadeEstoque(20).build();
         var captor = ArgumentCaptor.forClass(InsumoEntity.class);
 
         gateway.atualizar(insumo);
@@ -110,7 +110,7 @@ class InsumoDatabaseGatewayUnitTest {
 
     @Test
     void atualizar_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
-        var insumo = Insumo.reconstituir(1L, "Óleo", "Desc", new BigDecimal("45.90"), UnidadeMedida.LITRO, 5);
+        var insumo = Insumo.builder().id(1L).nome("Óleo").descricao("Desc").preco(new BigDecimal("45.90")).unidadeMedida(UnidadeMedida.LITRO).quantidadeEstoque(5).build();
         Mockito.when(insumoRepository.save(Mockito.any())).thenThrow(new RuntimeException("db error"));
 
         assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.atualizar(insumo));

@@ -93,7 +93,7 @@ class PecaDatabaseGatewayUnitTest {
 
     @Test
     void atualizar_shouldSaveEntityWithId() {
-        var peca = Peca.reconstituir(1L, "Filtro novo", "Desc nova", new BigDecimal("35.00"), 20);
+        var peca = Peca.builder().id(1L).nome("Filtro novo").descricao("Desc nova").preco(new BigDecimal("35.00")).quantidadeEstoque(20).build();
         var captor = ArgumentCaptor.forClass(PecaEntity.class);
 
         gateway.atualizar(peca);
@@ -109,7 +109,7 @@ class PecaDatabaseGatewayUnitTest {
 
     @Test
     void atualizar_shouldThrowErroAcessoBaseDeDadosExceptionWhenRepositoryFails() {
-        var peca = Peca.reconstituir(1L, "Filtro", "Desc", new BigDecimal("29.90"), 5);
+        var peca = Peca.builder().id(1L).nome("Filtro").descricao("Desc").preco(new BigDecimal("29.90")).quantidadeEstoque(5).build();
         Mockito.when(pecaRepository.save(Mockito.any())).thenThrow(new RuntimeException("db error"));
 
         assertThrows(ErroAcessoBaseDeDadosException.class, () -> gateway.atualizar(peca));

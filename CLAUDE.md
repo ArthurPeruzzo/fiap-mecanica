@@ -55,7 +55,7 @@ Seeded by Flyway migrations. All share the same password `MeCanica2026!@#`.
 | `33366699957` | `ROLE_ATENDENTE` |
 | `11144477735` | `ROLE_MECANICO` |
 
-Login via `POST /authenticate/login`. Migration `V14` seeds sample data (clients, vehicles, parts, supplies, services, orders in every status) for immediate API exploration. Swagger UI: `http://localhost:8080/swagger-ui.html`.
+Login via `POST /authenticate/login`. Migration `V16` seeds sample data (clients, vehicles, parts, supplies, services, orders in every status) for immediate API exploration. Swagger UI: `http://localhost:8080/swagger-ui.html`.
 
 ## Environment variables
 
@@ -100,13 +100,16 @@ com.fiap.mecanica
 │           └── repository/ # ClienteRepository, VeiculoRepository, MecanicoRepository, AtendenteRepository
 ├── estoque/                # Business module: parts (peças) and supplies (insumos)
 │   ├── core/
-│   │   ├── domain/         # ItemEstoque (abstract), Peca extends ItemEstoque, Insumo extends ItemEstoque, UnidadeMedida (enum)
+│   │   ├── domain/         # ItemEstoque (abstract), Peca extends ItemEstoque, Insumo extends ItemEstoque, UnidadeMedida (enum),
+│   │   │                   # Reserva + StatusReserva/TipoItemReserva, ReservaDeEstoque (domain service)
 │   │   ├── dto/            # Criar/Atualizar/Listar for Peca and Insumo
-│   │   ├── gateway/        # PecaGateway, InsumoGateway
-│   │   ├── usecase/        # Criar/Atualizar/Deletar/Listar for Peca and Insumo
+│   │   ├── gateway/        # PecaGateway, InsumoGateway, ItemEstoqueGateway, ReservaGateway
+│   │   ├── usecase/        # Criar/Atualizar/Deletar/Listar for Peca and Insumo,
+│   │   │                   # ReservarItemEstoque, ConfirmarReservasOrdemDeServico, LiberarReservasOrdemDeServico
 │   │   └── exception/      # PecaNaoEncontrada, InsumoNaoEncontrado, EstoqueInsuficiente
 │   └── infra/              # Peca{Clean|Http}Controller, Insumo{Clean|Http}Controller,
 │                           # presenter/: ListarPecas, ListarInsumos presenters,
+│                           # gateway/database/: Peca/Insumo/Reserva/ItemEstoque DatabaseGateway,
 │                           # entities, repositories
 └── ordemdeservico/         # Business module: service orders and services
     ├── core/
@@ -120,7 +123,8 @@ com.fiap.mecanica
     │   ├── dto/            # CriarOrdemDeServicoDto, OrdemDeServicoListagemDto,
     │   │               # ServicoVinculadoDto, PecaVinculadaDto, InsumoVinculadoDto,
     │   │               # Criar/Atualizar/ListarServicoDto
-    │   ├── gateway/        # OrdemDeServicoGateway, ServicoGateway, LinkAprovacaoOrcamentoGateway
+    │   ├── gateway/        # OrdemDeServicoGateway, ServicoGateway, LinkAprovacaoOrcamentoGateway,
+    │   │                   # CatalogoEstoqueGateway (peça/insumo → ItemCatalogo), ReservaEstoqueGateway
     │   ├── usecase/
     │   │   ├── ordemdeservico/ # CriarOrdemDeServico, IniciarDiagnostico, ConcluirDiagnostico,
     │   │   │                   # VincularServico, DesvincularServico,
@@ -143,6 +147,8 @@ com.fiap.mecanica
     │                       # ServicoEmExecucaoOuFinalizado, ServicoNaoIniciadoOuFinalizado,
     │                       # ServicoNaoVinculado, OrdemDeServicoSemServicos,
     │                       # MecanicoNaoResponsavelPelaOrdemDeServico,
+    │                       # PecaNaoEncontradaNoCatalogo, InsumoNaoEncontradoNoCatalogo,
+    │                       # EstoqueInsuficienteParaOrdem,
     │                       # VeiculoNaoPertenceAoCliente, etc.
     └── infra/
         ├── controller/     # Five Clean+Http pairs: OrdemDeServico (CRUD/listar/status/entregar),
@@ -156,6 +162,8 @@ com.fiap.mecanica
         │                   # presenter/: CriarOrdemDeServico, ListarOrdemDeServico,
         │                   #             ConsultarStatusOrdemDeServico, ListarServicos presenters
         └── gateway/
+            ├── estoque/    # The ONLY place in ordemdeservico allowed to import `estoque`:
+            │               # CatalogoEstoqueLocalGateway, ReservaEstoqueLocalGateway (see "Estoque seam")
             ├── database/   # OrdemDeServicoDatabaseGateway
             ├── entity/     # OrdemDeServicoEntity, ServicoEntity,
             │               # OrdemDeServicoServicoEntity (join: ordem_servico_servico — stores preco, StatusServico, timestamps),
@@ -197,11 +205,11 @@ Use cases that don't produce output (create/update/delete) return `void` — no 
 - **`core/` has zero Spring/JPA dependencies.** Use cases are plain Java — no `@Service` or any other Spring annotation. They are instantiated with `new` inside `CleanController` methods, not managed by Spring. Domain objects are plain Java. JPA entities live exclusively in `infra/gateway/entity/`.
 - **Dependency inversion via gateway interfaces.** All interfaces are defined in `core/gateway/`; implementations live in `infra/gateway/database/`.
 - **Use cases** depend only on domain objects and gateway interfaces — never on Spring beans or JPA directly.
-- **Cross-module gateway access is allowed.** `ordemdeservico` use cases depend on `gestao` gateways (e.g. `CriarOrdemDeServicoUseCase` uses `AtendenteGateway`, `ClienteGateway`, `VeiculoGateway`). This is intentional — `core/` modules may import from other modules' `core/` packages. For listing/read use cases that need human-readable fields from related modules (names, plate, etc.), enrich via cross-module gateways inside the use case and return a dedicated DTO (e.g. `ListarOrdemDeServicoUseCase` → `OrdemDeServicoListagemDto`). Never expose raw IDs in response JSON when the display name is available.
+- **Cross-module gateway access is allowed.** `ordemdeservico` use cases depend on `gestao` gateways (e.g. `CriarOrdemDeServicoUseCase` uses `AtendenteGateway`, `ClienteGateway`, `VeiculoGateway`). This is intentional — `core/` modules may import from other modules' `core/` packages. For listing/read use cases that need human-readable fields from related modules (names, plate, etc.), enrich via cross-module gateways inside the use case and return a dedicated DTO (e.g. `ListarOrdemDeServicoUseCase` → `OrdemDeServicoListagemDto`). Never expose raw IDs in response JSON when the display name is available. **Exception: `estoque`.** It is planned to become a separate microservice, so `ordemdeservico` must not import `com.fiap.mecanica.estoque.*` anywhere except `ordemdeservico/infra/gateway/estoque/` — see "Estoque seam" below. `ArquiteturaModulosUnitTest` fails the build otherwise.
 - **Value objects strip formatting on construction.** `Cpf` and `Cnpj` strip `[.\\-/]`; `Placa` strips `-` and uppercases — do not change to `\\D`.
 - **`Placa` value object** lives in `gestao/core/domain/`. `getValor()` returns the stored (stripped) value; `getValorFormatado()` inserts `-` after the 3rd character for display.
 - **Pagination boundary:** `Pagina<T>` (plain Java record in `shared/page/`) is used in `core/` and returned by gateways. `PageResponse` (Spring-based) lives in `infra/` and is used only in controllers. Controller converts via `PageResponse.from(pagina.map(ResponseJson::from))`.
-- **Domain rehydration:** use the static factory `reconstituir(Long id, ...)` to rebuild domain objects from DB. For simple domain objects (`Cliente`, `Veiculo`, etc.) it calls the regular constructor then sets `id` directly. `OrdemDeServico.reconstituir` uses a private no-arg constructor and assigns all fields directly (bypassing the creation constructor intentionally — the `//TODO resolver esse metodo` comment marks this as a known debt). Never invent new bypass patterns.
+- **Domain rehydration:** use the static factory `reconstituir(Long id, ...)` to rebuild domain objects from DB. For simple domain objects (`Cliente`, `Veiculo`, etc.) it calls the regular constructor then sets `id` directly. `OrdemDeServico.reconstituir` uses a private no-arg constructor and assigns all fields directly (bypassing the creation constructor intentionally — the `//TODO resolver esse metodo` comment marks this as a known debt). Never invent new bypass patterns. **Exception:** `Peca`, `Insumo` and `Reserva` have no `reconstituir` — they use Lombok `@Builder` (`@SuperBuilder` on `ItemEstoque`/`Peca`/`Insumo`, `@Builder` + private `@AllArgsConstructor` on `Reserva`): `Peca.builder().id(..).nome(..)...build()`. Public constructors remain for creation. With `@SuperBuilder`, `build()` returns a wildcard type, so inside lambdas map via a private method (see `paraDominio` in `PecaDatabaseGateway`/`InsumoDatabaseGateway`).
 - **Domain mutation:** use the `atualizar(...)` method on the domain object to update its state. The method re-validates invariants (e.g. exactly one document, valid plate format).
 - **`Veiculo.clienteId` is immutable after creation.** `atualizar(placa, modelo, ano)` does not accept `clienteId` — the client link can only be changed by deleting and recreating the vehicle.
 - **Domain exceptions** extend `BaseException` (which carries `HttpStatus`). Place them in `<module>/core/exception/`. `GlobalExceptionHandler` maps `BaseException` → its status, `MethodArgumentNotValidException` → 400, `DataIntegrityViolationException` → 400.
@@ -260,7 +268,7 @@ OrdemDeServico.reconstituir(id, clienteId, veiculoId, atendenteId, mecanicoId, s
 **Domain rules for vincular/desvincular peça and insumo:**
 - `vincularServico(Long servicoId, BigDecimal preco)`: allowed from `RECEBIDA` or `EM_DIAGNOSTICO`; adds a `ServicoVinculado` with `status = NAO_INICIADO` and null execution timestamps; throws `ServicoJaVinculadoException` if already linked.
 - `desvincularServico(Long servicoId)`: allowed from `RECEBIDA` or `EM_DIAGNOSTICO`.
-- `vincularPeca(Long pecaId, Integer quantidade, BigDecimal preco)` / `vincularInsumo(...)`: allowed from `RECEBIDA` or `EM_DIAGNOSTICO`; if the item is already linked, sums the quantity instead of adding a duplicate entry.
+- `vincularPeca(Long pecaId, Integer quantidade, BigDecimal preco)` / `vincularInsumo(...)`: allowed from `RECEBIDA` or `EM_DIAGNOSTICO`; if the item is already linked, sums the quantity instead of adding a duplicate entry. **The price is frozen at the first link**: the existing entry's `preco` is kept and the `preco` argument is ignored (the gateway also keeps the stored price when summing).
 - `desvincularPeca(Long pecaId, Integer quantidade)`: throws `PecaNaoVinculadaException` if not linked; throws `QuantidadeDesvincularInvalidaException` if `quantidade > existente.quantidade()`; removes the entry entirely when `quantidade == existente.quantidade()`; preserves `existente.preco()` on the remaining entry.
 - `desvincularInsumo`: same pattern as desvincularPeca.
 
@@ -270,17 +278,12 @@ OrdemDeServico.reconstituir(id, clienteId, veiculoId, atendenteId, mecanicoId, s
 
 The join tables `ordem_servico_peca` and `ordem_servico_insumo` each have a `UNIQUE KEY` on `(ordem_servico_id, {peca|insumo}_id)`, so duplicate rows are prevented at the DB level.
 
-**Use case flow for vincular** (same for peca and insumo):
-1. Load `OrdemDeServico` → validate status via domain (`vincularPeca/vincularInsumo` throws if not `EM_DIAGNOSTICO`).
-2. Load `Peca`/`Insumo` → call `baixarEstoque(quantidade)` (throws `EstoqueInsuficienteException` if insufficient).
-3. `pecaGateway/insumoGateway.atualizar(peca/insumo)` to persist the stock change.
-4. `ordemDeServicoGateway.vincularOuSomarPeca/vincularOuSomarInsumo(...)` to persist the link.
+**Use case flow for vincular/desvincular** (same for peca and insumo) — stock is reserved, not decremented:
+1. Load `OrdemDeServico` and the item via `CatalogoEstoqueGateway.buscarPeca/buscarInsumo` → `ItemCatalogo(id, preco)` (404 `PecaNaoEncontradaNoCatalogoException`/`InsumoNaoEncontradoNoCatalogoException` if missing) → `ordemDeServico.vincularPeca/desvincularPeca(...)` (domain validates status, presence and quantity).
+2. `ReservaEstoqueGateway.reservarPeca/reservarInsumo(osId, itemId, quantidadeTotal)` with the item's new total in the OS (0 after a full desvincular); throws `EstoqueInsuficienteParaOrdemException` (422) if the available stock can't cover it — `ReservaEstoqueLocalGateway` translates the estoque module's `EstoqueInsuficienteException`.
+3. `ordemDeServicoGateway.vincularOuSomar.../desvincularOuSubtrair...(...)` to persist the link.
 
-**Use case flow for desvincular** (same for peca and insumo):
-1. Load `OrdemDeServico` → load `Peca`/`Insumo`.
-2. `peca/insumo.devolverEstoque(quantidade)` to restore stock.
-3. `ordemDeServico.desvincularPeca/desvincularInsumo(id, quantidade)` — domain validates status, presence, and quantity.
-4. `pecaGateway/insumoGateway.atualizar(...)` and `ordemDeServicoGateway.desvincularOuSubtrairPeca/desvincularOuSubtrairInsumo(...)`.
+Aprovar orçamento → `reservaEstoqueGateway.confirmarReservas(osId)` (stock is decremented). Recusar → `liberarReservas(osId)`. Reservations live in `reserva_estoque` (status `ATIVA`/`CONFIRMADA`/`LIBERADA`).
 
 **Use case flow for enviarOrcamento** (`POST /ordem-servico/orcamento/envio/{id}`, requires `ROLE_ATENDENTE`):
 1. Load `OrdemDeServico` → call `gravarEnvioOrcamento()` which delegates to `state.enviarOrcamento(this)` (only succeeds from `DIAGNOSTICO_CONCLUIDO`).
@@ -316,9 +319,21 @@ Both flows share a common abstract base (`OrcamentoAprovadoOrdemDeServicoUseCase
 
 ### Estoque domain
 
-`ItemEstoque` is an abstract base class for `Peca` and `Insumo`. It encapsulates stock quantity and exposes `baixarEstoque(qty)` (throws `EstoqueInsuficienteException` if insufficient) and `devolverEstoque(qty)`. Concrete subclasses call `ajustarQuantidade(qty)` (protected) from their `atualizar(...)` method.
+`ItemEstoque` is an abstract base class for `Peca` and `Insumo`. It holds `quantidadeEstoque` and `quantidadeReservada` and exposes `reservar(qty)` (throws `EstoqueInsuficienteException` if insufficient), `liberarReserva(qty)`, `confirmarBaixa(qty)` and `getEstoqueDisponivel()` (estoque − reservada). Concrete subclasses call `ajustarQuantidade(qty)` (protected) from their `atualizar(...)` method.
 
-`Peca.reconstituir` has 5 parameters `(id, nome, descricao, preco, quantidadeEstoque)` — no `UnidadeMedida`. `Insumo.reconstituir` has 6 parameters with `UnidadeMedida` as 5th.
+`Peca`/`Insumo`/`Reserva` are rehydrated with builders (see "Domain rehydration"). `quantidadeReservada` defaults to 0 when omitted (`@Builder.Default`); a `Reserva` built without `status` has a null status, so always set it.
+
+**`ReservaDeEstoque`** (`estoque/core/domain/`, domain service, no gateways): `definirQuantidade(item, reserva, novoTotal)` compares `novoTotal` with `reserva.quantidadeAtiva()`, updates the reserva and calls `item.reservar(delta)` or `item.liberarReserva(delta)`. Returns `false` when nothing changed (idempotent) so the caller skips persistence. `ReservarItemEstoqueUseCase` loads, calls it, then saves.
+
+**`ItemEstoqueGateway`** (`estoque/core/gateway/`): `buscar(TipoItemReserva, itemId)` (throws `PecaNaoEncontradaException`/`InsumoNaoEncontradoException`) and `atualizar(ItemEstoque)`. `ItemEstoqueDatabaseGateway` routes by type to `PecaGateway`/`InsumoGateway`. The reserva/confirmar/liberar use cases take `(ItemEstoqueGateway, ReservaGateway)`.
+
+### Estoque seam (preparing the microservice extraction)
+
+`ordemdeservico` talks to `estoque` through two ports in `ordemdeservico/core/gateway/`, each with a local adapter in `ordemdeservico/infra/gateway/estoque/` (the only code allowed to import `estoque`):
+- `CatalogoEstoqueGateway` → `CatalogoEstoqueLocalGateway` (maps `Peca`/`Insumo` to `ItemCatalogo(id, preco)`; the OS only needs existence and price).
+- `ReservaEstoqueGateway` → `ReservaEstoqueLocalGateway` (reservar/confirmar/liberar; translates `EstoqueInsuficienteException`).
+
+Planned direction (hybrid): reservation stays a synchronous call (caller needs the answer immediately); confirm/release go async via RabbitMQ with outbox + idempotent consumers; the OS orchestrates the saga. Keep reservation idempotent per (OS, item) and confirm/release idempotent per OS. Known pending items: optimistic locking (`@Version`) on peca/insumo stock, reservation TTL, rule for deleting items with active reservations, exposing `estoqueDisponivel` in the API.
 
 ### Security filter flow
 
@@ -350,6 +365,8 @@ Standard field-level constraints: `@NotBlank`, `@NotNull`, `@CPF`, `@CNPJ` (Hibe
 | Unit | `@ExtendWith(MockitoExtension.class)` | — |
 | Contract | `@WebMvcTest` + `@ActiveProfiles("controller-test")` + `@ImportAutoConfiguration(NoSecurityConfiguration.class)` | `MockMvc` |
 | Integration | `@SpringBootTest(RANDOM_PORT)` + extends `AbstractContainer` | REST Assured (`RestAssured.port = port` in `@BeforeEach`) |
+
+`ArquiteturaModulosUnitTest` (plain JUnit, scans `src/main/java`, no Spring) enforces the estoque seam: `ordemdeservico` may import `estoque` only under `infra/gateway/estoque/`.
 
 **`AbstractContainer`** starts a shared Testcontainers MySQL instance and truncates all tables (except `flyway_schema_history` and `roles`) both before and after each test. It uses `SET FOREIGN_KEY_CHECKS = 0/1` to allow truncation regardless of FK constraints.
 

@@ -1,9 +1,8 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -22,14 +21,13 @@ public class OrcamentoHttpController {
     private final OrcamentoCleanController cleanController;
 
     public OrcamentoHttpController(OrdemDeServicoGateway ordemDeServicoGateway,
-                                    PecaGateway pecaGateway,
-                                    InsumoGateway insumoGateway,
+                                    ReservaEstoqueGateway reservaEstoqueGateway,
                                     NotificacaoGateway notificacaoGateway,
                                     LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway,
                                     @Value("${url.aprovar.orcamento}") String urlAprovarOrcamento,
                                     @Value("${url.recusar.orcamento}") String urlRecusarOrcamento) {
         this.cleanController = new OrcamentoCleanController(
-                ordemDeServicoGateway, pecaGateway, insumoGateway,
+                ordemDeServicoGateway, reservaEstoqueGateway,
                 notificacaoGateway, linkAprovacaoOrcamentoGateway,
                 urlAprovarOrcamento, urlRecusarOrcamento
         );

@@ -649,6 +649,41 @@ class OrdemDeServicoUnitTest {
     }
 
     @Test
+    void vincularPeca_shouldManterPrecoDoPrimeiroVinculoWhenPecaAlreadyLinked() {
+        BigDecimal preco = new BigDecimal(10);
+        var pecaExistente = new PecaVinculada(20L, 2, preco);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of(pecaExistente)))
+                .insumosVinculados(new ArrayList<>(List.of()))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
+
+        os.vincularPeca(20L, 3, new BigDecimal(99));
+
+        assertEquals(1, os.getPecasVinculadas().size());
+        assertEquals(20L, os.getPecasVinculadas().getFirst().pecaId());
+        assertEquals(5, os.getPecasVinculadas().getFirst().quantidade());
+        assertEquals(preco, os.getPecasVinculadas().getFirst().preco());
+    }
+
+    @Test
     void vincularPeca_shouldAddPecaToListWhenStatusIsRecebida() {
         var os = new OrdemDeServico(1L, 2L, 3L, DESCRICAO);
 
@@ -839,6 +874,41 @@ class OrdemDeServicoUnitTest {
                 .build();
 
         os.vincularInsumo(30L, 3, preco);
+
+        assertEquals(1, os.getInsumosVinculados().size());
+        assertEquals(30L, os.getInsumosVinculados().getFirst().insumoId());
+        assertEquals(7, os.getInsumosVinculados().getFirst().quantidade());
+        assertEquals(preco, os.getInsumosVinculados().getFirst().preco());
+    }
+
+    @Test
+    void vincularInsumo_shouldManterPrecoDoPrimeiroVinculoWhenInsumoAlreadyLinked() {
+        BigDecimal preco = new BigDecimal(10);
+        var insumoExistente = new InsumoVinculado(30L, 4, preco);
+        var os = OrdemDeServico.builder()
+                .id(1L)
+                .clienteId(1L)
+                .veiculoId(2L)
+                .atendenteId(3L)
+                .mecanicoId(5L)
+                .status(StatusOrdemDeServico.EM_DIAGNOSTICO)
+                .descricao(DESCRICAO)
+                .dataCriacao(LocalDateTime.now())
+                .dataInicioDiagnostico(LocalDateTime.now())
+                .dataConclusaoDiagnostico(null)
+                .servicosVinculados(new ArrayList<>(List.of()))
+                .pecasVinculadas(new ArrayList<>(List.of()))
+                .insumosVinculados(new ArrayList<>(List.of(insumoExistente)))
+                .orcamento(null)
+                .dataEnvioOrcamento(null)
+                .dataCancelamento(null)
+                .dataAprovacao(null)
+                .dataFinalizacao(null)
+                .dataEntrega(null)
+                .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
+                .build();
+
+        os.vincularInsumo(30L, 3, new BigDecimal(99));
 
         assertEquals(1, os.getInsumosVinculados().size());
         assertEquals(30L, os.getInsumosVinculados().getFirst().insumoId());
