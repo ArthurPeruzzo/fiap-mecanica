@@ -53,6 +53,7 @@ VALUES ((SELECT id FROM `cliente` WHERE cpf = '90196973074'), 'MLH8526', 'Renaul
 
 -- ==============================================================
 -- PEÇAS
+-- IDs fixos: o fiap-estoque (V4__seed_estoque.sql) usa os mesmos IDs.
 -- Quantidades já refletem as reservas das ordens de serviço abaixo:
 --   OS aprovadas (OS6, OS7, OS8): reserva CONFIRMADA, estoque baixado.
 --   OS abertas (OS3, OS4): reserva ATIVA, estoque intacto, conta em
@@ -66,27 +67,28 @@ VALUES ((SELECT id FROM `cliente` WHERE cpf = '90196973074'), 'MLH8526', 'Renaul
 --   Disco de Freio:       25 iniciais; OS7 confirmada = 2 baixados         -> 23
 -- ==============================================================
 
-INSERT INTO `peca` (`nome`, `descricao`, `preco`, `quantidade_estoque`, `quantidade_reservada`)
+INSERT INTO `peca` (`id`, `nome`, `descricao`, `preco`, `quantidade_estoque`, `quantidade_reservada`)
 VALUES
-    ('Pastilha de Freio Dianteira', 'Pastilha cerâmica de alta performance para eixo dianteiro',           89.90,  46, 0),
-    ('Correia Dentada',             'Correia dentada reforçada compatível com motores 1.0 a 2.0',         145.00,  30, 1),
-    ('Amortecedor Traseiro',        'Amortecedor a gás de dupla ação para eixo traseiro',                 320.00,  19, 0),
-    ('Vela de Ignição',             'Vela iridium de alto desempenho para motores flex',                   35.50, 100, 0),
-    ('Filtro de Ar',                'Filtro de ar esportivo lavável de alta filtragem',                    42.00,  58, 1),
-    ('Disco de Freio Dianteiro',    'Disco ventilado para eixo dianteiro, compatível com veículos 1.0-2.0', 210.00, 23, 0);
+    (1, 'Pastilha de Freio Dianteira', 'Pastilha cerâmica de alta performance para eixo dianteiro',           89.90,  46, 0),
+    (2, 'Correia Dentada',             'Correia dentada reforçada compatível com motores 1.0 a 2.0',         145.00,  30, 1),
+    (3, 'Amortecedor Traseiro',        'Amortecedor a gás de dupla ação para eixo traseiro',                 320.00,  19, 0),
+    (4, 'Vela de Ignição',             'Vela iridium de alto desempenho para motores flex',                   35.50, 100, 0),
+    (5, 'Filtro de Ar',                'Filtro de ar esportivo lavável de alta filtragem',                    42.00,  58, 1),
+    (6, 'Disco de Freio Dianteiro',    'Disco ventilado para eixo dianteiro, compatível com veículos 1.0-2.0', 210.00, 23, 0);
 
 -- ==============================================================
 -- INSUMOS
+-- IDs fixos: o fiap-estoque (V4__seed_estoque.sql) usa os mesmos IDs.
 -- Quantidades já refletem as reservas (mesma regra das peças):
 --   Óleo de Motor 5W30: 200 iniciais; OS6 (5L) e OS8 (4L) confirmadas = 9 baixados -> 191; OS3 aberta reserva 4
 -- ==============================================================
 
-INSERT INTO `insumo` (`nome`, `descricao`, `preco`, `quantidade_estoque`, `quantidade_reservada`, `unidade_medida`)
+INSERT INTO `insumo` (`id`, `nome`, `descricao`, `preco`, `quantidade_estoque`, `quantidade_reservada`, `unidade_medida`)
 VALUES
-    ('Óleo de Motor 5W30',        'Óleo sintético para motor a gasolina e flex',              38.00, 191, 4, 'LITRO'),
-    ('Fluido de Freio DOT4',      'Fluido de alta performance para sistemas de freio a disco', 25.00, 5000, 0, 'ML'),
-    ('Graxa Automotiva',          'Graxa multiuso para articulações e rolamentos',             15.00,  80, 0, 'UNIDADE'),
-    ('Líquido de Arrefecimento',  'Líquido refrigerante orgânico para radiador e bloco',      22.00, 150, 0, 'LITRO');
+    (1, 'Óleo de Motor 5W30',        'Óleo sintético para motor a gasolina e flex',              38.00, 191, 4, 'LITRO'),
+    (2, 'Fluido de Freio DOT4',      'Fluido de alta performance para sistemas de freio a disco', 25.00, 5000, 0, 'ML'),
+    (3, 'Graxa Automotiva',          'Graxa multiuso para articulações e rolamentos',             15.00,  80, 0, 'UNIDADE'),
+    (4, 'Líquido de Arrefecimento',  'Líquido refrigerante orgânico para radiador e bloco',      22.00, 150, 0, 'LITRO');
 
 -- ==============================================================
 -- SERVIÇOS
@@ -132,13 +134,14 @@ SET @s_revisao_freios   = (SELECT id FROM `servico` WHERE nome = 'Revisão de Fr
 SET @s_revisao_completa = (SELECT id FROM `servico` WHERE nome = 'Revisão Completa');
 SET @s_correia_dentada  = (SELECT id FROM `servico` WHERE nome = 'Troca de Correia Dentada');
 
-SET @p_pastilha    = (SELECT id FROM `peca` WHERE nome = 'Pastilha de Freio Dianteira');
-SET @p_correia     = (SELECT id FROM `peca` WHERE nome = 'Correia Dentada');
-SET @p_amortecedor = (SELECT id FROM `peca` WHERE nome = 'Amortecedor Traseiro');
-SET @p_filtro_ar   = (SELECT id FROM `peca` WHERE nome = 'Filtro de Ar');
-SET @p_disco       = (SELECT id FROM `peca` WHERE nome = 'Disco de Freio Dianteiro');
+-- Peças e insumos têm ID fixo (não há FK para o estoque, que terá banco próprio).
+SET @p_pastilha    = 1;
+SET @p_correia     = 2;
+SET @p_amortecedor = 3;
+SET @p_filtro_ar   = 5;
+SET @p_disco       = 6;
 
-SET @i_oleo = (SELECT id FROM `insumo` WHERE nome = 'Óleo de Motor 5W30');
+SET @i_oleo = 1;
 
 -- ==============================================================
 -- OS 1 — RECEBIDA
