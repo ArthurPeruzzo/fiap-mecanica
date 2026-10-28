@@ -16,6 +16,7 @@ import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
 import com.fiap.mecanica.ordemdeservico.core.dto.InsumoVinculadoCriarDto;
 import com.fiap.mecanica.ordemdeservico.core.dto.ItemCatalogo;
+import com.fiap.mecanica.ordemdeservico.core.dto.ItemReserva;
 import com.fiap.mecanica.ordemdeservico.core.dto.PecaVinculadaCriarDto;
 import com.fiap.mecanica.ordemdeservico.core.exception.InsumoNaoEncontradoNoCatalogoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoAbertaParaVeiculoException;
@@ -26,16 +27,21 @@ import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.notificacao.core.domain.MensagemParams;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
+import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class CriarOrdemDeServicoUseCase {
 
 	private final AtendenteGateway atendenteGateway;
@@ -46,6 +52,7 @@ public class CriarOrdemDeServicoUseCase {
 	private final ServicoGateway servicoGateway;
 	private final CatalogoEstoqueGateway catalogoEstoqueGateway;
 	private final ReservaEstoqueGateway reservaEstoqueGateway;
+	private final TransacaoGateway transacaoGateway;
 	private final NotificacaoGateway notificacaoGateway;
 	private final MetricasGateway metricasGateway;
 	private final CriarOrdemDeServicoOutputPort outputPort;
@@ -58,6 +65,7 @@ public class CriarOrdemDeServicoUseCase {
 									   ServicoGateway servicoGateway,
 									   CatalogoEstoqueGateway catalogoEstoqueGateway,
 									   ReservaEstoqueGateway reservaEstoqueGateway,
+									   TransacaoGateway transacaoGateway,
 									   NotificacaoGateway notificacaoGateway,
 									   MetricasGateway metricasGateway,
 									   CriarOrdemDeServicoOutputPort outputPort) {
@@ -69,6 +77,7 @@ public class CriarOrdemDeServicoUseCase {
 		this.servicoGateway = servicoGateway;
 		this.catalogoEstoqueGateway = catalogoEstoqueGateway;
 		this.reservaEstoqueGateway = reservaEstoqueGateway;
+		this.transacaoGateway = transacaoGateway;
 		this.notificacaoGateway = notificacaoGateway;
 		this.metricasGateway = metricasGateway;
 		this.outputPort = outputPort;
@@ -82,11 +91,17 @@ public class CriarOrdemDeServicoUseCase {
 		validaVinculoVeiculoAndCliente(veiculo, cliente);
 		validaOrdemAbertaParaVeiculo(veiculo);
 
-		OrdemDeServico ordemDeServico = criaOrdemDeServico(dto, atendente);
+		OrdemDeServico ordemDeServico = new OrdemDeServico(dto.clienteId(), dto.veiculoId(), atendente.getId(), dto.descricao());
 
-		vincularServicos(ordemDeServico, dto.servicosIds());
-		vincularPecas(ordemDeServico, dto.pecas());
-		vincularInsumos(ordemDeServico, dto.insumos());
+		List<Servico> servicos = buscaServicos(dto.servicosIds());
+		Map<Long, ItemCatalogo> pecasPorId = buscaPecasNoCatalogo(dto.pecas());
+		Map<Long, ItemCatalogo> insumosPorId = buscaInsumosNoCatalogo(dto.insumos());
+
+		servicos.forEach(servico -> ordemDeServico.vincularServico(servico.getId(), servico.getPreco()));
+		orEmpty(dto.pecas()).forEach(p -> ordemDeServico.vincularPeca(p.id(), p.quantidade(), pecasPorId.get(p.id()).preco()));
+		orEmpty(dto.insumos()).forEach(i -> ordemDeServico.vincularInsumo(i.id(), i.quantidade(), insumosPorId.get(i.id()).preco()));
+
+		persistirEReservarEstoque(ordemDeServico, servicos, dto.pecas(), pecasPorId, dto.insumos(), insumosPorId);
 
 		notificarCliente(ordemDeServico);
 
@@ -120,29 +135,18 @@ public class CriarOrdemDeServicoUseCase {
 		}
 	}
 
-	private OrdemDeServico criaOrdemDeServico(CriarOrdemDeServicoDto dto, Atendente atendente) {
-		OrdemDeServico ordemDeServico = new OrdemDeServico(dto.clienteId(), dto.veiculoId(), atendente.getId(), dto.descricao());
-		Long ordemServicoId = ordemDeServicoGateway.criar(ordemDeServico);
-		ordemDeServico.setId(ordemServicoId);
-		return ordemDeServico;
-	}
-
-	private void vincularServicos(OrdemDeServico ordemDeServico, List<Long> servicosIds) {
-		if (servicosIds == null || servicosIds.isEmpty()) return;
+	private List<Servico> buscaServicos(List<Long> servicosIds) {
+		if (servicosIds == null || servicosIds.isEmpty()) return List.of();
 
 		List<Servico> servicos = servicoGateway.listarPorIds(servicosIds);
 		if (servicos.size() != servicosIds.size()) {
 			throw new ServicoNaoEncontradoException();
 		}
-
-		servicos.forEach(servico -> {
-			ordemDeServico.vincularServico(servico.getId(), servico.getPreco());
-			ordemDeServicoGateway.vincularServico(ordemDeServico.getId(), servico.getId(), servico.getPreco(), StatusServico.NAO_INICIADO);
-		});
+		return servicos;
 	}
 
-	private void vincularPecas(OrdemDeServico ordemDeServico, List<PecaVinculadaCriarDto> pecas) {
-		if (pecas == null || pecas.isEmpty()) return;
+	private Map<Long, ItemCatalogo> buscaPecasNoCatalogo(List<PecaVinculadaCriarDto> pecas) {
+		if (pecas == null || pecas.isEmpty()) return Map.of();
 
 		List<Long> pecasIds = pecas.stream().map(PecaVinculadaCriarDto::id).toList();
 		Map<Long, ItemCatalogo> pecasPorId = catalogoEstoqueGateway.listarPecasPorIds(pecasIds).stream()
@@ -151,17 +155,11 @@ public class CriarOrdemDeServicoUseCase {
 		if (pecasPorId.size() != pecasIds.size()) {
 			throw new PecaNaoEncontradaNoCatalogoException();
 		}
-
-		pecas.forEach(dto -> {
-			ItemCatalogo peca = pecasPorId.get(dto.id());
-			ordemDeServico.vincularPeca(peca.id(), dto.quantidade(), peca.preco());
-			reservaEstoqueGateway.reservarPeca(ordemDeServico.getId(), peca.id(), ordemDeServico.getTotalQuantidadePecasMapeadasPorId().get(peca.id()));
-			ordemDeServicoGateway.vincularOuSomarPeca(ordemDeServico.getId(), peca.id(), dto.quantidade(), peca.preco());
-		});
+		return pecasPorId;
 	}
 
-	private void vincularInsumos(OrdemDeServico ordemDeServico, List<InsumoVinculadoCriarDto> insumos) {
-		if (insumos == null || insumos.isEmpty()) return;
+	private Map<Long, ItemCatalogo> buscaInsumosNoCatalogo(List<InsumoVinculadoCriarDto> insumos) {
+		if (insumos == null || insumos.isEmpty()) return Map.of();
 
 		List<Long> insumosIds = insumos.stream().map(InsumoVinculadoCriarDto::id).toList();
 		Map<Long, ItemCatalogo> insumosPorId = catalogoEstoqueGateway.listarInsumosPorIds(insumosIds).stream()
@@ -170,13 +168,69 @@ public class CriarOrdemDeServicoUseCase {
 		if (insumosPorId.size() != insumosIds.size()) {
 			throw new InsumoNaoEncontradoNoCatalogoException();
 		}
+		return insumosPorId;
+	}
 
-		insumos.forEach(dto -> {
-			ItemCatalogo insumo = insumosPorId.get(dto.id());
-			ordemDeServico.vincularInsumo(insumo.id(), dto.quantidade(), insumo.preco());
-			reservaEstoqueGateway.reservarInsumo(ordemDeServico.getId(), insumo.id(), ordemDeServico.getTotalQuantidadeInsumosMapeadosPorId().get(insumo.id()));
-			ordemDeServicoGateway.vincularOuSomarInsumo(ordemDeServico.getId(), insumo.id(), dto.quantidade(), insumo.preco());
-		});
+	/**
+	 * Grava a OS e seus vínculos numa transação local e, como último passo dela, reserva todas as
+	 * peças e insumos numa única chamada ao estoque (que é atômica do lado dele).
+	 * <ul>
+	 *   <li>Reserva rejeitada: a exceção desfaz a transação local; nada ficou reservado.</li>
+	 *   <li>Reserva aceita mas falha depois (commit, ou resposta perdida por timeout): libera as reservas
+	 *       da OS. É best-effort; se o estoque também não responder, a reserva órfã fica a cargo da expiração.</li>
+	 * </ul>
+	 */
+	private void persistirEReservarEstoque(OrdemDeServico ordemDeServico,
+										   List<Servico> servicos,
+										   List<PecaVinculadaCriarDto> pecas, Map<Long, ItemCatalogo> pecasPorId,
+										   List<InsumoVinculadoCriarDto> insumos, Map<Long, ItemCatalogo> insumosPorId) {
+		AtomicBoolean reservaTentada = new AtomicBoolean(false);
+
+		try {
+			transacaoGateway.executar(() -> {
+				Long ordemServicoId = ordemDeServicoGateway.criar(ordemDeServico);
+				ordemDeServico.setId(ordemServicoId);
+
+				servicos.forEach(servico -> ordemDeServicoGateway.vincularServico(
+						ordemServicoId, servico.getId(), servico.getPreco(), StatusServico.NAO_INICIADO));
+				orEmpty(pecas).forEach(p -> ordemDeServicoGateway.vincularOuSomarPeca(
+						ordemServicoId, p.id(), p.quantidade(), pecasPorId.get(p.id()).preco()));
+				orEmpty(insumos).forEach(i -> ordemDeServicoGateway.vincularOuSomarInsumo(
+						ordemServicoId, i.id(), i.quantidade(), insumosPorId.get(i.id()).preco()));
+
+				List<ItemReserva> reservas = montaReservas(ordemDeServico);
+				if (!reservas.isEmpty()) {
+					reservaTentada.set(true);
+					reservaEstoqueGateway.reservarItens(ordemServicoId, reservas);
+				}
+			});
+		} catch (RuntimeException e) {
+			if (reservaTentada.get()) {
+				liberarReservasSemFalhar(ordemDeServico.getId());
+			}
+			throw e;
+		}
+	}
+
+	private List<ItemReserva> montaReservas(OrdemDeServico ordemDeServico) {
+		List<ItemReserva> reservas = new ArrayList<>();
+		ordemDeServico.getTotalQuantidadePecasMapeadasPorId()
+				.forEach((pecaId, quantidade) -> reservas.add(ItemReserva.peca(pecaId, quantidade)));
+		ordemDeServico.getTotalQuantidadeInsumosMapeadosPorId()
+				.forEach((insumoId, quantidade) -> reservas.add(ItemReserva.insumo(insumoId, quantidade)));
+		return reservas;
+	}
+
+	private void liberarReservasSemFalhar(Long ordemServicoId) {
+		try {
+			reservaEstoqueGateway.liberarReservas(ordemServicoId);
+		} catch (RuntimeException e) {
+			log.error("Nao foi possivel liberar as reservas da ordem {} apos falha na criacao; reserva orfa no estoque", ordemServicoId, e);
+		}
+	}
+
+	private static <T> List<T> orEmpty(List<T> lista) {
+		return lista == null ? List.of() : lista;
 	}
 
 	private void notificarCliente(OrdemDeServico ordemDeServico) {

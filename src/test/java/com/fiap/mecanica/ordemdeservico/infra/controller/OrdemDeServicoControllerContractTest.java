@@ -15,6 +15,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.EstoqueInsuficienteParaOr
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
@@ -27,6 +28,7 @@ import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.UserGateway;
 import com.fiap.mecanica.shared.valueobjects.Cpf;
 import com.fiap.mecanica.shared.valueobjects.NomeCompleto;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -66,6 +68,7 @@ class OrdemDeServicoControllerContractTest {
     @MockitoBean private ServicoGateway servicoGateway;
     @MockitoBean private CatalogoEstoqueGateway catalogoEstoqueGateway;
     @MockitoBean private ReservaEstoqueGateway reservaEstoqueGateway;
+    @MockitoBean private TransacaoGateway transacaoGateway;
     @MockitoBean private NotificacaoGateway notificacaoGateway;
     @MockitoBean private MetricasGateway metricasGateway;
     @MockitoBean private UserGateway userGateway;
@@ -116,6 +119,14 @@ class OrdemDeServicoControllerContractTest {
 
     private OrdemDeServico ordemFinalizada() {
         return buildOrdem(MECANICO_ID, StatusOrdemDeServico.FINALIZADA, List.of(), List.of(), List.of(), new Orcamento(BigDecimal.TEN));
+    }
+
+    @BeforeEach
+    void executaTransacaoNaMesmaThread() {
+        Mockito.doAnswer(invocation -> {
+            invocation.<Runnable>getArgument(0).run();
+            return null;
+        }).when(transacaoGateway).executar(Mockito.any());
     }
 
     // ---- criar ----
@@ -350,7 +361,7 @@ class OrdemDeServicoControllerContractTest {
         Mockito.when(catalogoEstoqueGateway.listarPecasPorIds(Mockito.anyList()))
                 .thenReturn(List.of(new ItemCatalogo(5L, BigDecimal.TEN)));
         Mockito.doThrow(new EstoqueInsuficienteParaOrdemException())
-                .when(reservaEstoqueGateway).reservarPeca(Mockito.eq(1L), Mockito.eq(5L), Mockito.anyInt());
+                .when(reservaEstoqueGateway).reservarItens(Mockito.eq(1L), Mockito.anyList());
 
         mockMvc.perform(MockMvcRequestBuilders.post("/ordem-servico")
                         .contentType(MediaType.APPLICATION_JSON)

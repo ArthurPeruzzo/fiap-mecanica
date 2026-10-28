@@ -1,11 +1,14 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
+import com.fiap.mecanica.ordemdeservico.core.dto.ItemReserva;
 import com.fiap.mecanica.ordemdeservico.core.exception.InsumoNaoEncontradoNoCatalogoException;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
+
+import java.util.List;
 
 public class DesvincularInsumoOrdemDeServicoUseCase {
 
@@ -29,7 +32,8 @@ public class DesvincularInsumoOrdemDeServicoUseCase {
 
 		ordemDeServico.desvincularInsumo(insumoId, quantidade);
 
-		reservaEstoqueGateway.reservarInsumo(ordemServicoId, insumoId, ordemDeServico.getTotalQuantidadeInsumosMapeadosPorId().getOrDefault(insumoId, 0));
+		reservaEstoqueGateway.reservarItens(ordemServicoId, List.of(
+				ItemReserva.insumo(insumoId, ordemDeServico.getTotalQuantidadeInsumosMapeadosPorId().getOrDefault(insumoId, 0))));
 		ordemDeServicoGateway.desvincularOuSubtrairInsumo(ordemServicoId, insumoId, quantidade);
 	}
 }

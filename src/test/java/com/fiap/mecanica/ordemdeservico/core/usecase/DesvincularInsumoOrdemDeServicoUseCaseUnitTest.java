@@ -1,5 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase;
 
+import com.fiap.mecanica.ordemdeservico.core.dto.ItemReserva;
 import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
 import com.fiap.mecanica.ordemdeservico.core.dto.ItemCatalogo;
 import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
@@ -94,7 +95,7 @@ class DesvincularInsumoOrdemDeServicoUseCaseUnitTest {
 
         desvincularInsumoOrdemDeServicoUseCase.desvincular(ORDEM_ID, INSUMO_ID, QUANTIDADE);
 
-        Mockito.verify(reservaEstoqueGateway).reservarInsumo(ORDEM_ID, INSUMO_ID, 3);
+        Mockito.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.insumo(INSUMO_ID, 3)));
         Mockito.verify(ordemDeServicoGateway).desvincularOuSubtrairInsumo(ORDEM_ID, INSUMO_ID, QUANTIDADE);
     }
 
@@ -105,7 +106,7 @@ class DesvincularInsumoOrdemDeServicoUseCaseUnitTest {
 
         desvincularInsumoOrdemDeServicoUseCase.desvincular(ORDEM_ID, INSUMO_ID, QUANTIDADE);
 
-        Mockito.verify(reservaEstoqueGateway).reservarInsumo(ORDEM_ID, INSUMO_ID, 0);
+        Mockito.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.insumo(INSUMO_ID, 0)));
         Mockito.verify(ordemDeServicoGateway).desvincularOuSubtrairInsumo(ORDEM_ID, INSUMO_ID, QUANTIDADE);
     }
 

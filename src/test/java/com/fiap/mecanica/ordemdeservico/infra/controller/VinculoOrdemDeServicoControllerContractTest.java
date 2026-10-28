@@ -252,7 +252,7 @@ class VinculoOrdemDeServicoControllerContractTest {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
         Mockito.when(catalogoEstoqueGateway.buscarPeca(5L)).thenReturn(Optional.of(pecaNoCatalogo()));
         Mockito.doThrow(new EstoqueInsuficienteParaOrdemException())
-                .when(reservaEstoqueGateway).reservarPeca(Mockito.eq(1L), Mockito.eq(5L), Mockito.anyInt());
+                .when(reservaEstoqueGateway).reservarItens(Mockito.eq(1L), Mockito.anyList());
 
         mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/pecas/5")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -408,7 +408,7 @@ class VinculoOrdemDeServicoControllerContractTest {
         Mockito.when(ordemDeServicoGateway.buscarPorId(1L)).thenReturn(Optional.of(ordemRecebida()));
         Mockito.when(catalogoEstoqueGateway.buscarInsumo(30L)).thenReturn(Optional.of(insumoNoCatalogo()));
         Mockito.doThrow(new EstoqueInsuficienteParaOrdemException())
-                .when(reservaEstoqueGateway).reservarInsumo(Mockito.eq(1L), Mockito.eq(30L), Mockito.anyInt());
+                .when(reservaEstoqueGateway).reservarItens(Mockito.eq(1L), Mockito.anyList());
 
         mockMvc.perform(MockMvcRequestBuilders.put("/ordem-servico/1/insumos/30")
                         .contentType(MediaType.APPLICATION_JSON)

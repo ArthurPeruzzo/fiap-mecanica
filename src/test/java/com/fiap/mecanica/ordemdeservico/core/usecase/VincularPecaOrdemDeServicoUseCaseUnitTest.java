@@ -1,5 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase;
 
+import com.fiap.mecanica.ordemdeservico.core.dto.ItemReserva;
 import com.fiap.mecanica.ordemdeservico.core.dto.ItemCatalogo;
 import com.fiap.mecanica.ordemdeservico.core.exception.EstoqueInsuficienteParaOrdemException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
@@ -93,7 +94,7 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
 
         vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE);
 
-        Mockito.verify(reservaEstoqueGateway).reservarPeca(ORDEM_ID, PECA_ID, QUANTIDADE);
+        Mockito.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.peca(PECA_ID, QUANTIDADE)));
         Mockito.verify(ordemDeServicoGateway).vincularOuSomarPeca(ORDEM_ID, PECA_ID, QUANTIDADE, PRECO);
     }
 
@@ -105,7 +106,7 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
 
         vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE);
 
-        Mockito.verify(reservaEstoqueGateway).reservarPeca(ORDEM_ID, PECA_ID, 5);
+        Mockito.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.peca(PECA_ID, 5)));
         Mockito.verify(ordemDeServicoGateway).vincularOuSomarPeca(ORDEM_ID, PECA_ID, QUANTIDADE, PRECO);
     }
 
@@ -137,7 +138,7 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
         stubOrdem(ordemEmDiagnostico(List.of()));
         stubPeca(pecaNoCatalogo());
         Mockito.doThrow(new EstoqueInsuficienteParaOrdemException())
-                .when(reservaEstoqueGateway).reservarPeca(ORDEM_ID, PECA_ID, QUANTIDADE);
+                .when(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.peca(PECA_ID, QUANTIDADE)));
 
         assertThrows(EstoqueInsuficienteParaOrdemException.class,
                 () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));

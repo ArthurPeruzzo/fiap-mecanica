@@ -1,5 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase;
 
+import com.fiap.mecanica.ordemdeservico.core.dto.ItemReserva;
 import com.fiap.mecanica.ordemdeservico.core.dto.ItemCatalogo;
 import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.exception.PecaNaoEncontradaNoCatalogoException;
@@ -93,7 +94,7 @@ class DesvincularPecaOrdemDeServicoUseCaseUnitTest {
 
         desvincularPecaOrdemDeServicoUseCase.desvincular(ORDEM_ID, PECA_ID, QUANTIDADE);
 
-        Mockito.verify(reservaEstoqueGateway).reservarPeca(ORDEM_ID, PECA_ID, 3);
+        Mockito.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.peca(PECA_ID, 3)));
         Mockito.verify(ordemDeServicoGateway).desvincularOuSubtrairPeca(ORDEM_ID, PECA_ID, QUANTIDADE);
     }
 
@@ -104,7 +105,7 @@ class DesvincularPecaOrdemDeServicoUseCaseUnitTest {
 
         desvincularPecaOrdemDeServicoUseCase.desvincular(ORDEM_ID, PECA_ID, QUANTIDADE);
 
-        Mockito.verify(reservaEstoqueGateway).reservarPeca(ORDEM_ID, PECA_ID, 0);
+        Mockito.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.peca(PECA_ID, 0)));
         Mockito.verify(ordemDeServicoGateway).desvincularOuSubtrairPeca(ORDEM_ID, PECA_ID, QUANTIDADE);
     }
 

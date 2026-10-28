@@ -11,6 +11,7 @@ import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.*;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
@@ -43,13 +44,14 @@ public class OrdemDeServicoHttpController {
                                          ServicoGateway servicoGateway,
                                          CatalogoEstoqueGateway catalogoEstoqueGateway,
                                          ReservaEstoqueGateway reservaEstoqueGateway,
+                                         TransacaoGateway transacaoGateway,
                                          NotificacaoGateway notificacaoGateway,
                                          MetricasGateway metricasGateway,
                                          UserGateway userGateway) {
         this.cleanController = new OrdemDeServicoCleanController(
                 ordemDeServicoGateway, atendenteGateway, tokenGateway,
                 veiculoGateway, clienteGateway, mecanicoGateway,
-                servicoGateway, catalogoEstoqueGateway, reservaEstoqueGateway,
+                servicoGateway, catalogoEstoqueGateway, reservaEstoqueGateway, transacaoGateway,
                 notificacaoGateway, metricasGateway, userGateway
         );
     }
