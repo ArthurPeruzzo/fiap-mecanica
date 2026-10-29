@@ -5,27 +5,26 @@ import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.LinkAprovacaoOrcame
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+
+@TestPropertySource(properties = "estoque.fake=false")
 class OrcamentoAprovadoViaTokenIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
 
-    private Integer obterEstoqueNoBanco(String tabela, Long id) {
-        return jdbcTemplate.queryForObject(
-                "SELECT quantidade_estoque FROM " + tabela + " WHERE id = ?", Integer.class, id);
-    }
-
-    private Integer obterReservadaNoBanco(String tabela, Long id) {
-        return jdbcTemplate.queryForObject(
-                "SELECT quantidade_reservada FROM " + tabela + " WHERE id = ?", Integer.class, id);
-    }
-
-    private List<String> obterStatusReservasNoBanco(Long ordemId) {
-        return jdbcTemplate.queryForList(
-                "SELECT status FROM reserva_estoque WHERE ordem_servico_id = ?", String.class, ordemId);
+    @BeforeEach
+    void stubsDoEstoque() {
+        stubCatalogo();
+        stubReservaOk();
+        stubConfirmarEliberarOk();
     }
 
     private String obterTokenLinkDeOrdemAguardandoAprovacao(Long ordemId) {
@@ -94,11 +93,11 @@ class OrcamentoAprovadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
     }
 
     @Test
-    void shouldBaixarEstoqueEConfirmarReservasAoAprovarViaToken() {
+    void shouldConfirmarReservasNoEstoqueAoAprovarViaToken() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
-        Long pecaId = criarPecaERetornarId(10);
-        Long insumoId = criarInsumoERetornarId(10);
+        Long pecaId = PECA_ID;
+        Long insumoId = INSUMO_ID;
         Long ordemId = criarOrdemAguardandoAprovacaoComPecaEInsumoERetornarId(
                 tokenAtendente, tokenMecanico, pecaId, 3, insumoId, 2);
         String token = obterTokenLinkDeOrdemAguardandoAprovacao(ordemId);
@@ -107,10 +106,7 @@ class OrcamentoAprovadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
                 .when().get("/ordem-servico/orcamento/externo/aprovar/" + token)
                 .then().statusCode(204);
 
-        Assertions.assertEquals(7, obterEstoqueNoBanco("peca", pecaId));
-        Assertions.assertEquals(0, obterReservadaNoBanco("peca", pecaId));
-        Assertions.assertEquals(8, obterEstoqueNoBanco("insumo", insumoId));
-        Assertions.assertEquals(0, obterReservadaNoBanco("insumo", insumoId));
-        Assertions.assertEquals(List.of("CONFIRMADA", "CONFIRMADA"), obterStatusReservasNoBanco(ordemId));
+        estoque.verify(exactly(1), postRequestedFor(urlEqualTo("/reserva/ordem-servico/" + ordemId + "/confirmar")));
+        estoque.verify(exactly(0), postRequestedFor(urlPathMatching(LIBERAR)));
     }
 }

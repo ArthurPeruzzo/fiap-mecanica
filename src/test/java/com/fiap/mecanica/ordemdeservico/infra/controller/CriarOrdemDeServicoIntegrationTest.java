@@ -28,22 +28,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 @TestPropertySource(properties = "estoque.fake=false")
 class CriarOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
 
-    private static final Long PECA_ID = 11L;
-    private static final Long INSUMO_ID = 21L;
-
-    /** O catálogo é do fiap-estoque: o teste só informa o que ele responderia, sem gravar peça no banco. */
-    private void stubCatalogo() {
-        estoque.stubFor(get(urlPathEqualTo("/catalogo/pecas"))
-                .willReturn(aResponse().withHeader("Content-Type", "application/json")
-                        .withBody("[{\"id\":" + PECA_ID + ",\"preco\":45.00}]")));
-        estoque.stubFor(get(urlPathEqualTo("/catalogo/insumos"))
-                .willReturn(aResponse().withHeader("Content-Type", "application/json")
-                        .withBody("[{\"id\":" + INSUMO_ID + ",\"preco\":35.00}]")));
-    }
-
-    private static final String RESERVAR_ITENS = "/reserva/ordem-servico/\\d+/itens";
-    private static final String LIBERAR = "/reserva/ordem-servico/\\d+/liberar";
-
     private int contarOrdensNoBanco() {
         return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM ordem_servico", Integer.class);
     }

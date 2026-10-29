@@ -4,31 +4,25 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDe
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.context.TestPropertySource;
 
-import java.util.List;
 import java.util.Map;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+
+@TestPropertySource(properties = "estoque.fake=false")
 class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
 
-    private Integer obterEstoquePecaNoBanco(Long pecaId) {
-        return jdbcTemplate.queryForObject(
-                "SELECT quantidade_estoque FROM peca WHERE id = ?", Integer.class, pecaId);
-    }
-
-    private Integer obterEstoqueInsumoNoBanco(Long insumoId) {
-        return jdbcTemplate.queryForObject(
-                "SELECT quantidade_estoque FROM insumo WHERE id = ?", Integer.class, insumoId);
-    }
-
-    private Integer obterReservadaNoBanco(String tabela, Long id) {
-        return jdbcTemplate.queryForObject(
-                "SELECT quantidade_reservada FROM " + tabela + " WHERE id = ?", Integer.class, id);
-    }
-
-    private List<String> obterStatusReservasNoBanco(Long ordemId) {
-        return jdbcTemplate.queryForList(
-                "SELECT status FROM reserva_estoque WHERE ordem_servico_id = ?", String.class, ordemId);
+    @BeforeEach
+    void stubsDoEstoque() {
+        stubCatalogo();
+        stubReservaOk();
+        stubConfirmarEliberarOk();
     }
 
     private int contarVinculosPecaNoBanco(Long ordemId, Long pecaId) {
@@ -100,10 +94,14 @@ class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServ
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
 
-        Long peca1Id = criarPecaERetornarId(10);
-        Long peca2Id = criarPecaERetornarId(10);
-        Long insumo1Id = criarInsumoERetornarId(10);
-        Long insumo2Id = criarInsumoERetornarId(10);
+        Long peca1Id = 11L;
+        Long peca2Id = 12L;
+        Long insumo1Id = 21L;
+        Long insumo2Id = 22L;
+        stubCatalogoPeca(peca1Id, "45.00");
+        stubCatalogoPeca(peca2Id, "60.00");
+        stubCatalogoInsumo(insumo1Id, "35.00");
+        stubCatalogoInsumo(insumo2Id, "20.00");
 
         Long ordemId = criarOrdemAguardandoAprovacaoERetornarId(
                 tokenAtendente, tokenMecanico,
@@ -119,16 +117,8 @@ class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServ
         Assertions.assertEquals(StatusOrdemDeServico.CANCELADA, ordem.getStatus());
         Assertions.assertNotNull(ordem.getDataCancelamento());
 
-        Assertions.assertEquals(10, obterEstoquePecaNoBanco(peca1Id));
-        Assertions.assertEquals(10, obterEstoquePecaNoBanco(peca2Id));
-        Assertions.assertEquals(10, obterEstoqueInsumoNoBanco(insumo1Id));
-        Assertions.assertEquals(10, obterEstoqueInsumoNoBanco(insumo2Id));
-
-        Assertions.assertEquals(0, obterReservadaNoBanco("peca", peca1Id));
-        Assertions.assertEquals(0, obterReservadaNoBanco("peca", peca2Id));
-        Assertions.assertEquals(0, obterReservadaNoBanco("insumo", insumo1Id));
-        Assertions.assertEquals(0, obterReservadaNoBanco("insumo", insumo2Id));
-        Assertions.assertEquals(List.of("LIBERADA", "LIBERADA", "LIBERADA", "LIBERADA"), obterStatusReservasNoBanco(ordemId));
+        estoque.verify(exactly(1), postRequestedFor(urlEqualTo("/reserva/ordem-servico/" + ordemId + "/liberar")));
+        estoque.verify(exactly(0), postRequestedFor(urlPathMatching(CONFIRMAR)));
 
         Assertions.assertEquals(1, contarVinculosPecaNoBanco(ordemId, peca1Id));
         Assertions.assertEquals(1, contarVinculosPecaNoBanco(ordemId, peca2Id));
