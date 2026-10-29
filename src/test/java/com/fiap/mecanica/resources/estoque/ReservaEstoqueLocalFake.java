@@ -11,6 +11,7 @@ import com.fiap.mecanica.ordemdeservico.core.dto.ItemReserva;
 import com.fiap.mecanica.ordemdeservico.core.exception.EstoqueInsuficienteParaOrdemException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -21,10 +22,12 @@ import java.util.List;
  * Substitui o cliente HTTP do fiap-estoque nos testes de integração do monólito: aplica as reservas
  * no módulo de estoque embutido (mesmo banco do teste), sem depender do outro serviço no ar.
  * O contrato HTTP real é coberto por ReservaEstoqueHttpGatewayUnitTest e pelos testes do fiap-estoque.
+ * Testes que usam o WireMock desligam o fake com estoque.fake=false (ex.: CriarOrdemDeServicoIntegrationTest).
  */
 @Component
 @Primary
 @Profile("integration-test")
+@ConditionalOnProperty(name = "estoque.fake", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class ReservaEstoqueLocalFake implements ReservaEstoqueGateway {
 

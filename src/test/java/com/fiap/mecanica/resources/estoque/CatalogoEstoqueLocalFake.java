@@ -1,4 +1,4 @@
-package com.fiap.mecanica.ordemdeservico.infra.gateway.estoque;
+package com.fiap.mecanica.resources.estoque;
 
 import com.fiap.mecanica.estoque.core.domain.Insumo;
 import com.fiap.mecanica.estoque.core.domain.Peca;
@@ -7,14 +7,24 @@ import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.ordemdeservico.core.dto.ItemCatalogo;
 import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Substitui o cliente HTTP do catálogo nos testes de integração que ainda cadastram peças e insumos
+ * no módulo de estoque embutido. Testes com estoque.fake=false consultam o fiap-estoque (WireMock).
+ */
 @Component
+@Primary
+@Profile("integration-test")
+@ConditionalOnProperty(name = "estoque.fake", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
-public class CatalogoEstoqueLocalGateway implements CatalogoEstoqueGateway {
+public class CatalogoEstoqueLocalFake implements CatalogoEstoqueGateway {
 
 	private final PecaGateway pecaGateway;
 	private final InsumoGateway insumoGateway;
