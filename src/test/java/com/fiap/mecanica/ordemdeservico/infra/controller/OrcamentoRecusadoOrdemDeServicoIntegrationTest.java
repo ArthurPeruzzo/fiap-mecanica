@@ -4,9 +4,7 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDe
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.context.TestPropertySource;
 
 import java.util.Map;
 
@@ -15,15 +13,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 
-@TestPropertySource(properties = "estoque.fake=false")
 class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
-
-    @BeforeEach
-    void stubsDoEstoque() {
-        stubCatalogo();
-        stubReservaOk();
-        stubConfirmarEliberarOk();
-    }
 
     private int contarVinculosPecaNoBanco(Long ordemId, Long pecaId) {
         Integer count = jdbcTemplate.queryForObject(

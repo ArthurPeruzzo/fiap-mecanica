@@ -1,7 +1,6 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase;
 
 import com.fiap.mecanica.ordemdeservico.core.dto.ItemReserva;
-import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
 import com.fiap.mecanica.ordemdeservico.core.dto.ItemCatalogo;
 import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.exception.InsumoNaoEncontradoNoCatalogoException;

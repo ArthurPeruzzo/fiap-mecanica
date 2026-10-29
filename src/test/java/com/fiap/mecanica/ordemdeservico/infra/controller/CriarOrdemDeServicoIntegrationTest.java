@@ -7,7 +7,6 @@ import io.restassured.RestAssured;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.context.TestPropertySource;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
@@ -25,7 +24,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
  * O fiap-estoque é simulado com o WireMock de AbstractContainer: o RestClient real chama um servidor HTTP local, então o
  * teste cobre rota, corpo, mapeamento de status e timeout (estoque.fake=false desliga o fake local).
  */
-@TestPropertySource(properties = "estoque.fake=false")
 class CriarOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
 
     private int contarOrdensNoBanco() {

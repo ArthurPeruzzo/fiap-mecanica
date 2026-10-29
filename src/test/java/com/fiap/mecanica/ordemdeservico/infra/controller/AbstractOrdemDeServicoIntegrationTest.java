@@ -1,10 +1,5 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
-import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
-import com.fiap.mecanica.estoque.infra.gateway.entity.InsumoEntity;
-import com.fiap.mecanica.estoque.infra.gateway.entity.PecaEntity;
-import com.fiap.mecanica.estoque.infra.gateway.repository.InsumoRepository;
-import com.fiap.mecanica.estoque.infra.gateway.repository.PecaRepository;
 import com.fiap.mecanica.gestao.core.domain.Turno;
 import com.fiap.mecanica.gestao.infra.gateway.entity.AtendenteEntity;
 import com.fiap.mecanica.gestao.infra.gateway.entity.ClienteEntity;
@@ -63,8 +58,6 @@ abstract class AbstractOrdemDeServicoIntegrationTest extends AbstractContainer {
     @Autowired protected OrdemDeServicoRepository ordemDeServicoRepository;
     @Autowired protected LinkAprovacaoOrcamentoRepository linkAprovacaoOrcamentoRepository;
     @Autowired protected ServicoRepository servicoRepository;
-    @Autowired protected PecaRepository pecaRepository;
-    @Autowired protected InsumoRepository insumoRepository;
     @Autowired protected JdbcTemplate jdbcTemplate;
 
     /** Ids do catálogo do fiap-estoque simulado: o monólito não guarda peça nem insumo. */
@@ -132,6 +125,10 @@ abstract class AbstractOrdemDeServicoIntegrationTest extends AbstractContainer {
     @BeforeEach
     void setup() {
         RestAssured.port = port;
+        // Respostas padrão do fiap-estoque; cada teste sobrescreve só o que quer variar.
+        stubCatalogo();
+        stubReservaOk();
+        stubConfirmarEliberarOk();
     }
 
     protected String obterToken(RoleEnum role, String cpf) {
@@ -269,25 +266,6 @@ abstract class AbstractOrdemDeServicoIntegrationTest extends AbstractContainer {
                 .nome("Troca de óleo")
                 .descricao("Serviço de troca de óleo do motor")
                 .preco(new BigDecimal("150.00"))
-                .build()).getId();
-    }
-
-    protected Long criarPecaERetornarId(Integer quantidadeEstoque) {
-        return pecaRepository.saveAndFlush(PecaEntity.builder()
-                .nome("Filtro de óleo")
-                .descricao("Filtro original")
-                .preco(new BigDecimal("45.00"))
-                .quantidadeEstoque(quantidadeEstoque)
-                .build()).getId();
-    }
-
-    protected Long criarInsumoERetornarId(Integer quantidadeEstoque) {
-        return insumoRepository.saveAndFlush(InsumoEntity.builder()
-                .nome("Óleo motor 5W30")
-                .descricao("Óleo sintético")
-                .preco(new BigDecimal("35.00"))
-                .quantidadeEstoque(quantidadeEstoque)
-                .unidadeMedida(UnidadeMedida.LITRO)
                 .build()).getId();
     }
 }

@@ -82,20 +82,6 @@ class SecurityConfigurationIntegrationTest extends AbstractContainer {
                 .then().statusCode(200);
     }
 
-    @Test
-    void shouldAdministradorAcessarInsumo() {
-        RestAssured.given().header("Authorization", "Bearer " + tokenAdministrador)
-                .when().get("/insumo")
-                .then().statusCode(200);
-    }
-
-    @Test
-    void shouldAdministradorAcessarPeca() {
-        RestAssured.given().header("Authorization", "Bearer " + tokenAdministrador)
-                .when().get("/peca")
-                .then().statusCode(200);
-    }
-
     // -------------------------------------------------------
     // ATENDENTE — acesso permitido
     // -------------------------------------------------------
@@ -298,7 +284,7 @@ class SecurityConfigurationIntegrationTest extends AbstractContainer {
                 .then().statusCode(403);
 
         RestAssured.given().header("Authorization", "Bearer " + tokenAtendente)
-                .when().get("/peca")
+                .when().get("/servico")
                 .then().statusCode(403);
     }
 

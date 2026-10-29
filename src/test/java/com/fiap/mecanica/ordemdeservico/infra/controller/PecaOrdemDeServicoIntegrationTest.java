@@ -4,7 +4,6 @@ import io.restassured.RestAssured;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.context.TestPropertySource;
 
 import java.util.List;
 import java.util.Map;
@@ -14,7 +13,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
 import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 
-@TestPropertySource(properties = "estoque.fake=false")
 class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
 
     private int contarVinculosPecaNoBanco(Long ordemId, Long pecaId) {

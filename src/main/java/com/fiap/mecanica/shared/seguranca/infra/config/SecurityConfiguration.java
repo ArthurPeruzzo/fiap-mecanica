@@ -46,8 +46,6 @@ public class SecurityConfiguration {
     private static final String[] ENDPOINTS_ADMINISTRADOR = {
             "/cliente/**",
             "/veiculo/**",
-            "/peca/**",
-            "/insumo/**",
             "/servico/**",
             "/ordem-servico/detalhamento"
     };

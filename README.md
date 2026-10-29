@@ -1,6 +1,6 @@
 # Mecânica FIAP
 
-API REST para gestão de uma oficina mecânica, desenvolvida como projeto acadêmico na FIAP. O sistema cobre o ciclo completo de uma ordem de serviço — da abertura ao diagnóstico, orçamento, aprovação, execução e entrega — com controle de estoque de peças e insumos e autenticação baseada em perfis de acesso.
+API REST para gestão de uma oficina mecânica, desenvolvida como projeto acadêmico na FIAP. O sistema cobre o ciclo completo de uma ordem de serviço — da abertura ao diagnóstico, orçamento, aprovação, execução e entrega — com reserva de estoque de peças e insumos (microsserviço `fiap-estoque`) e autenticação baseada em perfis de acesso.
 
 Este é o repositório da **aplicação principal** (Fase 3): além do código da API, contém a infraestrutura específica da aplicação (ECR, API Gateway e alertas/dashboards New Relic) e o pipeline que builda, testa e faz o deploy no cluster Kubernetes. VPC/EKS, o banco gerenciado e a Function Lambda de autenticação vivem em [três repositórios separados](#estrutura-em-4-repositórios).
 
@@ -8,7 +8,7 @@ Este é o repositório da **aplicação principal** (Fase 3): além do código d
 
 - Gerenciar clientes, veículos, mecânicos e atendentes
 - Controlar o ciclo de vida de ordens de serviço
-- Gerenciar estoque de peças e insumos com baixa e devolução automática ao vincular/desvincular de ordens
+- Reservar e liberar estoque de peças e insumos ao vincular/desvincular itens de ordens, delegando ao microsserviço `fiap-estoque`
 - Restringir operações por perfil: administrador, atendente, mecânico e cliente
 
 ### Fase 3 — Objetivo desta etapa
@@ -76,8 +76,7 @@ A aplicação é um **monolito modular** organizado segundo os princípios da **
 | Módulo | Responsabilidade |
 |---|---|
 | `gestao` | Clientes, veículos, mecânicos e atendentes |
-| `estoque` | Peças e insumos, com baixa e devolução automática de estoque |
-| `ordemdeservico` | Ciclo de vida da ordem de serviço, serviços, orçamento e notificações |
+| `ordemdeservico` | Ciclo de vida da ordem de serviço, serviços, orçamento e notificações. Consulta o catálogo e reserva estoque no microsserviço `fiap-estoque` por HTTP |
 | `shared` | Segurança/JWT, tratamento global de exceções, *value objects*, paginação, notificação e métricas |
 
 ## Estrutura em 4 repositórios
@@ -265,17 +264,18 @@ Dicionário de termos do domínio utilizados no sistema.
 | **Veículo** | Automóvel pertencente a um cliente, identificado pela placa. Um veículo não pode ter mais de uma ordem de serviço ativa simultaneamente. |
 | **Atendente** | Funcionário responsável por abrir ordens de serviço, enviar orçamentos ao cliente, registrar a aprovação ou recusa e realizar a entrega do veículo. |
 | **Mecânico** | Funcionário responsável por executar o diagnóstico e os serviços vinculados a uma ordem. O mecânico que inicia o diagnóstico torna-se o **mecânico responsável** por aquela ordem. |
-| **Administrador** | Perfil com acesso irrestrito ao cadastro de clientes, veículos, peças, insumos e serviços. Não opera ordens de serviço diretamente. |
+| **Administrador** | Perfil com acesso irrestrito ao cadastro de clientes, veículos e serviços. Não opera ordens de serviço diretamente. |
 
 ### Estoque
 
 | Termo | Definição |
 |---|---|
-| **Peça** | Item físico de estoque. Ex: pastilha de freio, correia dentada. |
+| **Peça** | Item físico de estoque (cadastrado e mantido no `fiap-estoque`). Ex: pastilha de freio, correia dentada. |
 | **Insumo** | Item consumível de estoque com unidade de medida variável (litros, ml, unidades). Ex: óleo de motor, fluido de freio. |
-| **Baixa de Estoque** | Redução da quantidade disponível de uma peça ou insumo ao vinculá-la a uma ordem em diagnóstico. |
-| **Devolução de Estoque** | Restituição da quantidade ao estoque ao desvincular uma peça ou insumo de uma ordem. |
-| **Estoque Insuficiente** | Condição que impede o vínculo quando a quantidade solicitada supera o disponível. |
+| **Reserva de Estoque** | Quantidade de uma peça ou insumo separada para uma ordem ao vinculá-la; ajustada ao vincular/desvincular. A reserva e o estoque ficam no `fiap-estoque`. |
+| **Baixa de Estoque** | Confirmação das reservas da ordem, abatendo do estoque, quando o orçamento é aprovado. |
+| **Liberação de Reserva** | Devolução das reservas ao saldo disponível quando o orçamento é recusado. |
+| **Estoque Insuficiente** | Condição que impede o vínculo quando a quantidade solicitada supera o disponível (o estoque responde 422). |
 
 ### Ordem de Serviço
 
@@ -300,7 +300,7 @@ Dicionário de termos do domínio utilizados no sistema.
 | **Em Execução** (Ordem de Serviço) | Orçamento aprovado. Os serviços vinculados podem ser iniciados e finalizados individualmente pelo mecânico. |
 | **Finalizada** | Todos os serviços vinculados foram concluídos. Aguarda entrega do veículo. |
 | **Entregue** | Veículo devolvido ao cliente. Estado terminal positivo. |
-| **Cancelada** | Orçamento recusado pelo cliente. Estado terminal negativo. Estoque devolvido automaticamente. |
+| **Cancelada** | Orçamento recusado pelo cliente. Estado terminal negativo. Reservas liberadas no estoque. |
 
 ### Execução de serviços
 

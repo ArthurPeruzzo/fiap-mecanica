@@ -21,8 +21,6 @@ import java.util.List;
                 @Tag(name = "Autenticação", description = "Operações relacionadas a autenticação"),
                 @Tag(name = "Cliente", description = "Operações relacionadas ao cliente"),
                 @Tag(name = "Veículo", description = "Operações relacionadas ao veículo"),
-                @Tag(name = "Peça", description = "Operações relacionadas as peças"),
-                @Tag(name = "Insumo", description = "Operações relacionadas aos insumos"),
                 @Tag(name = "Serviço", description = "Operações relacionadas aos serviços"),
                 @Tag(name = "Ordem de Serviço", description = "Operações relacionadas a ordem de serviços"),
                 @Tag(name = "Diagnóstico", description = "Gerencia o ciclo de diagnóstico das ordens de serviço"),

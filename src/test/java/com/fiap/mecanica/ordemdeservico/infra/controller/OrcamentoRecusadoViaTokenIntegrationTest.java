@@ -5,9 +5,7 @@ import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.LinkAprovacaoOrcame
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.context.TestPropertySource;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -17,15 +15,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 
-@TestPropertySource(properties = "estoque.fake=false")
 class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
-
-    @BeforeEach
-    void stubsDoEstoque() {
-        stubCatalogo();
-        stubReservaOk();
-        stubConfirmarEliberarOk();
-    }
 
     private String obterTokenLinkDeOrdemAguardandoAprovacao(Long ordemId) {
         return linkAprovacaoOrcamentoRepository.findByOrdemServicoId(ordemId)
