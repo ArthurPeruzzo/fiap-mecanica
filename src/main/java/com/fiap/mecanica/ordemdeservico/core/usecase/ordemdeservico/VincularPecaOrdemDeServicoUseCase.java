@@ -9,7 +9,6 @@ import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 
-import java.util.List;
 
 public class VincularPecaOrdemDeServicoUseCase {
 
@@ -31,10 +30,13 @@ public class VincularPecaOrdemDeServicoUseCase {
 
 		ItemCatalogo peca = catalogoEstoqueGateway.buscarPeca(pecaId).orElseThrow(PecaNaoEncontradaNoCatalogoException::new);
 
+		Integer totalAnterior = ordemDeServico.getTotalQuantidadePecasMapeadasPorId().getOrDefault(pecaId, 0);
+
 		ordemDeServico.vincularPeca(pecaId, quantidade, peca.preco());
 
-		reservaEstoqueGateway.reservarItens(ordemServicoId, List.of(
-				ItemReserva.peca(pecaId, ordemDeServico.getTotalQuantidadePecasMapeadasPorId().get(pecaId))));
-		ordemDeServicoGateway.vincularOuSomarPeca(ordemServicoId, pecaId, quantidade, peca.preco());
+		ReservaComCompensacao.executar(reservaEstoqueGateway, ordemServicoId,
+				ItemReserva.peca(pecaId, ordemDeServico.getTotalQuantidadePecasMapeadasPorId().get(pecaId)),
+				ItemReserva.peca(pecaId, totalAnterior),
+				() -> ordemDeServicoGateway.vincularOuSomarPeca(ordemServicoId, pecaId, quantidade, peca.preco()));
 	}
 }

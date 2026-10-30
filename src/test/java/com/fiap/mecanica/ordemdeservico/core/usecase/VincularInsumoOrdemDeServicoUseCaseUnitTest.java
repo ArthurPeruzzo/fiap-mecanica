@@ -14,6 +14,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.VinculoInsumoNaoAutorizad
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.VincularInsumoOrdemDeServicoUseCase;
+import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -107,6 +108,21 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
 
         Mockito.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.insumo(INSUMO_ID, 8)));
         Mockito.verify(ordemDeServicoGateway).vincularOuSomarInsumo(ORDEM_ID, INSUMO_ID, QUANTIDADE, PRECO);
+    }
+
+    @Test
+    void shouldRestaurarReservaAnteriorQuandoGravacaoDoVinculoFalhaDepoisDeReservar() {
+        stubOrdem(ordemEmDiagnostico(List.of(new InsumoVinculado(INSUMO_ID, 4, PRECO))));
+        stubInsumo(insumoNoCatalogo());
+        Mockito.doThrow(new ErroAcessoBaseDeDadosException()).when(ordemDeServicoGateway)
+                .vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+
+        assertThrows(ErroAcessoBaseDeDadosException.class,
+                () -> vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
+
+        var ordem = Mockito.inOrder(reservaEstoqueGateway);
+        ordem.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.insumo(INSUMO_ID, 7)));
+        ordem.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.insumo(INSUMO_ID, 4)));
     }
 
     @Test

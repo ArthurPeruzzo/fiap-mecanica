@@ -9,7 +9,6 @@ import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 
-import java.util.List;
 
 public class VincularInsumoOrdemDeServicoUseCase {
 
@@ -31,10 +30,13 @@ public class VincularInsumoOrdemDeServicoUseCase {
 
         ItemCatalogo insumo = catalogoEstoqueGateway.buscarInsumo(insumoId).orElseThrow(InsumoNaoEncontradoNoCatalogoException::new);
 
+        Integer totalAnterior = ordemDeServico.getTotalQuantidadeInsumosMapeadosPorId().getOrDefault(insumoId, 0);
+
         ordemDeServico.vincularInsumo(insumoId, quantidade, insumo.preco());
 
-        reservaEstoqueGateway.reservarItens(ordemServicoId, List.of(
-				ItemReserva.insumo(insumoId, ordemDeServico.getTotalQuantidadeInsumosMapeadosPorId().get(insumoId))));
-        ordemDeServicoGateway.vincularOuSomarInsumo(ordemServicoId, insumoId, quantidade, insumo.preco());
+        ReservaComCompensacao.executar(reservaEstoqueGateway, ordemServicoId,
+        		ItemReserva.insumo(insumoId, ordemDeServico.getTotalQuantidadeInsumosMapeadosPorId().get(insumoId)),
+        		ItemReserva.insumo(insumoId, totalAnterior),
+        		() -> ordemDeServicoGateway.vincularOuSomarInsumo(ordemServicoId, insumoId, quantidade, insumo.preco()));
     }
 }

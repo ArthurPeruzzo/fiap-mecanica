@@ -15,6 +15,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.QuantidadeDesvincularInva
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.DesvincularInsumoOrdemDeServicoUseCase;
+import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -107,6 +108,21 @@ class DesvincularInsumoOrdemDeServicoUseCaseUnitTest {
 
         Mockito.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.insumo(INSUMO_ID, 0)));
         Mockito.verify(ordemDeServicoGateway).desvincularOuSubtrairInsumo(ORDEM_ID, INSUMO_ID, QUANTIDADE);
+    }
+
+    @Test
+    void shouldRestaurarReservaAnteriorQuandoGravacaoDoDesvinculoFalhaDepoisDeReservar() {
+        stubOrdem(ordemEmDiagnosticoComInsumo(5));
+        stubInsumo(insumoNoCatalogo());
+        Mockito.doThrow(new ErroAcessoBaseDeDadosException()).when(ordemDeServicoGateway)
+                .desvincularOuSubtrairInsumo(Mockito.any(), Mockito.any(), Mockito.any());
+
+        assertThrows(ErroAcessoBaseDeDadosException.class,
+                () -> desvincularInsumoOrdemDeServicoUseCase.desvincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
+
+        var ordem = Mockito.inOrder(reservaEstoqueGateway);
+        ordem.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.insumo(INSUMO_ID, 3)));
+        ordem.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.insumo(INSUMO_ID, 5)));
     }
 
     @Test

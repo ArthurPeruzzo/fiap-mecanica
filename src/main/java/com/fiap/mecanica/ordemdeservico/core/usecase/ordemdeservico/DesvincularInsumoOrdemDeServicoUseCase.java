@@ -8,7 +8,6 @@ import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 
-import java.util.List;
 
 public class DesvincularInsumoOrdemDeServicoUseCase {
 
@@ -30,10 +29,13 @@ public class DesvincularInsumoOrdemDeServicoUseCase {
 
 		catalogoEstoqueGateway.buscarInsumo(insumoId).orElseThrow(InsumoNaoEncontradoNoCatalogoException::new);
 
+		Integer totalAnterior = ordemDeServico.getTotalQuantidadeInsumosMapeadosPorId().getOrDefault(insumoId, 0);
+
 		ordemDeServico.desvincularInsumo(insumoId, quantidade);
 
-		reservaEstoqueGateway.reservarItens(ordemServicoId, List.of(
-				ItemReserva.insumo(insumoId, ordemDeServico.getTotalQuantidadeInsumosMapeadosPorId().getOrDefault(insumoId, 0))));
-		ordemDeServicoGateway.desvincularOuSubtrairInsumo(ordemServicoId, insumoId, quantidade);
+		ReservaComCompensacao.executar(reservaEstoqueGateway, ordemServicoId,
+				ItemReserva.insumo(insumoId, ordemDeServico.getTotalQuantidadeInsumosMapeadosPorId().getOrDefault(insumoId, 0)),
+				ItemReserva.insumo(insumoId, totalAnterior),
+				() -> ordemDeServicoGateway.desvincularOuSubtrairInsumo(ordemServicoId, insumoId, quantidade));
 	}
 }

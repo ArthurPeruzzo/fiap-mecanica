@@ -14,6 +14,8 @@ import com.fiap.mecanica.ordemdeservico.core.exception.VinculoPecaNaoAutorizadaE
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.VincularPecaOrdemDeServicoUseCase;
+import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
+import com.fiap.mecanica.ordemdeservico.core.exception.EstoqueIndisponivelException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -108,6 +110,77 @@ class VincularPecaOrdemDeServicoUseCaseUnitTest {
 
         Mockito.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.peca(PECA_ID, 5)));
         Mockito.verify(ordemDeServicoGateway).vincularOuSomarPeca(ORDEM_ID, PECA_ID, QUANTIDADE, PRECO);
+    }
+
+    @Test
+    void shouldRestaurarReservaAnteriorQuandoGravacaoDoVinculoFalhaDepoisDeReservar() {
+        stubOrdem(ordemEmDiagnostico(List.of(new PecaVinculada(PECA_ID, 3, PRECO))));
+        stubPeca(pecaNoCatalogo());
+        Mockito.doThrow(new ErroAcessoBaseDeDadosException()).when(ordemDeServicoGateway)
+                .vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+
+        assertThrows(ErroAcessoBaseDeDadosException.class,
+                () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));
+
+        var ordem = Mockito.inOrder(reservaEstoqueGateway);
+        ordem.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.peca(PECA_ID, 5)));
+        ordem.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.peca(PECA_ID, 3)));
+    }
+
+    @Test
+    void shouldRestaurarParaZeroQuandoPecaEraNovaEGravacaoFalha() {
+        stubOrdem(ordemEmDiagnostico(List.of()));
+        stubPeca(pecaNoCatalogo());
+        Mockito.doThrow(new ErroAcessoBaseDeDadosException()).when(ordemDeServicoGateway)
+                .vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+
+        assertThrows(ErroAcessoBaseDeDadosException.class,
+                () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));
+
+        Mockito.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.peca(PECA_ID, 0)));
+    }
+
+    @Test
+    void shouldRestaurarReservaAnteriorQuandoEstoqueFalhaSemSaberSeAplicouAReserva() {
+        stubOrdem(ordemEmDiagnostico(List.of(new PecaVinculada(PECA_ID, 3, PRECO))));
+        stubPeca(pecaNoCatalogo());
+        Mockito.doThrow(new EstoqueIndisponivelException()).doNothing().when(reservaEstoqueGateway)
+                .reservarItens(Mockito.eq(ORDEM_ID), Mockito.any());
+
+        assertThrows(EstoqueIndisponivelException.class,
+                () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));
+
+        Mockito.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.peca(PECA_ID, 3)));
+        Mockito.verify(ordemDeServicoGateway, Mockito.never())
+                .vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+    }
+
+    @Test
+    void shouldNaoRestaurarQuandoEstoqueRejeitaPorSaldoInsuficiente() {
+        stubOrdem(ordemEmDiagnostico(List.of(new PecaVinculada(PECA_ID, 3, PRECO))));
+        stubPeca(pecaNoCatalogo());
+        Mockito.doThrow(new EstoqueInsuficienteParaOrdemException()).when(reservaEstoqueGateway)
+                .reservarItens(Mockito.eq(ORDEM_ID), Mockito.any());
+
+        assertThrows(EstoqueInsuficienteParaOrdemException.class,
+                () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));
+
+        Mockito.verify(reservaEstoqueGateway, Mockito.times(1)).reservarItens(Mockito.any(), Mockito.any());
+    }
+
+    @Test
+    void shouldPropagarOErroOriginalMesmoQuandoARestauracaoFalha() {
+        stubOrdem(ordemEmDiagnostico(List.of(new PecaVinculada(PECA_ID, 3, PRECO))));
+        stubPeca(pecaNoCatalogo());
+        Mockito.doThrow(new ErroAcessoBaseDeDadosException()).when(ordemDeServicoGateway)
+                .vincularOuSomarPeca(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.doNothing().doThrow(new EstoqueIndisponivelException()).when(reservaEstoqueGateway)
+                .reservarItens(Mockito.eq(ORDEM_ID), Mockito.any());
+
+        assertThrows(ErroAcessoBaseDeDadosException.class,
+                () -> vincularPecaOrdemDeServicoUseCase.vincular(ORDEM_ID, PECA_ID, QUANTIDADE));
+
+        Mockito.verify(reservaEstoqueGateway, Mockito.times(2)).reservarItens(Mockito.any(), Mockito.any());
     }
 
     @Test

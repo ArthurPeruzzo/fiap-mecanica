@@ -8,6 +8,7 @@ import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.OrcamentoRecusadoViaAtendenteUseCase;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
+import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -90,6 +91,34 @@ class OrcamentoRecusadoViaAtendenteUseCaseUnitTest {
         assertNotNull(os.getDataCancelamento());
 
         Mockito.verify(reservaEstoqueGateway).liberarReservas(ORDEM_ID);
+    }
+
+    @Test
+    void shouldPropagarErroENaoNotificarQuandoGravacaoFalhaDepoisDeLiberarReservas() {
+        Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemAguardandoAprovacao()));
+        Mockito.doThrow(new ErroAcessoBaseDeDadosException()).when(ordemDeServicoGateway).atualizar(Mockito.any());
+
+        assertThrows(ErroAcessoBaseDeDadosException.class,
+                () -> orcamentoRecusadoViaAtendenteUseCase.recusar(ORDEM_ID));
+
+        Mockito.verify(reservaEstoqueGateway).liberarReservas(ORDEM_ID);
+        Mockito.verifyNoInteractions(notificacaoGateway);
+    }
+
+    @Test
+    void shouldPermitirRepetirRecusaDepoisDeFalhaNaGravacao() {
+        // A OS segue AGUARDANDO_APROVACAO no banco após a falha; o estoque trata liberar como idempotente.
+        Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenAnswer(i -> Optional.of(ordemAguardandoAprovacao()));
+        Mockito.doThrow(new ErroAcessoBaseDeDadosException()).doNothing()
+                .when(ordemDeServicoGateway).atualizar(Mockito.any());
+
+        assertThrows(ErroAcessoBaseDeDadosException.class,
+                () -> orcamentoRecusadoViaAtendenteUseCase.recusar(ORDEM_ID));
+        orcamentoRecusadoViaAtendenteUseCase.recusar(ORDEM_ID);
+
+        Mockito.verify(reservaEstoqueGateway, Mockito.times(2)).liberarReservas(ORDEM_ID);
+        Mockito.verify(ordemDeServicoGateway, Mockito.times(2)).atualizar(Mockito.any());
+        Mockito.verify(notificacaoGateway, Mockito.times(1)).enviar(Mockito.any());
     }
 
     @Test
