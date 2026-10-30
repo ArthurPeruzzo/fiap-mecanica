@@ -3,6 +3,12 @@ package com.fiap.mecanica.ordemdeservico.infra.controller;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.shared.seguranca.core.domain.RoleEnum;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
+import org.springframework.beans.factory.annotation.Value;
+import java.util.Base64;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import io.restassured.RestAssured;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
@@ -25,6 +31,9 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
  * teste cobre rota, corpo, mapeamento de status e timeout (estoque.fake=false desliga o fake local).
  */
 class CriarOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
+
+    @Value("${servico.jwt.secret}")
+    private String segredoDeServico;
 
     private int contarOrdensNoBanco() {
         return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM ordem_servico", Integer.class);
@@ -88,6 +97,40 @@ class CriarOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrati
                         "{\"itens\":[{\"tipoItem\":\"PECA\",\"itemId\":%d,\"quantidadeTotal\":2},"
                                 + "{\"tipoItem\":\"INSUMO\",\"itemId\":%d,\"quantidadeTotal\":3}]}", pecaId, insumoId))));
         Assertions.assertEquals(2, contarVinculosNoBanco());
+    }
+
+    @Test
+    void shouldAutenticarAsChamadasAoEstoqueComTokenDeServicoDeEscopoMinimo() {
+        estoque.stubFor(put(urlPathMatching(RESERVAR_ITENS)).willReturn(aResponse().withStatus(204)));
+        Long clienteId = criarClienteERetornarId();
+        Long veiculoId = criarVeiculoERetornarId(clienteId);
+        stubCatalogo();
+        String tokenDoAtendente = obterTokenAtendente();
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenDoAtendente)
+                .body(corpoCriacao(clienteId, veiculoId, PECA_ID, INSUMO_ID))
+                .when().post("/ordem-servico")
+                .then().statusCode(201);
+
+        var verificador = JWT.require(Algorithm.HMAC256(Base64.getUrlDecoder().decode(segredoDeServico)))
+                .withIssuer("mecanica-fiap-servicos").withAudience("fiap-estoque").build();
+
+        var catalogo = estoque.findAll(getRequestedFor(urlPathMatching("/catalogo/(pecas|insumos)")));
+        Assertions.assertEquals(2, catalogo.size());
+        catalogo.forEach(chamada -> Assertions.assertEquals("catalogo:leitura",
+                verificador.verify(tokenDe(chamada)).getClaim("scope").asString()));
+
+        var reservas = estoque.findAll(putRequestedFor(urlPathMatching(RESERVAR_ITENS)));
+        Assertions.assertEquals(1, reservas.size());
+        var reserva = verificador.verify(tokenDe(reservas.getFirst()));
+        Assertions.assertEquals("reserva:escrita", reserva.getClaim("scope").asString());
+        Assertions.assertEquals("svc:fiap-mecanica", reserva.getSubject());
+        Assertions.assertNotEquals(tokenDoAtendente, tokenDe(reservas.getFirst()));
+    }
+
+    private static String tokenDe(LoggedRequest chamada) {
+        return chamada.getHeader("Authorization").substring("Bearer ".length());
     }
 
     @Test

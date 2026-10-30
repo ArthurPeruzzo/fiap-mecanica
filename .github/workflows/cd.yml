@@ -216,6 +216,7 @@ jobs:
           --from-literal=DB_USERNAME="${{ secrets.TF_VAR_DB_USERNAME }}" \
           --from-literal=DB_PASSWORD="${{ secrets.TF_VAR_DB_PASSWORD }}" \
           --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+          --from-literal=SERVICE_JWT_SECRET="${{ secrets.SERVICE_JWT_SECRET }}" \
           --from-literal=NEW_RELIC_LICENSE_KEY="${{ secrets.NEW_RELIC_LICENSE_KEY }}" \
           --dry-run=client -o yaml | kubectl apply -f -
     - name: Aplicar Service (antes do Deployment — só assim dá pra descobrir o hostname do LoadBalancer sem subir pods com config incompleta)

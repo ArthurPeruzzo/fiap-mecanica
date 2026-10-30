@@ -65,6 +65,7 @@ Login via `POST /authenticate/login`. Migration `V16` seeds sample data (clients
 | `DB_USERNAME` | `root` | DB user |
 | `DB_PASSWORD` | `root` | DB password |
 | `JWT_SECRET` | — | Base64URL-encoded secret (min 32 bytes decoded). Required in production. |
+| `SERVICE_JWT_SECRET` | — | Base64URL-encoded secret (min 32 bytes decoded) for the service token sent to the fiap-estoque. Must equal the estoque's value and differ from `JWT_SECRET`. Required (the app does not start without it). |
 | `url.aprovar.orcamento` | `http://localhost:8080/ordem-servico/orcamento/externo/aprovar/` | Base URL appended with the token for the client approval link |
 | `url.recusar.orcamento` | `http://localhost:8080/ordem-servico/orcamento/externo/recusar/` | Base URL appended with the token for the client rejection link |
 
@@ -310,7 +311,9 @@ Peças, insumos and reservations belong to the separate `fiap-estoque` service (
 - `CatalogoEstoqueGateway` → `CatalogoEstoqueHttpGateway`: `GET /catalogo/pecas|insumos?ids=` (batch, returns `ItemCatalogo(id, preco)`; unknown ids are simply omitted).
 - `ReservaEstoqueGateway` → `ReservaEstoqueHttpGateway`: `PUT /reserva/ordem-servico/{id}/itens` (atomic and idempotent batch), `POST .../confirmar`, `POST .../liberar`. 422 → `EstoqueInsuficienteParaOrdemException`; any other 4xx/5xx/timeout/IO error → `EstoqueIndisponivelException` (503).
 
-`/reserva/**` and `/catalogo/**` are internal routes without authentication in the fiap-estoque (network-level protection; service-to-service auth is pending). Creating an OS reserves everything in one call and compensates (liberar) if persisting fails; a stock failure fails the operation.
+`/reserva/**` and `/catalogo/**` are internal routes of the fiap-estoque that require a **service token**: `estoqueRestClient` is built with `EstoqueTokenInterceptor`, which on every call asks `ServicoTokenGenerator` (`shared/seguranca/infra/token/servico/`) for a fresh short-lived JWT (`iss=mecanica-fiap-servicos`, `sub=svc:fiap-mecanica`, `aud=fiap-estoque`, `scope=catalogo:leitura` for `/catalogo/**` or `reserva:escrita` for `/reserva/**`, `exp` = `servico.jwt.ttl`, `jti`). It is signed with its own secret (`SERVICE_JWT_SECRET`, **different** from the user `JWT_SECRET`; the fiap-estoque uses the same value to validate). An unknown route gets no token and the estoque answers 401 (→ `EstoqueIndisponivelException`, 503). Creating an OS reserves everything in one call and compensates (liberar) if persisting fails; a stock failure fails the operation.
+
+Vincular/desvincular peça/insumo reserve first and persist the link second; `ReservaComCompensacao` (same package as the use cases) re-reserves the item's **previous total** if persisting (or an uncertain reservation) fails — safe because `reservarItens` is absolute and idempotent. A 422 (insufficient stock) is not compensated (the estoque rejects atomically). Aprovar/recusar call the estoque (`confirmar`/`liberar`, both idempotent) before saving the OS, so a failed save is fixed by retrying.
 
 ### Security filter flow
 

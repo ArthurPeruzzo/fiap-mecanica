@@ -11,3 +11,4 @@ consequências. Uma decisão registrada aqui só muda com um novo ADR que a subs
 | [0004](0004-infra-quatro-repositorios.md) | Infraestrutura em 4 repositórios Terraform com states independentes | Aceito |
 | [0005](0005-state-pattern-ordem-servico.md) | State pattern no ciclo de vida da ordem de serviço | Aceito |
 | [0006](0006-jwt-hs256-segredo-compartilhado.md) | JWT HS256 stateless com segredo compartilhado; autorização na aplicação | Aceito |
+| [0007](0007-token-de-servico-entre-microsservicos.md) | Token de serviço (JWT HS256, segredo próprio, gerado por chamada) entre monólito e estoque | Aceito |
