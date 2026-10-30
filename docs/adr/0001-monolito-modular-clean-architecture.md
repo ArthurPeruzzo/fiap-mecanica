@@ -12,7 +12,9 @@ resistentes a mudanças de framework, banco e forma de exposição (HTTP hoje).
 
 Construir a aplicação como um **monólito modular** organizado por **Clean Architecture**:
 
-- Módulos de negócio por subdomínio: `gestao`, `estoque`, `ordemdeservico`, mais `shared`.
+- Módulos de negócio por subdomínio: `gestao`, `ordemdeservico`, mais `shared`. O módulo `estoque`
+  foi extraído para o microsserviço `fiap-estoque` (Fase 4); `ordemdeservico` o acessa por HTTP
+  através de gateways em `infra/gateway/estoque`.
 - Cada módulo dividido em `core/` (domínio) e `infra/` (framework):
   - `core/` — entidades de domínio, *use cases*, DTOs e **interfaces de gateway**, em Java puro,
     **sem nenhuma dependência de Spring, JPA ou HTTP**. Use cases são instanciados com `new`

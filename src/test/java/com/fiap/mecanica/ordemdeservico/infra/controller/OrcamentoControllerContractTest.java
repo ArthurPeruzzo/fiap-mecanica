@@ -1,11 +1,11 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import org.junit.jupiter.api.Test;
@@ -38,8 +38,8 @@ class OrcamentoControllerContractTest {
     private MockMvc mockMvc;
 
     @MockitoBean private OrdemDeServicoGateway ordemDeServicoGateway;
-    @MockitoBean private PecaGateway pecaGateway;
-    @MockitoBean private InsumoGateway insumoGateway;
+    @MockitoBean private CatalogoEstoqueGateway catalogoEstoqueGateway;
+    @MockitoBean private ReservaEstoqueGateway reservaEstoqueGateway;
     @MockitoBean private NotificacaoGateway notificacaoGateway;
     @MockitoBean private LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway;
 

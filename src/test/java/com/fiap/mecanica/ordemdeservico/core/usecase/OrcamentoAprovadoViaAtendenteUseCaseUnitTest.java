@@ -5,7 +5,9 @@ import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.OrcamentoAprovadoViaAtendenteUseCase;
+import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +33,9 @@ class OrcamentoAprovadoViaAtendenteUseCaseUnitTest {
 
     @Mock
     private OrdemDeServicoGateway ordemDeServicoGateway;
+
+    @Mock
+    private ReservaEstoqueGateway reservaEstoqueGateway;
 
     @Mock
     private NotificacaoGateway notificacaoGateway;
@@ -74,6 +79,35 @@ class OrcamentoAprovadoViaAtendenteUseCaseUnitTest {
         var os = captor.getValue();
         assertEquals(StatusOrdemDeServico.EM_EXECUCAO, os.getStatus());
         assertNotNull(os.getDataAprovacao());
+        Mockito.verify(reservaEstoqueGateway).confirmarReservas(ORDEM_ID);
+    }
+
+    @Test
+    void shouldPropagarErroENaoNotificarQuandoGravacaoFalhaDepoisDeConfirmarReservas() {
+        Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemAguardandoAprovacao()));
+        Mockito.doThrow(new ErroAcessoBaseDeDadosException()).when(ordemDeServicoGateway).atualizar(Mockito.any());
+
+        assertThrows(ErroAcessoBaseDeDadosException.class,
+                () -> orcamentoAprovadoViaAtendenteUseCase.aprovar(ORDEM_ID));
+
+        Mockito.verify(reservaEstoqueGateway).confirmarReservas(ORDEM_ID);
+        Mockito.verifyNoInteractions(notificacaoGateway);
+    }
+
+    @Test
+    void shouldPermitirRepetirAprovacaoDepoisDeFalhaNaGravacao() {
+        // A OS segue AGUARDANDO_APROVACAO no banco após a falha; o estoque trata confirmar como idempotente.
+        Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenAnswer(i -> Optional.of(ordemAguardandoAprovacao()));
+        Mockito.doThrow(new ErroAcessoBaseDeDadosException()).doNothing()
+                .when(ordemDeServicoGateway).atualizar(Mockito.any());
+
+        assertThrows(ErroAcessoBaseDeDadosException.class,
+                () -> orcamentoAprovadoViaAtendenteUseCase.aprovar(ORDEM_ID));
+        orcamentoAprovadoViaAtendenteUseCase.aprovar(ORDEM_ID);
+
+        Mockito.verify(reservaEstoqueGateway, Mockito.times(2)).confirmarReservas(ORDEM_ID);
+        Mockito.verify(ordemDeServicoGateway, Mockito.times(2)).atualizar(Mockito.any());
+        Mockito.verify(notificacaoGateway, Mockito.times(1)).enviar(Mockito.any());
     }
 
     @Test
@@ -116,5 +150,6 @@ class OrcamentoAprovadoViaAtendenteUseCaseUnitTest {
                 () -> orcamentoAprovadoViaAtendenteUseCase.aprovar(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(reservaEstoqueGateway);
     }
 }

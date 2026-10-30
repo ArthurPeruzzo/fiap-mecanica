@@ -6,17 +6,14 @@ import io.restassured.RestAssured;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+
 class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
-
-    private Integer obterEstoquePecaNoBanco(Long pecaId) {
-        return jdbcTemplate.queryForObject(
-                "SELECT quantidade_estoque FROM peca WHERE id = ?", Integer.class, pecaId);
-    }
-
-    private Integer obterEstoqueInsumoNoBanco(Long insumoId) {
-        return jdbcTemplate.queryForObject(
-                "SELECT quantidade_estoque FROM insumo WHERE id = ?", Integer.class, insumoId);
-    }
 
     private int contarVinculosPecaNoBanco(Long ordemId, Long pecaId) {
         Integer count = jdbcTemplate.queryForObject(
@@ -42,25 +39,25 @@ class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServ
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + qtdPeca1 + "}")
+                .body(Map.of("quantidade", qtdPeca1))
                 .when().put("/ordem-servico/" + ordemId + "/pecas/" + peca1Id)
                 .then().statusCode(204);
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + qtdPeca2 + "}")
+                .body(Map.of("quantidade", qtdPeca2))
                 .when().put("/ordem-servico/" + ordemId + "/pecas/" + peca2Id)
                 .then().statusCode(204);
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + qtdInsumo1 + "}")
+                .body(Map.of("quantidade", qtdInsumo1))
                 .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumo1Id)
                 .then().statusCode(204);
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
-                .body("{\"quantidade\":" + qtdInsumo2 + "}")
+                .body(Map.of("quantidade", qtdInsumo2))
                 .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumo2Id)
                 .then().statusCode(204);
 
@@ -87,10 +84,14 @@ class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServ
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
 
-        Long peca1Id = criarPecaERetornarId(10);
-        Long peca2Id = criarPecaERetornarId(10);
-        Long insumo1Id = criarInsumoERetornarId(10);
-        Long insumo2Id = criarInsumoERetornarId(10);
+        Long peca1Id = 11L;
+        Long peca2Id = 12L;
+        Long insumo1Id = 21L;
+        Long insumo2Id = 22L;
+        stubCatalogoPeca(peca1Id, "45.00");
+        stubCatalogoPeca(peca2Id, "60.00");
+        stubCatalogoInsumo(insumo1Id, "35.00");
+        stubCatalogoInsumo(insumo2Id, "20.00");
 
         Long ordemId = criarOrdemAguardandoAprovacaoERetornarId(
                 tokenAtendente, tokenMecanico,
@@ -106,10 +107,8 @@ class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServ
         Assertions.assertEquals(StatusOrdemDeServico.CANCELADA, ordem.getStatus());
         Assertions.assertNotNull(ordem.getDataCancelamento());
 
-        Assertions.assertEquals(10, obterEstoquePecaNoBanco(peca1Id));
-        Assertions.assertEquals(10, obterEstoquePecaNoBanco(peca2Id));
-        Assertions.assertEquals(10, obterEstoqueInsumoNoBanco(insumo1Id));
-        Assertions.assertEquals(10, obterEstoqueInsumoNoBanco(insumo2Id));
+        estoque.verify(exactly(1), postRequestedFor(urlEqualTo("/reserva/ordem-servico/" + ordemId + "/liberar")));
+        estoque.verify(exactly(0), postRequestedFor(urlPathMatching(CONFIRMAR)));
 
         Assertions.assertEquals(1, contarVinculosPecaNoBanco(ordemId, peca1Id));
         Assertions.assertEquals(1, contarVinculosPecaNoBanco(ordemId, peca2Id));

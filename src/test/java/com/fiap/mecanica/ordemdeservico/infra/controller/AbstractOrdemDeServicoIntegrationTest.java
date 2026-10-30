@@ -1,10 +1,5 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
-import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
-import com.fiap.mecanica.estoque.infra.gateway.entity.InsumoEntity;
-import com.fiap.mecanica.estoque.infra.gateway.entity.PecaEntity;
-import com.fiap.mecanica.estoque.infra.gateway.repository.InsumoRepository;
-import com.fiap.mecanica.estoque.infra.gateway.repository.PecaRepository;
 import com.fiap.mecanica.gestao.core.domain.Turno;
 import com.fiap.mecanica.gestao.infra.gateway.entity.AtendenteEntity;
 import com.fiap.mecanica.gestao.infra.gateway.entity.ClienteEntity;
@@ -25,6 +20,7 @@ import com.fiap.mecanica.shared.seguranca.infra.gateway.entity.RoleEntity;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.entity.UserEntity;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.repository.RoleRepository;
 import com.fiap.mecanica.shared.seguranca.infra.gateway.repository.UserRepository;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +31,18 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.put;
+import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 
 @ActiveProfiles("integration-test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -50,9 +58,66 @@ abstract class AbstractOrdemDeServicoIntegrationTest extends AbstractContainer {
     @Autowired protected OrdemDeServicoRepository ordemDeServicoRepository;
     @Autowired protected LinkAprovacaoOrcamentoRepository linkAprovacaoOrcamentoRepository;
     @Autowired protected ServicoRepository servicoRepository;
-    @Autowired protected PecaRepository pecaRepository;
-    @Autowired protected InsumoRepository insumoRepository;
     @Autowired protected JdbcTemplate jdbcTemplate;
+
+    /** Ids do catálogo do fiap-estoque simulado: o monólito não guarda peça nem insumo. */
+    protected static final Long PECA_ID = 11L;
+    protected static final Long INSUMO_ID = 21L;
+    protected static final String RESERVAR_ITENS = "/reserva/ordem-servico/\\d+/itens";
+    protected static final String CONFIRMAR = "/reserva/ordem-servico/\\d+/confirmar";
+    protected static final String LIBERAR = "/reserva/ordem-servico/\\d+/liberar";
+
+    protected void stubCatalogo() {
+        estoque.stubFor(get(urlPathEqualTo("/catalogo/pecas"))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json")
+                        .withBody("[{\"id\":" + PECA_ID + ",\"preco\":45.00}]")));
+        estoque.stubFor(get(urlPathEqualTo("/catalogo/insumos"))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json")
+                        .withBody("[{\"id\":" + INSUMO_ID + ",\"preco\":35.00}]")));
+    }
+
+    protected void stubCatalogoVazio() {
+        estoque.stubFor(get(urlPathEqualTo("/catalogo/pecas"))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody("[]")));
+        estoque.stubFor(get(urlPathEqualTo("/catalogo/insumos"))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json").withBody("[]")));
+    }
+
+    protected void stubReservaOk() {
+        estoque.stubFor(put(urlPathMatching(RESERVAR_ITENS)).willReturn(aResponse().withStatus(204)));
+    }
+
+    protected void stubReservaStatus(int status) {
+        estoque.stubFor(put(urlPathMatching(RESERVAR_ITENS)).willReturn(aResponse().withStatus(status)));
+    }
+
+    protected void stubConfirmarEliberarOk() {
+        estoque.stubFor(post(urlPathMatching(CONFIRMAR)).willReturn(aResponse().withStatus(204)));
+        estoque.stubFor(post(urlPathMatching(LIBERAR)).willReturn(aResponse().withStatus(204)));
+    }
+
+    protected void stubCatalogoPeca(Long id, String preco) {
+        estoque.stubFor(get(urlPathEqualTo("/catalogo/pecas")).withQueryParam("ids", equalTo(String.valueOf(id)))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json")
+                        .withBody("[{\"id\":" + id + ",\"preco\":" + preco + "}]")));
+    }
+
+    protected void stubCatalogoInsumo(Long id, String preco) {
+        estoque.stubFor(get(urlPathEqualTo("/catalogo/insumos")).withQueryParam("ids", equalTo(String.valueOf(id)))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json")
+                        .withBody("[{\"id\":" + id + ",\"preco\":" + preco + "}]")));
+    }
+
+    /** As quantidadeTotal enviadas ao estoque nas reservas, na ordem em que foram feitas. */
+    protected List<Integer> quantidadesReservadasNoEstoque() {
+        Pattern quantidade = Pattern.compile("\"quantidadeTotal\"\\s*:\\s*(\\d+)");
+        return estoque.findAll(putRequestedFor(urlPathMatching(RESERVAR_ITENS))).stream()
+                .map(LoggedRequest::getBodyAsString)
+                .map(quantidade::matcher)
+                .filter(Matcher::find)
+                .map(m -> Integer.valueOf(m.group(1)))
+                .toList();
+    }
 
     @LocalServerPort
     private int port;
@@ -60,6 +125,10 @@ abstract class AbstractOrdemDeServicoIntegrationTest extends AbstractContainer {
     @BeforeEach
     void setup() {
         RestAssured.port = port;
+        // Respostas padrão do fiap-estoque; cada teste sobrescreve só o que quer variar.
+        stubCatalogo();
+        stubReservaOk();
+        stubConfirmarEliberarOk();
     }
 
     protected String obterToken(RoleEnum role, String cpf) {
@@ -156,30 +225,47 @@ abstract class AbstractOrdemDeServicoIntegrationTest extends AbstractContainer {
         return ordemId;
     }
 
+    protected Long criarOrdemAguardandoAprovacaoComPecaEInsumoERetornarId(String tokenAtendente, String tokenMecanico,
+                                                                           Long pecaId, int qtdPeca,
+                                                                           Long insumoId, int qtdInsumo) {
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(tokenAtendente, tokenMecanico);
+        Long servicoId = criarServicoERetornarId();
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body(Map.of("quantidade", qtdPeca))
+                .when().put("/ordem-servico/" + ordemId + "/pecas/" + pecaId)
+                .then().statusCode(204);
+
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body(Map.of("quantidade", qtdInsumo))
+                .when().put("/ordem-servico/" + ordemId + "/insumos/" + insumoId)
+                .then().statusCode(204);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().put("/ordem-servico/" + ordemId + "/servicos/" + servicoId)
+                .then().statusCode(204);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .when().patch("/ordem-servico/" + ordemId + "/diagnostico/conclusao")
+                .then().statusCode(204);
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenAtendente)
+                .when().post("/ordem-servico/orcamento/envio/" + ordemId)
+                .then().statusCode(204);
+
+        return ordemId;
+    }
+
     protected Long criarServicoERetornarId() {
         return servicoRepository.saveAndFlush(ServicoEntity.builder()
                 .nome("Troca de óleo")
                 .descricao("Serviço de troca de óleo do motor")
                 .preco(new BigDecimal("150.00"))
-                .build()).getId();
-    }
-
-    protected Long criarPecaERetornarId(Integer quantidadeEstoque) {
-        return pecaRepository.saveAndFlush(PecaEntity.builder()
-                .nome("Filtro de óleo")
-                .descricao("Filtro original")
-                .preco(new BigDecimal("45.00"))
-                .quantidadeEstoque(quantidadeEstoque)
-                .build()).getId();
-    }
-
-    protected Long criarInsumoERetornarId(Integer quantidadeEstoque) {
-        return insumoRepository.saveAndFlush(InsumoEntity.builder()
-                .nome("Óleo motor 5W30")
-                .descricao("Óleo sintético")
-                .preco(new BigDecimal("35.00"))
-                .quantidadeEstoque(quantidadeEstoque)
-                .unidadeMedida(UnidadeMedida.LITRO)
                 .build()).getId();
     }
 }

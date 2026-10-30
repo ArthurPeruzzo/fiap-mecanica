@@ -1,7 +1,5 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.gestao.core.gateway.AtendenteGateway;
 import com.fiap.mecanica.gestao.core.gateway.ClienteGateway;
 import com.fiap.mecanica.gestao.core.gateway.MecanicoGateway;
@@ -9,8 +7,11 @@ import com.fiap.mecanica.gestao.core.gateway.VeiculoGateway;
 import com.fiap.mecanica.ordemdeservico.core.dto.CriarOrdemDeServicoDto;
 import com.fiap.mecanica.ordemdeservico.core.dto.InsumoVinculadoCriarDto;
 import com.fiap.mecanica.ordemdeservico.core.dto.PecaVinculadaCriarDto;
+import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.*;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import com.fiap.mecanica.shared.metricas.core.gateway.MetricasGateway;
@@ -41,15 +42,16 @@ public class OrdemDeServicoHttpController {
                                          ClienteGateway clienteGateway,
                                          MecanicoGateway mecanicoGateway,
                                          ServicoGateway servicoGateway,
-                                         PecaGateway pecaGateway,
-                                         InsumoGateway insumoGateway,
+                                         CatalogoEstoqueGateway catalogoEstoqueGateway,
+                                         ReservaEstoqueGateway reservaEstoqueGateway,
+                                         TransacaoGateway transacaoGateway,
                                          NotificacaoGateway notificacaoGateway,
                                          MetricasGateway metricasGateway,
                                          UserGateway userGateway) {
         this.cleanController = new OrdemDeServicoCleanController(
                 ordemDeServicoGateway, atendenteGateway, tokenGateway,
                 veiculoGateway, clienteGateway, mecanicoGateway,
-                servicoGateway, pecaGateway, insumoGateway,
+                servicoGateway, catalogoEstoqueGateway, reservaEstoqueGateway, transacaoGateway,
                 notificacaoGateway, metricasGateway, userGateway
         );
     }

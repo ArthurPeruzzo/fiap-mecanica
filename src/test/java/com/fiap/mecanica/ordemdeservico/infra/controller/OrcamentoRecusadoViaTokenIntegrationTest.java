@@ -1,6 +1,5 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
-import com.fiap.mecanica.estoque.infra.gateway.entity.PecaEntity;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.LinkAprovacaoOrcamentoEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
@@ -10,6 +9,11 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 
 class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
 
@@ -40,11 +44,11 @@ class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
     }
 
     @Test
-    void shouldDevolverEstoqueAoRecusarViaToken() {
+    void shouldLiberarReservaAoRecusarViaToken() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
 
-        Long pecaId = criarPecaERetornarId(10);
+        Long pecaId = PECA_ID;
         Long ordemId = criarOrdemEmDiagnosticoERetornarId(tokenAtendente, tokenMecanico);
         Long servicoId = criarServicoERetornarId();
 
@@ -70,16 +74,14 @@ class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
                 .when().post("/ordem-servico/orcamento/envio/" + ordemId)
                 .then().statusCode(204);
 
-        PecaEntity pecaAntes = pecaRepository.findById(pecaId).orElseThrow();
-        Assertions.assertEquals(7, pecaAntes.getQuantidadeEstoque());
+        estoque.verify(exactly(0), postRequestedFor(urlPathMatching(LIBERAR)));
 
         String token = obterTokenLinkDeOrdemAguardandoAprovacao(ordemId);
         RestAssured.given()
                 .when().get("/ordem-servico/orcamento/externo/recusar/" + token)
                 .then().statusCode(204);
 
-        PecaEntity pecaDepois = pecaRepository.findById(pecaId).orElseThrow();
-        Assertions.assertEquals(10, pecaDepois.getQuantidadeEstoque());
+        estoque.verify(exactly(1), postRequestedFor(urlEqualTo("/reserva/ordem-servico/" + ordemId + "/liberar")));
     }
 
     @Test

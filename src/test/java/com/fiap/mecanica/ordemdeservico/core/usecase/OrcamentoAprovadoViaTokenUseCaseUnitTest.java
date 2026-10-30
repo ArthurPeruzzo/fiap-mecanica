@@ -8,6 +8,7 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontra
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.OrcamentoAprovadoViaTokenUseCase;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import org.junit.jupiter.api.Test;
@@ -35,6 +36,9 @@ class OrcamentoAprovadoViaTokenUseCaseUnitTest {
 
     @Mock
     private OrdemDeServicoGateway ordemDeServicoGateway;
+
+    @Mock
+    private ReservaEstoqueGateway reservaEstoqueGateway;
 
     @Mock
     private NotificacaoGateway notificacaoGateway;
@@ -117,6 +121,7 @@ class OrcamentoAprovadoViaTokenUseCaseUnitTest {
         var linkCaptor = ArgumentCaptor.forClass(LinkAprovacaoOrcamento.class);
         Mockito.verify(linkAprovacaoOrcamentoGateway).atualizar(linkCaptor.capture());
         assertNotNull(linkCaptor.getValue().getDataUtilizacao());
+        Mockito.verify(reservaEstoqueGateway).confirmarReservas(ORDEM_ID);
     }
 
     @Test
@@ -184,6 +189,7 @@ class OrcamentoAprovadoViaTokenUseCaseUnitTest {
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
         Mockito.verify(linkAprovacaoOrcamentoGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(reservaEstoqueGateway);
     }
 
     @Test

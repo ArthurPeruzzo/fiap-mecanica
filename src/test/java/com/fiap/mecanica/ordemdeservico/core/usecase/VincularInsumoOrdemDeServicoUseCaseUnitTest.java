@@ -1,10 +1,10 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase;
 
-import com.fiap.mecanica.estoque.core.domain.Insumo;
-import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
-import com.fiap.mecanica.estoque.core.exception.EstoqueInsuficienteException;
-import com.fiap.mecanica.estoque.core.exception.InsumoNaoEncontradoException;
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
+import com.fiap.mecanica.ordemdeservico.core.dto.ItemReserva;
+import com.fiap.mecanica.ordemdeservico.core.dto.ItemCatalogo;
+import com.fiap.mecanica.ordemdeservico.core.exception.EstoqueInsuficienteParaOrdemException;
+import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
+import com.fiap.mecanica.ordemdeservico.core.exception.InsumoNaoEncontradoNoCatalogoException;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.InsumoVinculado;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServicoStateFactory;
@@ -12,7 +12,9 @@ import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDe
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.VinculoInsumoNaoAutorizadaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.VincularInsumoOrdemDeServicoUseCase;
+import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -38,7 +40,10 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
     private OrdemDeServicoGateway ordemDeServicoGateway;
 
     @Mock
-    private InsumoGateway insumoGateway;
+    private CatalogoEstoqueGateway catalogoEstoqueGateway;
+
+    @Mock
+    private ReservaEstoqueGateway reservaEstoqueGateway;
 
     private static final Long ORDEM_ID = 1L;
     private static final Long INSUMO_ID = 30L;
@@ -71,39 +76,53 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
                 .build();
     }
 
-    private Insumo insumoComEstoque(Integer estoque) {
-        return Insumo.reconstituir(INSUMO_ID, "Óleo motor 5W30", "Óleo sintético", BigDecimal.TEN,
-                UnidadeMedida.LITRO, estoque);
+    private ItemCatalogo insumoNoCatalogo() {
+        return new ItemCatalogo(INSUMO_ID, BigDecimal.TEN);
     }
 
     private void stubOrdem(OrdemDeServico os) {
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(os));
     }
 
-    private void stubInsumo(Insumo insumo) {
-        Mockito.when(insumoGateway.buscarPorId(INSUMO_ID)).thenReturn(Optional.of(insumo));
+    private void stubInsumo(ItemCatalogo insumo) {
+        Mockito.when(catalogoEstoqueGateway.buscarInsumo(INSUMO_ID)).thenReturn(Optional.of(insumo));
     }
 
     @Test
     void shouldVincularInsumoSuccessfully() {
         stubOrdem(ordemEmDiagnostico(List.of()));
-        stubInsumo(insumoComEstoque(10));
+        stubInsumo(insumoNoCatalogo());
 
         vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE);
 
-        Mockito.verify(insumoGateway).atualizar(Mockito.any());
+        Mockito.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.insumo(INSUMO_ID, QUANTIDADE)));
         Mockito.verify(ordemDeServicoGateway).vincularOuSomarInsumo(ORDEM_ID, INSUMO_ID, QUANTIDADE, PRECO);
     }
 
     @Test
     void shouldSomarQuantidadeWhenInsumoAlreadyLinked() {
         stubOrdem(ordemEmDiagnostico(List.of(new InsumoVinculado(INSUMO_ID, 5, BigDecimal.TEN))));
-        stubInsumo(insumoComEstoque(10));
+        stubInsumo(insumoNoCatalogo());
 
         vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE);
 
-        Mockito.verify(insumoGateway).atualizar(Mockito.any());
+        Mockito.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.insumo(INSUMO_ID, 8)));
         Mockito.verify(ordemDeServicoGateway).vincularOuSomarInsumo(ORDEM_ID, INSUMO_ID, QUANTIDADE, PRECO);
+    }
+
+    @Test
+    void shouldRestaurarReservaAnteriorQuandoGravacaoDoVinculoFalhaDepoisDeReservar() {
+        stubOrdem(ordemEmDiagnostico(List.of(new InsumoVinculado(INSUMO_ID, 4, PRECO))));
+        stubInsumo(insumoNoCatalogo());
+        Mockito.doThrow(new ErroAcessoBaseDeDadosException()).when(ordemDeServicoGateway)
+                .vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+
+        assertThrows(ErroAcessoBaseDeDadosException.class,
+                () -> vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
+
+        var ordem = Mockito.inOrder(reservaEstoqueGateway);
+        ordem.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.insumo(INSUMO_ID, 7)));
+        ordem.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.insumo(INSUMO_ID, 4)));
     }
 
     @Test
@@ -113,31 +132,32 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
         assertThrows(OrdemDeServicoNaoEncontradaException.class,
                 () -> vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
 
-        Mockito.verifyNoInteractions(insumoGateway);
+        Mockito.verifyNoInteractions(catalogoEstoqueGateway, reservaEstoqueGateway);
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
     void shouldThrowWhenInsumoNotFound() {
         stubOrdem(ordemEmDiagnostico(List.of()));
-        Mockito.when(insumoGateway.buscarPorId(INSUMO_ID)).thenReturn(Optional.empty());
+        Mockito.when(catalogoEstoqueGateway.buscarInsumo(INSUMO_ID)).thenReturn(Optional.empty());
 
-        assertThrows(InsumoNaoEncontradoException.class,
+        assertThrows(InsumoNaoEncontradoNoCatalogoException.class,
                 () -> vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
 
-        Mockito.verify(insumoGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(reservaEstoqueGateway);
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
     void shouldThrowWhenEstoqueInsuficiente() {
         stubOrdem(ordemEmDiagnostico(List.of()));
-        stubInsumo(insumoComEstoque(0));
+        stubInsumo(insumoNoCatalogo());
+        Mockito.doThrow(new EstoqueInsuficienteParaOrdemException())
+                .when(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.insumo(INSUMO_ID, QUANTIDADE)));
 
-        assertThrows(EstoqueInsuficienteException.class,
+        assertThrows(EstoqueInsuficienteParaOrdemException.class,
                 () -> vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
 
-        Mockito.verify(insumoGateway, Mockito.never()).atualizar(Mockito.any());
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 
@@ -166,12 +186,12 @@ class VincularInsumoOrdemDeServicoUseCaseUnitTest {
                 .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.DIAGNOSTICO_CONCLUIDO))
                 .build();
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemDiagnosticoConcluido));
-        stubInsumo(insumoComEstoque(10));
+        stubInsumo(insumoNoCatalogo());
 
         assertThrows(VinculoInsumoNaoAutorizadaException.class,
                 () -> vincularInsumoOrdemDeServicoUseCase.vincular(ORDEM_ID, INSUMO_ID, QUANTIDADE));
 
-        Mockito.verify(insumoGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(reservaEstoqueGateway);
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).vincularOuSomarInsumo(Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     }
 }

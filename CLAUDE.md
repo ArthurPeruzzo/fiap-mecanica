@@ -55,7 +55,7 @@ Seeded by Flyway migrations. All share the same password `MeCanica2026!@#`.
 | `33366699957` | `ROLE_ATENDENTE` |
 | `11144477735` | `ROLE_MECANICO` |
 
-Login via `POST /authenticate/login`. Migration `V14` seeds sample data (clients, vehicles, parts, supplies, services, orders in every status) for immediate API exploration. Swagger UI: `http://localhost:8080/swagger-ui.html`.
+Login via `POST /authenticate/login`. Migration `V16` seeds sample data (clients, vehicles, parts, supplies, services, orders in every status) for immediate API exploration. Swagger UI: `http://localhost:8080/swagger-ui.html`.
 
 ## Environment variables
 
@@ -65,6 +65,7 @@ Login via `POST /authenticate/login`. Migration `V14` seeds sample data (clients
 | `DB_USERNAME` | `root` | DB user |
 | `DB_PASSWORD` | `root` | DB password |
 | `JWT_SECRET` | — | Base64URL-encoded secret (min 32 bytes decoded). Required in production. |
+| `SERVICE_JWT_SECRET` | — | Base64URL-encoded secret (min 32 bytes decoded) for the service token sent to the fiap-estoque. Must equal the estoque's value and differ from `JWT_SECRET`. Required (the app does not start without it). |
 | `url.aprovar.orcamento` | `http://localhost:8080/ordem-servico/orcamento/externo/aprovar/` | Base URL appended with the token for the client approval link |
 | `url.recusar.orcamento` | `http://localhost:8080/ordem-servico/orcamento/externo/recusar/` | Base URL appended with the token for the client rejection link |
 
@@ -98,16 +99,6 @@ com.fiap.mecanica
 │           ├── database/   # ClienteDatabaseGateway, VeiculoDatabaseGateway, etc.
 │           ├── entity/     # ClienteEntity (@OneToMany veiculos), VeiculoEntity (@ManyToOne cliente), etc.
 │           └── repository/ # ClienteRepository, VeiculoRepository, MecanicoRepository, AtendenteRepository
-├── estoque/                # Business module: parts (peças) and supplies (insumos)
-│   ├── core/
-│   │   ├── domain/         # ItemEstoque (abstract), Peca extends ItemEstoque, Insumo extends ItemEstoque, UnidadeMedida (enum)
-│   │   ├── dto/            # Criar/Atualizar/Listar for Peca and Insumo
-│   │   ├── gateway/        # PecaGateway, InsumoGateway
-│   │   ├── usecase/        # Criar/Atualizar/Deletar/Listar for Peca and Insumo
-│   │   └── exception/      # PecaNaoEncontrada, InsumoNaoEncontrado, EstoqueInsuficiente
-│   └── infra/              # Peca{Clean|Http}Controller, Insumo{Clean|Http}Controller,
-│                           # presenter/: ListarPecas, ListarInsumos presenters,
-│                           # entities, repositories
 └── ordemdeservico/         # Business module: service orders and services
     ├── core/
     │   ├── domain/
@@ -120,7 +111,8 @@ com.fiap.mecanica
     │   ├── dto/            # CriarOrdemDeServicoDto, OrdemDeServicoListagemDto,
     │   │               # ServicoVinculadoDto, PecaVinculadaDto, InsumoVinculadoDto,
     │   │               # Criar/Atualizar/ListarServicoDto
-    │   ├── gateway/        # OrdemDeServicoGateway, ServicoGateway, LinkAprovacaoOrcamentoGateway
+    │   ├── gateway/        # OrdemDeServicoGateway, ServicoGateway, LinkAprovacaoOrcamentoGateway,
+    │   │                   # CatalogoEstoqueGateway (peça/insumo → ItemCatalogo), ReservaEstoqueGateway
     │   ├── usecase/
     │   │   ├── ordemdeservico/ # CriarOrdemDeServico, IniciarDiagnostico, ConcluirDiagnostico,
     │   │   │                   # VincularServico, DesvincularServico,
@@ -143,6 +135,8 @@ com.fiap.mecanica
     │                       # ServicoEmExecucaoOuFinalizado, ServicoNaoIniciadoOuFinalizado,
     │                       # ServicoNaoVinculado, OrdemDeServicoSemServicos,
     │                       # MecanicoNaoResponsavelPelaOrdemDeServico,
+    │                       # PecaNaoEncontradaNoCatalogo, InsumoNaoEncontradoNoCatalogo,
+    │                       # EstoqueInsuficienteParaOrdem,
     │                       # VeiculoNaoPertenceAoCliente, etc.
     └── infra/
         ├── controller/     # Five Clean+Http pairs: OrdemDeServico (CRUD/listar/status/entregar),
@@ -156,6 +150,8 @@ com.fiap.mecanica
         │                   # presenter/: CriarOrdemDeServico, ListarOrdemDeServico,
         │                   #             ConsultarStatusOrdemDeServico, ListarServicos presenters
         └── gateway/
+            ├── estoque/    # HTTP clients for the fiap-estoque microservice (see "Estoque integration"):
+            │               # CatalogoEstoqueHttpGateway, ReservaEstoqueHttpGateway, EstoqueClientConfig, json/
             ├── database/   # OrdemDeServicoDatabaseGateway
             ├── entity/     # OrdemDeServicoEntity, ServicoEntity,
             │               # OrdemDeServicoServicoEntity (join: ordem_servico_servico — stores preco, StatusServico, timestamps),
@@ -197,11 +193,11 @@ Use cases that don't produce output (create/update/delete) return `void` — no 
 - **`core/` has zero Spring/JPA dependencies.** Use cases are plain Java — no `@Service` or any other Spring annotation. They are instantiated with `new` inside `CleanController` methods, not managed by Spring. Domain objects are plain Java. JPA entities live exclusively in `infra/gateway/entity/`.
 - **Dependency inversion via gateway interfaces.** All interfaces are defined in `core/gateway/`; implementations live in `infra/gateway/database/`.
 - **Use cases** depend only on domain objects and gateway interfaces — never on Spring beans or JPA directly.
-- **Cross-module gateway access is allowed.** `ordemdeservico` use cases depend on `gestao` gateways (e.g. `CriarOrdemDeServicoUseCase` uses `AtendenteGateway`, `ClienteGateway`, `VeiculoGateway`). This is intentional — `core/` modules may import from other modules' `core/` packages. For listing/read use cases that need human-readable fields from related modules (names, plate, etc.), enrich via cross-module gateways inside the use case and return a dedicated DTO (e.g. `ListarOrdemDeServicoUseCase` → `OrdemDeServicoListagemDto`). Never expose raw IDs in response JSON when the display name is available.
+- **Cross-module gateway access is allowed.** `ordemdeservico` use cases depend on `gestao` gateways (e.g. `CriarOrdemDeServicoUseCase` uses `AtendenteGateway`, `ClienteGateway`, `VeiculoGateway`). This is intentional — `core/` modules may import from other modules' `core/` packages. For listing/read use cases that need human-readable fields from related modules (names, plate, etc.), enrich via cross-module gateways inside the use case and return a dedicated DTO (e.g. `ListarOrdemDeServicoUseCase` → `OrdemDeServicoListagemDto`). Never expose raw IDs in response JSON when the display name is available. **Exception: `estoque`.** It is no longer part of this repo — it is the separate `fiap-estoque` microservice, reached only through the HTTP gateways in `ordemdeservico/infra/gateway/estoque/` (see "Estoque integration" below).
 - **Value objects strip formatting on construction.** `Cpf` and `Cnpj` strip `[.\\-/]`; `Placa` strips `-` and uppercases — do not change to `\\D`.
 - **`Placa` value object** lives in `gestao/core/domain/`. `getValor()` returns the stored (stripped) value; `getValorFormatado()` inserts `-` after the 3rd character for display.
 - **Pagination boundary:** `Pagina<T>` (plain Java record in `shared/page/`) is used in `core/` and returned by gateways. `PageResponse` (Spring-based) lives in `infra/` and is used only in controllers. Controller converts via `PageResponse.from(pagina.map(ResponseJson::from))`.
-- **Domain rehydration:** use the static factory `reconstituir(Long id, ...)` to rebuild domain objects from DB. For simple domain objects (`Cliente`, `Veiculo`, etc.) it calls the regular constructor then sets `id` directly. `OrdemDeServico.reconstituir` uses a private no-arg constructor and assigns all fields directly (bypassing the creation constructor intentionally — the `//TODO resolver esse metodo` comment marks this as a known debt). Never invent new bypass patterns.
+- **Domain rehydration:** use the static factory `reconstituir(Long id, ...)` to rebuild domain objects from DB. For simple domain objects (`Cliente`, `Veiculo`, etc.) it calls the regular constructor then sets `id` directly. `OrdemDeServico.reconstituir` uses a private no-arg constructor and assigns all fields directly (bypassing the creation constructor intentionally — the `//TODO resolver esse metodo` comment marks this as a known debt). Never invent new bypass patterns. **Exception:** `Peca`, `Insumo` and `Reserva` have no `reconstituir` — they use Lombok `@Builder` (`@SuperBuilder` on `ItemEstoque`/`Peca`/`Insumo`, `@Builder` + private `@AllArgsConstructor` on `Reserva`): `Peca.builder().id(..).nome(..)...build()`. Public constructors remain for creation. With `@SuperBuilder`, `build()` returns a wildcard type, so inside lambdas map via a private method (see `paraDominio` in `PecaDatabaseGateway`/`InsumoDatabaseGateway`).
 - **Domain mutation:** use the `atualizar(...)` method on the domain object to update its state. The method re-validates invariants (e.g. exactly one document, valid plate format).
 - **`Veiculo.clienteId` is immutable after creation.** `atualizar(placa, modelo, ano)` does not accept `clienteId` — the client link can only be changed by deleting and recreating the vehicle.
 - **Domain exceptions** extend `BaseException` (which carries `HttpStatus`). Place them in `<module>/core/exception/`. `GlobalExceptionHandler` maps `BaseException` → its status, `MethodArgumentNotValidException` → 400, `DataIntegrityViolationException` → 400.
@@ -209,7 +205,7 @@ Use cases that don't produce output (create/update/delete) return `void` — no 
 - **Database gateway error handling:** wrap all repository calls in try/catch and rethrow as `ErroAcessoBaseDeDadosException` for infrastructure failures.
 - **Duplicate check on update:** use `existsBy<Field>AndIdNot(value, id)` Spring Data derived queries to exclude the current entity from the uniqueness check.
 - **JPA cascade delete:** `ClienteEntity` owns `@OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL, orphanRemoval = true) List<VeiculoEntity> veiculos`. When saving a vehicle, pass a minimal reference: `ClienteEntity.builder().id(clienteId).build()`.
-- **Roles** are seeded by Flyway (`V1__create_security_struct.sql`): `ROLE_ATENDENTE`, `ROLE_MECANICO`, `ROLE_ADMINISTRADOR`. The `SecurityConfiguration` role constants must match `RoleEnum`. `ROLE_ADMINISTRADOR` controls `/cliente/**`, `/veiculo/**`, `/peca/**`, `/insumo/**`, `/servico/**`, and `GET /ordem-servico/detalhamento`. `ROLE_ATENDENTE` controls `POST /ordem-servico`, `POST /ordem-servico/orcamento/**`, and `PATCH /ordem-servico/*/entregar`. `ROLE_MECANICO` controls all `PATCH /ordem-servico/*/diagnostico*`, vincular/desvincular serviço/peça/insumo, and iniciar/finalizar serviço endpoints. `GET /ordem-servico/{id}/status` requires any authenticated role (`hasAnyRole(ATENDENTE, MECANICO, ADMINISTRADOR)`). `GET /ordem-servico/orcamento/externo/**` is in `ENDPOINTS_SEM_AUTENTICACAO` (public, no auth). Any other unmatched request is denied (`anyRequest().denyAll()`).
+- **Roles** are seeded by Flyway (`V1__create_security_struct.sql`): `ROLE_ATENDENTE`, `ROLE_MECANICO`, `ROLE_ADMINISTRADOR`. The `SecurityConfiguration` role constants must match `RoleEnum`. `ROLE_ADMINISTRADOR` controls `/cliente/**`, `/veiculo/**`, `/servico/**`, and `GET /ordem-servico/detalhamento`. `ROLE_ATENDENTE` controls `POST /ordem-servico`, `POST /ordem-servico/orcamento/**`, and `PATCH /ordem-servico/*/entregar`. `ROLE_MECANICO` controls all `PATCH /ordem-servico/*/diagnostico*`, vincular/desvincular serviço/peça/insumo, and iniciar/finalizar serviço endpoints. `GET /ordem-servico/{id}/status` requires any authenticated role (`hasAnyRole(ATENDENTE, MECANICO, ADMINISTRADOR)`). `GET /ordem-servico/orcamento/externo/**` is in `ENDPOINTS_SEM_AUTENTICACAO` (public, no auth). Any other unmatched request is denied (`anyRequest().denyAll()`).
 
 ### OrdemDeServico state machine
 
@@ -260,7 +256,7 @@ OrdemDeServico.reconstituir(id, clienteId, veiculoId, atendenteId, mecanicoId, s
 **Domain rules for vincular/desvincular peça and insumo:**
 - `vincularServico(Long servicoId, BigDecimal preco)`: allowed from `RECEBIDA` or `EM_DIAGNOSTICO`; adds a `ServicoVinculado` with `status = NAO_INICIADO` and null execution timestamps; throws `ServicoJaVinculadoException` if already linked.
 - `desvincularServico(Long servicoId)`: allowed from `RECEBIDA` or `EM_DIAGNOSTICO`.
-- `vincularPeca(Long pecaId, Integer quantidade, BigDecimal preco)` / `vincularInsumo(...)`: allowed from `RECEBIDA` or `EM_DIAGNOSTICO`; if the item is already linked, sums the quantity instead of adding a duplicate entry.
+- `vincularPeca(Long pecaId, Integer quantidade, BigDecimal preco)` / `vincularInsumo(...)`: allowed from `RECEBIDA` or `EM_DIAGNOSTICO`; if the item is already linked, sums the quantity instead of adding a duplicate entry. **The price is frozen at the first link**: the existing entry's `preco` is kept and the `preco` argument is ignored (the gateway also keeps the stored price when summing).
 - `desvincularPeca(Long pecaId, Integer quantidade)`: throws `PecaNaoVinculadaException` if not linked; throws `QuantidadeDesvincularInvalidaException` if `quantidade > existente.quantidade()`; removes the entry entirely when `quantidade == existente.quantidade()`; preserves `existente.preco()` on the remaining entry.
 - `desvincularInsumo`: same pattern as desvincularPeca.
 
@@ -270,17 +266,12 @@ OrdemDeServico.reconstituir(id, clienteId, veiculoId, atendenteId, mecanicoId, s
 
 The join tables `ordem_servico_peca` and `ordem_servico_insumo` each have a `UNIQUE KEY` on `(ordem_servico_id, {peca|insumo}_id)`, so duplicate rows are prevented at the DB level.
 
-**Use case flow for vincular** (same for peca and insumo):
-1. Load `OrdemDeServico` → validate status via domain (`vincularPeca/vincularInsumo` throws if not `EM_DIAGNOSTICO`).
-2. Load `Peca`/`Insumo` → call `baixarEstoque(quantidade)` (throws `EstoqueInsuficienteException` if insufficient).
-3. `pecaGateway/insumoGateway.atualizar(peca/insumo)` to persist the stock change.
-4. `ordemDeServicoGateway.vincularOuSomarPeca/vincularOuSomarInsumo(...)` to persist the link.
+**Use case flow for vincular/desvincular** (same for peca and insumo) — stock is reserved, not decremented:
+1. Load `OrdemDeServico` and the item via `CatalogoEstoqueGateway.buscarPeca/buscarInsumo` → `ItemCatalogo(id, preco)` (404 `PecaNaoEncontradaNoCatalogoException`/`InsumoNaoEncontradoNoCatalogoException` if missing) → `ordemDeServico.vincularPeca/desvincularPeca(...)` (domain validates status, presence and quantity).
+2. `ReservaEstoqueGateway.reservarItens(osId, List<ItemReserva>)` with the item's new total in the OS (0 after a full desvincular); throws `EstoqueInsuficienteParaOrdemException` (422) if the fiap-estoque answers 422, `EstoqueIndisponivelException` (503) on any other failure.
+3. `ordemDeServicoGateway.vincularOuSomar.../desvincularOuSubtrair...(...)` to persist the link.
 
-**Use case flow for desvincular** (same for peca and insumo):
-1. Load `OrdemDeServico` → load `Peca`/`Insumo`.
-2. `peca/insumo.devolverEstoque(quantidade)` to restore stock.
-3. `ordemDeServico.desvincularPeca/desvincularInsumo(id, quantidade)` — domain validates status, presence, and quantity.
-4. `pecaGateway/insumoGateway.atualizar(...)` and `ordemDeServicoGateway.desvincularOuSubtrairPeca/desvincularOuSubtrairInsumo(...)`.
+Aprovar orçamento → `reservaEstoqueGateway.confirmarReservas(osId)` (stock is decremented). Recusar → `liberarReservas(osId)`. Reservations live in the fiap-estoque database, not here.
 
 **Use case flow for enviarOrcamento** (`POST /ordem-servico/orcamento/envio/{id}`, requires `ROLE_ATENDENTE`):
 1. Load `OrdemDeServico` → call `gravarEnvioOrcamento()` which delegates to `state.enviarOrcamento(this)` (only succeeds from `DIAGNOSTICO_CONCLUIDO`).
@@ -314,11 +305,15 @@ Both flows share a common abstract base (`OrcamentoAprovadoOrdemDeServicoUseCase
 
 **`GET /ordem-servico/{id}/status`** (requires any authenticated role): delegates to `ConsultarStatusOrdemDeServicoUseCase`, which returns a `ConsultarStatusOrdemDeServicoDto(id, status)` — a lightweight status check without loading the full order graph.
 
-### Estoque domain
+### Estoque integration (fiap-estoque microservice)
 
-`ItemEstoque` is an abstract base class for `Peca` and `Insumo`. It encapsulates stock quantity and exposes `baixarEstoque(qty)` (throws `EstoqueInsuficienteException` if insufficient) and `devolverEstoque(qty)`. Concrete subclasses call `ajustarQuantidade(qty)` (protected) from their `atualizar(...)` method.
+Peças, insumos and reservations belong to the separate `fiap-estoque` service (own repo and database); this monolith only keeps the OS-side links (`ordem_servico_peca`, `ordem_servico_insumo`, with no FK to any stock table). `ordemdeservico` reaches it through two ports in `ordemdeservico/core/gateway/`, implemented in `ordemdeservico/infra/gateway/estoque/` with a `RestClient` (`estoqueRestClient`, built by `shared/http/RestClientFactory`; `estoque.url`, `estoque.connect-timeout`, `estoque.read-timeout`):
+- `CatalogoEstoqueGateway` → `CatalogoEstoqueHttpGateway`: `GET /catalogo/pecas|insumos?ids=` (batch, returns `ItemCatalogo(id, preco)`; unknown ids are simply omitted).
+- `ReservaEstoqueGateway` → `ReservaEstoqueHttpGateway`: `PUT /reserva/ordem-servico/{id}/itens` (atomic and idempotent batch), `POST .../confirmar`, `POST .../liberar`. 422 → `EstoqueInsuficienteParaOrdemException`; any other 4xx/5xx/timeout/IO error → `EstoqueIndisponivelException` (503).
 
-`Peca.reconstituir` has 5 parameters `(id, nome, descricao, preco, quantidadeEstoque)` — no `UnidadeMedida`. `Insumo.reconstituir` has 6 parameters with `UnidadeMedida` as 5th.
+`/reserva/**` and `/catalogo/**` are internal routes of the fiap-estoque that require a **service token**: `estoqueRestClient` is built with `EstoqueTokenInterceptor`, which on every call asks `ServicoTokenGenerator` (`shared/seguranca/infra/token/servico/`) for a fresh short-lived JWT (`iss=mecanica-fiap-servicos`, `sub=svc:fiap-mecanica`, `aud=fiap-estoque`, `scope=catalogo:leitura` for `/catalogo/**` or `reserva:escrita` for `/reserva/**`, `exp` = `servico.jwt.ttl`, `jti`). It is signed with its own secret (`SERVICE_JWT_SECRET`, **different** from the user `JWT_SECRET`; the fiap-estoque uses the same value to validate). An unknown route gets no token and the estoque answers 401 (→ `EstoqueIndisponivelException`, 503). Creating an OS reserves everything in one call and compensates (liberar) if persisting fails; a stock failure fails the operation.
+
+Vincular/desvincular peça/insumo reserve first and persist the link second; `ReservaComCompensacao` (same package as the use cases) re-reserves the item's **previous total** if persisting (or an uncertain reservation) fails — safe because `reservarItens` is absolute and idempotent. A 422 (insufficient stock) is not compensated (the estoque rejects atomically). Aprovar/recusar call the estoque (`confirmar`/`liberar`, both idempotent) before saving the OS, so a failed save is fixed by retrying.
 
 ### Security filter flow
 
@@ -351,12 +346,12 @@ Standard field-level constraints: `@NotBlank`, `@NotNull`, `@CPF`, `@CNPJ` (Hibe
 | Contract | `@WebMvcTest` + `@ActiveProfiles("controller-test")` + `@ImportAutoConfiguration(NoSecurityConfiguration.class)` | `MockMvc` |
 | Integration | `@SpringBootTest(RANDOM_PORT)` + extends `AbstractContainer` | REST Assured (`RestAssured.port = port` in `@BeforeEach`) |
 
-**`AbstractContainer`** starts a shared Testcontainers MySQL instance and truncates all tables (except `flyway_schema_history` and `roles`) both before and after each test. It uses `SET FOREIGN_KEY_CHECKS = 0/1` to allow truncation regardless of FK constraints.
+**`AbstractContainer`** starts a shared Testcontainers MySQL instance and a shared WireMock server standing in for the fiap-estoque (`protected static WireMockServer estoque`, `estoque.url` registered via `@DynamicPropertySource`, `resetAll()` before each test), and truncates all tables (except `flyway_schema_history` and `roles`) both before and after each test. It uses `SET FOREIGN_KEY_CHECKS = 0/1` to allow truncation regardless of FK constraints.
 
 **Integration test authentication pattern:** create a `UserEntity` with `securityConfiguration.passwordEncoder().encode(...)`, call `POST /authenticate/login` via REST Assured, extract the token, then pass it as `header("Authorization", "Bearer " + token)` on subsequent requests.
 
 **Contract tests** must declare a `@MockitoBean` for every use case injected into the controller under test, even those not exercised in the test class — Spring context will fail to start otherwise.
 
-**`ordemdeservico` integration test pattern:** instead of extending `AbstractContainer` directly, each feature area extends `AbstractOrdemDeServicoIntegrationTest` (in `ordemdeservico/infra/controller/`), which itself extends `AbstractContainer`. The abstract class holds all `@Autowired` repositories (including `linkAprovacaoOrcamentoRepository`), `@LocalServerPort`, the `@BeforeEach` port setup, and shared helper methods (`obterToken(RoleEnum, cpf)`, `obterTokenAtendente`, `obterTokenMecanico`, `obterTokenOutroMecanico`, `criarClienteERetornarId`, `criarVeiculoERetornarId`, `criarOrdemERetornarId`, `criarOrdemEmDiagnosticoERetornarId`, `criarOrdemAguardandoAprovacaoERetornarId`, `criarServicoERetornarId`, `criarPecaERetornarId`, `criarInsumoERetornarId`). Use `obterToken(RoleEnum.ROLE_ADMINISTRADOR, "44477711107")` for admin-role tests. Each concrete test class covers one feature area (criação, diagnóstico, serviço, peça, insumo, envio de orçamento, aprovação, execução, entrega, detalhamento). DB-query helpers specific to a single class (e.g. `contarVinculosPecaNoBanco`) stay in that class, not in the abstract base.
+**`ordemdeservico` integration test pattern:** instead of extending `AbstractContainer` directly, each feature area extends `AbstractOrdemDeServicoIntegrationTest` (in `ordemdeservico/infra/controller/`), which itself extends `AbstractContainer`. The abstract class holds all `@Autowired` repositories (including `linkAprovacaoOrcamentoRepository`), `@LocalServerPort`, the `@BeforeEach` port setup, and shared helper methods (`obterToken(RoleEnum, cpf)`, `obterTokenAtendente`, `obterTokenMecanico`, `obterTokenOutroMecanico`, `criarClienteERetornarId`, `criarVeiculoERetornarId`, `criarOrdemERetornarId`, `criarOrdemEmDiagnosticoERetornarId`, `criarOrdemAguardandoAprovacaoERetornarId`, `criarServicoERetornarId`) and the estoque stubs (`stubCatalogo`, `stubCatalogoVazio`, `stubCatalogoPeca/Insumo`, `stubReservaOk`, `stubReservaStatus`, `stubConfirmarEliberarOk`, `quantidadesReservadasNoEstoque`, constants `PECA_ID`/`INSUMO_ID`); `setup()` installs default happy-path stubs that each test overrides. There are no peça/insumo tables here: tests never persist them. Use `obterToken(RoleEnum.ROLE_ADMINISTRADOR, "44477711107")` for admin-role tests. Each concrete test class covers one feature area (criação, diagnóstico, serviço, peça, insumo, envio de orçamento, aprovação, execução, entrega, detalhamento). DB-query helpers specific to a single class (e.g. `contarVinculosPecaNoBanco`) stay in that class, not in the abstract base.
 
 > **REST Assured + Java 25 note:** REST Assured (Groovy-based) may throw `NullPointerException` in `applyProxySettings` on Java 25. If this occurs, add `--add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED` to the `maven-surefire-plugin` `<argLine>`.

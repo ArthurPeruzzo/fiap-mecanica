@@ -1,8 +1,0 @@
-package com.fiap.mecanica.estoque.core.dto;
-
-import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
-
-import java.math.BigDecimal;
-
-public record CriarInsumoDto(String nome, String descricao, BigDecimal preco, Integer quantidadeEstoque, UnidadeMedida unidadeMedida) {
-}
