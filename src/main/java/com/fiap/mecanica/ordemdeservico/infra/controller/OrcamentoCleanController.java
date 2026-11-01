@@ -1,8 +1,10 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
+import com.fiap.mecanica.ordemdeservico.core.gateway.EstoqueComandosGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.*;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 
@@ -10,6 +12,8 @@ public class OrcamentoCleanController {
 
     private final OrdemDeServicoGateway ordemDeServicoGateway;
     private final ReservaEstoqueGateway reservaEstoqueGateway;
+    private final EstoqueComandosGateway estoqueComandosGateway;
+    private final TransacaoGateway transacaoGateway;
     private final NotificacaoGateway notificacaoGateway;
     private final LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway;
     private final String urlAprovarOrcamento;
@@ -17,12 +21,16 @@ public class OrcamentoCleanController {
 
     public OrcamentoCleanController(OrdemDeServicoGateway ordemDeServicoGateway,
                                      ReservaEstoqueGateway reservaEstoqueGateway,
+                                     EstoqueComandosGateway estoqueComandosGateway,
+                                     TransacaoGateway transacaoGateway,
                                      NotificacaoGateway notificacaoGateway,
                                      LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway,
                                      String urlAprovarOrcamento,
                                      String urlRecusarOrcamento) {
         this.ordemDeServicoGateway = ordemDeServicoGateway;
         this.reservaEstoqueGateway = reservaEstoqueGateway;
+        this.estoqueComandosGateway = estoqueComandosGateway;
+        this.transacaoGateway = transacaoGateway;
         this.notificacaoGateway = notificacaoGateway;
         this.linkAprovacaoOrcamentoGateway = linkAprovacaoOrcamentoGateway;
         this.urlAprovarOrcamento = urlAprovarOrcamento;
@@ -35,12 +43,12 @@ public class OrcamentoCleanController {
     }
 
     public void recusarOrcamento(Long ordemServicoId) {
-        new OrcamentoRecusadoViaAtendenteUseCase(ordemDeServicoGateway, reservaEstoqueGateway, notificacaoGateway)
+        new OrcamentoRecusadoViaAtendenteUseCase(ordemDeServicoGateway, estoqueComandosGateway, transacaoGateway, notificacaoGateway)
                 .recusar(ordemServicoId);
     }
 
     public void recusarOrcamentoViaToken(String token) {
-        new OrcamentoRecusadoViaTokenUseCase(ordemDeServicoGateway, reservaEstoqueGateway,
+        new OrcamentoRecusadoViaTokenUseCase(ordemDeServicoGateway, estoqueComandosGateway, transacaoGateway,
                 notificacaoGateway, linkAprovacaoOrcamentoGateway).recusar(token);
     }
 

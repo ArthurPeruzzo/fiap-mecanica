@@ -3,9 +3,11 @@ package com.fiap.mecanica.ordemdeservico.infra.controller;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.LinkAprovacaoOrcamentoEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OutboxEventoRepository;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -16,6 +18,9 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 
 class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
+
+    @Autowired
+    private OutboxEventoRepository outboxEventoRepository;
 
     private String obterTokenLinkDeOrdemAguardandoAprovacao(Long ordemId) {
         return linkAprovacaoOrcamentoRepository.findByOrdemServicoId(ordemId)
@@ -44,7 +49,7 @@ class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
     }
 
     @Test
-    void shouldLiberarReservaAoRecusarViaToken() {
+    void shouldRegistrarComandoDeLiberacaoNaOutboxAoRecusarViaToken() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
 
@@ -75,13 +80,20 @@ class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
                 .then().statusCode(204);
 
         estoque.verify(exactly(0), postRequestedFor(urlPathMatching(LIBERAR)));
+        Assertions.assertEquals(0, outboxEventoRepository.count());
 
         String token = obterTokenLinkDeOrdemAguardandoAprovacao(ordemId);
         RestAssured.given()
                 .when().get("/ordem-servico/orcamento/externo/recusar/" + token)
                 .then().statusCode(204);
 
-        estoque.verify(exactly(1), postRequestedFor(urlEqualTo("/reserva/ordem-servico/" + ordemId + "/liberar")));
+        // Sem chamada HTTP ao estoque: o comando fica na outbox, pendente de envio ao broker.
+        estoque.verify(exactly(0), postRequestedFor(urlEqualTo("/reserva/ordem-servico/" + ordemId + "/liberar")));
+        var comandos = outboxEventoRepository.findAll();
+        Assertions.assertEquals(1, comandos.size());
+        Assertions.assertEquals("LIBERAR_RESERVA", comandos.getFirst().getTipo());
+        Assertions.assertEquals(ordemId, comandos.getFirst().getAgregadoId());
+        Assertions.assertNull(comandos.getFirst().getEnviadoEm());
     }
 
     @Test

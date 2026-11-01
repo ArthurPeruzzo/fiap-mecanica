@@ -47,3 +47,9 @@ Toda a comunicação entre componentes é **síncrona, request/response sobre HT
 - **Lambda consultando o RDS diretamente** em vez de chamar a aplicação — descartado: duplicaria
   regra de negócio (existência/criação do `User` cliente) fora da aplicação. Ver
   [ADR-0006](0006-jwt-hs256-segredo-compartilhado.md).
+
+---
+
+> **Atualização:** a decisão de "não ter broker" foi parcialmente substituída pelo
+> [ADR-0008](0008-mensageria-rabbitmq-outbox.md). As chamadas síncronas por HTTP continuam valendo
+> (reservar, confirmar, catálogo); apenas a liberação de reservas de OS cancelada passou a ser assíncrona.

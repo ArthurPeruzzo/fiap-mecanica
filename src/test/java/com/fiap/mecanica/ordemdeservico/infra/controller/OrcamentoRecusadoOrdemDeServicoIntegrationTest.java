@@ -2,9 +2,12 @@ package com.fiap.mecanica.ordemdeservico.infra.controller;
 
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OutboxEventoEntity;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OutboxEventoRepository;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Map;
 
@@ -14,6 +17,9 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 
 class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
+
+    @Autowired
+    private OutboxEventoRepository outboxEventoRepository;
 
     private int contarVinculosPecaNoBanco(Long ordemId, Long pecaId) {
         Integer count = jdbcTemplate.queryForObject(
@@ -107,8 +113,17 @@ class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServ
         Assertions.assertEquals(StatusOrdemDeServico.CANCELADA, ordem.getStatus());
         Assertions.assertNotNull(ordem.getDataCancelamento());
 
-        estoque.verify(exactly(1), postRequestedFor(urlEqualTo("/reserva/ordem-servico/" + ordemId + "/liberar")));
+        // A liberação não é mais síncrona: o estoque não é chamado por HTTP e o comando fica na outbox.
+        estoque.verify(exactly(0), postRequestedFor(urlEqualTo("/reserva/ordem-servico/" + ordemId + "/liberar")));
         estoque.verify(exactly(0), postRequestedFor(urlPathMatching(CONFIRMAR)));
+
+        var comandos = outboxEventoRepository.findAll();
+        Assertions.assertEquals(1, comandos.size());
+        OutboxEventoEntity comando = comandos.getFirst();
+        Assertions.assertEquals("LIBERAR_RESERVA", comando.getTipo());
+        Assertions.assertEquals(ordemId, comando.getAgregadoId());
+        Assertions.assertEquals("{\"ordemServicoId\":" + ordemId + "}", comando.getPayload());
+        Assertions.assertNull(comando.getEnviadoEm());
 
         Assertions.assertEquals(1, contarVinculosPecaNoBanco(ordemId, peca1Id));
         Assertions.assertEquals(1, contarVinculosPecaNoBanco(ordemId, peca2Id));

@@ -8,9 +8,11 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontra
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
-import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.EstoqueComandosGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.OrcamentoRecusadoViaTokenUseCase;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -38,7 +40,18 @@ class OrcamentoRecusadoViaTokenUseCaseUnitTest {
     private OrdemDeServicoGateway ordemDeServicoGateway;
 
     @Mock
-    private ReservaEstoqueGateway reservaEstoqueGateway;
+    private EstoqueComandosGateway estoqueComandosGateway;
+
+    @Mock
+    private TransacaoGateway transacaoGateway;
+
+    @BeforeEach
+    void executarTransacaoNaMesmaThread() {
+        Mockito.lenient().doAnswer(invocation -> {
+            ((Runnable) invocation.getArgument(0)).run();
+            return null;
+        }).when(transacaoGateway).executar(Mockito.any());
+    }
 
     @Mock
     private NotificacaoGateway notificacaoGateway;
@@ -126,7 +139,7 @@ class OrcamentoRecusadoViaTokenUseCaseUnitTest {
         Mockito.verify(linkAprovacaoOrcamentoGateway).atualizar(linkCaptor.capture());
         assertNotNull(linkCaptor.getValue().getDataUtilizacao());
 
-        Mockito.verify(reservaEstoqueGateway).liberarReservas(ORDEM_ID);
+        Mockito.verify(estoqueComandosGateway).solicitarLiberacaoDeReservas(ORDEM_ID);
     }
 
     @Test
@@ -137,7 +150,7 @@ class OrcamentoRecusadoViaTokenUseCaseUnitTest {
                 () -> orcamentoRecusadoViaTokenUseCase.recusar(TOKEN));
 
         Mockito.verifyNoInteractions(ordemDeServicoGateway);
-        Mockito.verifyNoInteractions(reservaEstoqueGateway);
+        Mockito.verifyNoInteractions(estoqueComandosGateway);
     }
 
     @Test
