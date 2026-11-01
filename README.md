@@ -157,6 +157,11 @@ O `.env.example` já traz valores padrão (`root`/`root`) suficientes para rodar
 | `DB_USERNAME` | Usuário usado pela aplicação para conectar ao banco |
 | `DB_PASSWORD` | Senha usada pela aplicação para conectar ao banco |
 | `JWT_SECRET` | Chave usada para assinar/validar os tokens JWT. Deve ser uma string Base64URL com no mínimo 32 bytes decodificados |
+| `SERVICE_JWT_SECRET` | Chave do token de serviço enviado ao `fiap-estoque`. Base64URL, mínimo 32 bytes, **diferente** do `JWT_SECRET` e igual à do estoque (ver [ADR-0007](docs/adr/0007-token-de-servico-entre-microsservicos.md)) |
+| `RABBITMQ_ADMIN_USER` / `RABBITMQ_ADMIN_PASSWORD` | Administrador do broker (container `rabbitmq`); só o script de inicialização usa |
+| `RABBITMQ_VHOST` | Virtual host do broker (padrão `fiap`) |
+| `RABBITMQ_USERNAME` / `RABBITMQ_PASSWORD` | Usuário desta aplicação no broker (só publica no exchange `estoque.comandos`) |
+| `RABBITMQ_ESTOQUE_USERNAME` / `RABBITMQ_ESTOQUE_PASSWORD` | Usuário do `fiap-estoque` no broker; o serviço `rabbitmq-init` o cria, e o estoque usa o mesmo par em `RABBITMQ_USERNAME`/`RABBITMQ_PASSWORD` do `.env` dele. Use valores alfanuméricos |
 
 > O Docker Compose carrega o `.env` automaticamente por estar no mesmo diretório do `docker-compose.yml` — não é preciso passar nenhuma flag adicional.
 
@@ -170,6 +175,8 @@ docker compose up
 ```
 
 A aplicação ficará disponível em `http://localhost:8080`.
+
+O `docker compose` também sobe o **RabbitMQ** (`localhost:5672`; painel de gerenciamento em `http://localhost:15672`, com o usuário `RABBITMQ_ADMIN_USER`) e executa o serviço de uso único `rabbitmq-init`, que cria o virtual host e os usuários de menor privilégio. O broker é compartilhado com o `fiap-estoque`, que se conecta em `localhost:5672`. Quando um orçamento é recusado, a liberação do estoque segue por mensageria (ver [ADR-0008](docs/adr/0008-mensageria-rabbitmq-outbox.md)); se o broker ou o estoque estiverem fora do ar, o cancelamento da OS não é afetado e o comando é entregue quando voltarem.
 
 O MySQL ficará acessível no host em `localhost:3307` (útil para conectar com DBeaver ou outro cliente SQL). Com os valores padrão do `.env.example`:
 
