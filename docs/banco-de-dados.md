@@ -7,9 +7,9 @@ Justificativa da escolha do banco, o modelo relacional e a explicação dos rela
 ### Por que um banco relacional
 
 O domínio é **fortemente relacional e transacional**: `cliente → veículo → ordem de serviço →
-(serviços, peças, insumos)`, com integridade referencial entre todas as pontas e regras de
+(serviços, peças, insumos)`, com integridade referencial entre as pontas deste banco e regras de
 unicidade (placa do veículo, CPF de usuário, um vínculo por item em cada ordem). Abrir uma ordem
-de serviço executa vários `INSERT` mais a baixa de estoque numa única unidade de trabalho — precisa
+de serviço executa vários `INSERT` numa única unidade de trabalho (a reserva de estoque é uma chamada ao `fiap-estoque`, com compensação) — precisa
 de **transações ACID**. Não há requisito de escala horizontal massiva, schema dinâmico nem dados
 semiestruturados que justificassem um banco NoSQL.
 
@@ -54,9 +54,7 @@ erDiagram
     ORDEM_SERVICO ||--o{ ORDEM_SERVICO_SERVICO : ""
     SERVICO ||--o{ ORDEM_SERVICO_SERVICO : ""
     ORDEM_SERVICO ||--o{ ORDEM_SERVICO_PECA : ""
-    PECA ||--o{ ORDEM_SERVICO_PECA : ""
     ORDEM_SERVICO ||--o{ ORDEM_SERVICO_INSUMO : ""
-    INSUMO ||--o{ ORDEM_SERVICO_INSUMO : ""
     ORDEM_SERVICO ||--o| LINK_APROVACAO_ORCAMENTO : "gera"
 
     ROLES {
@@ -102,19 +100,6 @@ erDiagram
         varchar modelo
         int ano
     }
-    PECA {
-        bigint id PK
-        varchar nome
-        decimal preco
-        int quantidade_estoque
-    }
-    INSUMO {
-        bigint id PK
-        varchar nome
-        decimal preco
-        int quantidade_estoque
-        varchar unidade_medida
-    }
     SERVICO {
         bigint id PK
         varchar nome
@@ -149,14 +134,14 @@ erDiagram
     ORDEM_SERVICO_PECA {
         bigint id PK
         bigint ordem_servico_id FK
-        bigint peca_id FK
+        bigint peca_id "id no fiap-estoque, sem FK"
         int quantidade
         decimal preco
     }
     ORDEM_SERVICO_INSUMO {
         bigint id PK
         bigint ordem_servico_id FK
-        bigint insumo_id FK
+        bigint insumo_id "id no fiap-estoque, sem FK"
         int quantidade
         decimal preco
     }
@@ -192,8 +177,9 @@ erDiagram
 - **`cliente`** aceita **CPF ou CNPJ**, ambos `NULL` no schema — pessoa física ou jurídica sem
   tabela separada. A regra "exatamente um dos dois" é validada no domínio (`@DocumentoValido`),
   não pelo banco.
-- **`peca`** e **`insumo`** são tabelas **separadas** (persistência table-per-concrete-class dos
-  tipos `Peca`/`Insumo extends ItemEstoque`). `insumo` tem `unidade_medida`; `peca` não.
+- **Peças, insumos e reservas** não existem neste banco: pertencem ao microsserviço `fiap-estoque`,
+  com banco próprio. `ordem_servico_peca.peca_id` e `ordem_servico_insumo.insumo_id` guardam só o
+  id do item, **sem FK**; o preço é o *snapshot* obtido do catálogo do estoque no vínculo.
 
 ### Ordem de serviço
 

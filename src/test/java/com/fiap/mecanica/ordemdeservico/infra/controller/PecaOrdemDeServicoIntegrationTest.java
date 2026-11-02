@@ -5,6 +5,14 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+import java.util.Map;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
+import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
+import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+
 class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
 
     private int contarVinculosPecaNoBanco(Long ordemId, Long pecaId) {
@@ -20,13 +28,31 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
                 Integer.class, ordemId, pecaId);
     }
 
+    private void vincularPeca(String tokenMecanico, Long ordemId, Long pecaId, int quantidade, int statusEsperado) {
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body(Map.of("quantidade", quantidade))
+                .when().put("/ordem-servico/" + ordemId + "/pecas/" + pecaId)
+                .then().statusCode(statusEsperado);
+    }
+
+    private void desvincularPeca(String tokenMecanico, Long ordemId, Long pecaId, int quantidade) {
+        RestAssured.given().contentType("application/json")
+                .header("Authorization", "Bearer " + tokenMecanico)
+                .body(Map.of("quantidade", quantidade))
+                .when().delete("/ordem-servico/" + ordemId + "/pecas/" + pecaId)
+                .then().statusCode(204);
+    }
+
     // --- vincularPeca ---
 
     @Test
     void shouldVincularPecaSuccessfully() {
+        stubCatalogo();
+        stubReservaOk();
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
-        Long pecaId = criarPecaERetornarId(10);
+        Long pecaId = PECA_ID;
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
@@ -36,13 +62,18 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
 
         Assertions.assertEquals(1, contarVinculosPecaNoBanco(ordemId, pecaId));
         Assertions.assertEquals(3, obterQuantidadePecaNoBanco(ordemId, pecaId));
+        estoque.verify(exactly(1), putRequestedFor(urlEqualTo("/reserva/ordem-servico/" + ordemId + "/itens"))
+                .withRequestBody(equalToJson(String.format(
+                        "{\"itens\":[{\"tipoItem\":\"PECA\",\"itemId\":%d,\"quantidadeTotal\":3}]}", pecaId))));
     }
 
     @Test
     void shouldSomarQuantidadeWhenPecaVinculadaJaExiste() {
+        stubCatalogo();
+        stubReservaOk();
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
-        Long pecaId = criarPecaERetornarId(10);
+        Long pecaId = PECA_ID;
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
@@ -58,13 +89,16 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
 
         Assertions.assertEquals(1, contarVinculosPecaNoBanco(ordemId, pecaId));
         Assertions.assertEquals(5, obterQuantidadePecaNoBanco(ordemId, pecaId));
+        Assertions.assertEquals(List.of(3, 5), quantidadesReservadasNoEstoque());
     }
 
     @Test
     void shouldReturn422WhenEstoqueInsuficienteOnVincularPeca() {
+        stubCatalogo();
+        stubReservaStatus(422);
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
-        Long pecaId = criarPecaERetornarId(1);
+        Long pecaId = PECA_ID;
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
@@ -72,14 +106,30 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
                 .when().put("/ordem-servico/" + ordemId + "/pecas/" + pecaId)
                 .then().statusCode(422)
                 .body("message", Matchers.equalTo("Estoque insuficiente para realizar a operação"));
+
+        Assertions.assertEquals(0, contarVinculosPecaNoBanco(ordemId, pecaId));
+    }
+
+    @Test
+    void shouldReturn503AndKeepOrdemIntactWhenEstoqueIndisponivelOnVincularPeca() {
+        stubCatalogo();
+        stubReservaStatus(500);
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+
+        vincularPeca(tokenMecanico, ordemId, PECA_ID, 3, 503);
+
+        Assertions.assertEquals(0, contarVinculosPecaNoBanco(ordemId, PECA_ID));
     }
 
     @Test
     void shouldReturn422WhenOrdemStatusNaoPermiteVincularPeca() {
+        stubCatalogo();
+        stubReservaOk();
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemAguardandoAprovacaoERetornarId(tokenAtendente, tokenMecanico);
-        Long pecaId = criarPecaERetornarId(10);
+        Long pecaId = PECA_ID;
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
@@ -91,8 +141,10 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
 
     @Test
     void shouldReturn404WhenOrdemNotFoundOnVincularPeca() {
+        stubCatalogo();
+        stubReservaOk();
         String tokenMecanico = obterTokenMecanico();
-        Long pecaId = criarPecaERetornarId(10);
+        Long pecaId = PECA_ID;
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
@@ -104,6 +156,7 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
 
     @Test
     void shouldReturn404WhenPecaNotFoundOnVincularPeca() {
+        stubCatalogoVazio();
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
 
@@ -117,9 +170,11 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
 
     @Test
     void shouldReturn400WhenQuantidadeIsNullOnVincularPeca() {
+        stubCatalogo();
+        stubReservaOk();
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
-        Long pecaId = criarPecaERetornarId(10);
+        Long pecaId = PECA_ID;
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
@@ -131,9 +186,11 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
 
     @Test
     void shouldReturn400WhenQuantidadeIsZeroOnVincularPeca() {
+        stubCatalogo();
+        stubReservaOk();
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
-        Long pecaId = criarPecaERetornarId(10);
+        Long pecaId = PECA_ID;
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
@@ -155,9 +212,11 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
 
     @Test
     void shouldDesvincularPecaParcialmenteSuccessfully() {
+        stubCatalogo();
+        stubReservaOk();
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
-        Long pecaId = criarPecaERetornarId(10);
+        Long pecaId = PECA_ID;
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
@@ -173,13 +232,16 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
 
         Assertions.assertEquals(1, contarVinculosPecaNoBanco(ordemId, pecaId));
         Assertions.assertEquals(3, obterQuantidadePecaNoBanco(ordemId, pecaId));
+        Assertions.assertEquals(List.of(5, 3), quantidadesReservadasNoEstoque());
     }
 
     @Test
     void shouldDesvincularPecaIntegralmenteEDeletarVinculo() {
+        stubCatalogo();
+        stubReservaOk();
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
-        Long pecaId = criarPecaERetornarId(10);
+        Long pecaId = PECA_ID;
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
@@ -194,16 +256,19 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
                 .then().statusCode(204);
 
         Assertions.assertEquals(0, contarVinculosPecaNoBanco(ordemId, pecaId));
+        Assertions.assertEquals(List.of(3, 0), quantidadesReservadasNoEstoque());
     }
 
     @Test
     void shouldReturn422WhenOrdemNaoEmDiagnosticoParaDesvincularPeca() {
+        stubCatalogo();
+        stubReservaOk();
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
         Long clienteId = criarClienteERetornarId();
         Long veiculoId = criarVeiculoERetornarId(clienteId);
         Long ordemId = criarOrdemERetornarId(tokenAtendente, clienteId, veiculoId);
-        Long pecaId = criarPecaERetornarId(10);
+        Long pecaId = PECA_ID;
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
@@ -215,9 +280,11 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
 
     @Test
     void shouldReturn422WhenPecaNaoVinculadaOnDesvincularPeca() {
+        stubCatalogo();
+        stubReservaOk();
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
-        Long pecaId = criarPecaERetornarId(10);
+        Long pecaId = PECA_ID;
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
@@ -229,9 +296,11 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
 
     @Test
     void shouldReturn422WhenQuantidadeMaiorQueVinculadaOnDesvincularPeca() {
+        stubCatalogo();
+        stubReservaOk();
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
-        Long pecaId = criarPecaERetornarId(10);
+        Long pecaId = PECA_ID;
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
@@ -249,8 +318,10 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
 
     @Test
     void shouldReturn404WhenOrdemNotFoundOnDesvincularPeca() {
+        stubCatalogo();
+        stubReservaOk();
         String tokenMecanico = obterTokenMecanico();
-        Long pecaId = criarPecaERetornarId(10);
+        Long pecaId = PECA_ID;
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
@@ -262,6 +333,7 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
 
     @Test
     void shouldReturn404WhenPecaNotFoundOnDesvincularPeca() {
+        stubCatalogoVazio();
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
 
@@ -275,9 +347,11 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
 
     @Test
     void shouldReturn400WhenQuantidadeIsNullOnDesvincularPeca() {
+        stubCatalogo();
+        stubReservaOk();
         String tokenMecanico = obterTokenMecanico();
         Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
-        Long pecaId = criarPecaERetornarId(10);
+        Long pecaId = PECA_ID;
 
         RestAssured.given().contentType("application/json")
                 .header("Authorization", "Bearer " + tokenMecanico)
@@ -293,5 +367,23 @@ class PecaOrdemDeServicoIntegrationTest extends AbstractOrdemDeServicoIntegratio
                 .body("{\"quantidade\":2}")
                 .when().delete("/ordem-servico/1/pecas/1")
                 .then().statusCode(401);
+    }
+
+    // --- reserva de estoque ---
+
+    @Test
+    void shouldReenviarAReservaTotalAoVincularEDesvincularPeca() {
+        stubCatalogo();
+        stubReservaOk();
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemEmDiagnosticoERetornarId(obterTokenAtendente(), tokenMecanico);
+
+        vincularPeca(tokenMecanico, ordemId, PECA_ID, 3, 204);
+        vincularPeca(tokenMecanico, ordemId, PECA_ID, 2, 204);
+        desvincularPeca(tokenMecanico, ordemId, PECA_ID, 2);
+        desvincularPeca(tokenMecanico, ordemId, PECA_ID, 3);
+
+        Assertions.assertEquals(List.of(3, 5, 3, 0), quantidadesReservadasNoEstoque());
+        Assertions.assertEquals(0, contarVinculosPecaNoBanco(ordemId, PECA_ID));
     }
 }

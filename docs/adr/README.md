@@ -6,8 +6,10 @@ consequências. Uma decisão registrada aqui só muda com um novo ADR que a subs
 | ADR | Decisão | Status |
 |---|---|---|
 | [0001](0001-monolito-modular-clean-architecture.md) | Monólito modular com Clean Architecture | Aceito |
-| [0002](0002-comunicacao-sincrona-http.md) | Comunicação síncrona por HTTP/REST, sem broker de mensagens | Aceito |
+| [0002](0002-comunicacao-sincrona-http.md) | Comunicação síncrona por HTTP/REST, sem broker de mensagens | Parcialmente substituído pelo [0008](0008-mensageria-rabbitmq-outbox.md) |
 | [0003](0003-escalabilidade-hpa.md) | Escalabilidade horizontal com HPA (CPU 70%, 1–4 réplicas) | Aceito |
 | [0004](0004-infra-quatro-repositorios.md) | Infraestrutura em 4 repositórios Terraform com states independentes | Aceito |
 | [0005](0005-state-pattern-ordem-servico.md) | State pattern no ciclo de vida da ordem de serviço | Aceito |
 | [0006](0006-jwt-hs256-segredo-compartilhado.md) | JWT HS256 stateless com segredo compartilhado; autorização na aplicação | Aceito |
+| [0007](0007-token-de-servico-entre-microsservicos.md) | Token de serviço (JWT HS256, segredo próprio, gerado por chamada) entre monólito e estoque | Aceito |
+| [0008](0008-mensageria-rabbitmq-outbox.md) | Comandos assíncronos ao estoque via RabbitMQ com outbox transacional (substitui parcialmente o 0002) | Aceito |

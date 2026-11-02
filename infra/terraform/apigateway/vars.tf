@@ -38,3 +38,16 @@ variable "auth_lambda_name" {
   type        = string
   default     = ""
 }
+
+variable "estoque_elb_host" {
+  description = <<-EOT
+    Hostname do LoadBalancer do Service do fiap-estoque (sem esquema e sem barra final). O Service e
+    publicado pelo CD do repositorio fiap-estoque, em outro namespace; o job `apigw-apply` do cd.yml o descobre
+    com kubectl e passa via TF_VAR_estoque_elb_host.
+
+    Default vazio de proposito (mesmo padrao de `app_elb_host` e `auth_lambda_name`): enquanto estiver vazio, as
+    rotas /peca e /insumo nao sao criadas e este modulo nao depende de o estoque ja estar no ar.
+  EOT
+  type        = string
+  default     = ""
+}

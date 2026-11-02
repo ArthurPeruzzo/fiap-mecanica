@@ -1,8 +1,8 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.ServicoGateway;
 import com.fiap.mecanica.ordemdeservico.infra.controller.json.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,10 +22,10 @@ public class VinculoOrdemDeServicoHttpController {
 
     public VinculoOrdemDeServicoHttpController(OrdemDeServicoGateway ordemDeServicoGateway,
                                                 ServicoGateway servicoGateway,
-                                                PecaGateway pecaGateway,
-                                                InsumoGateway insumoGateway) {
+                                                CatalogoEstoqueGateway catalogoEstoqueGateway,
+                                                ReservaEstoqueGateway reservaEstoqueGateway) {
         this.cleanController = new VinculoOrdemDeServicoCleanController(
-                ordemDeServicoGateway, servicoGateway, pecaGateway, insumoGateway
+                ordemDeServicoGateway, servicoGateway, catalogoEstoqueGateway, reservaEstoqueGateway
         );
     }
 
@@ -60,7 +60,7 @@ public class VinculoOrdemDeServicoHttpController {
     }
 
     @Operation(summary = "Vincular Peça",
-            description = "Vincula uma peça à ordem de serviço, baixando o estoque correspondente. Se a peça já estiver vinculada, soma a quantidade informada. Somente permitido enquanto a ordem estiver no status RECEBIDA ou EM_DIAGNOSTICO.")
+            description = "Vincula uma peça à ordem de serviço, reservando o estoque correspondente (a baixa definitiva ocorre na aprovação do orçamento). Se a peça já estiver vinculada, soma a quantidade informada. Somente permitido enquanto a ordem estiver no status RECEBIDA ou EM_DIAGNOSTICO.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Peça vinculada com sucesso"),
             @ApiResponse(responseCode = "400", description = "Quantidade inválida"),
@@ -77,7 +77,7 @@ public class VinculoOrdemDeServicoHttpController {
     }
 
     @Operation(summary = "Desvincular Peça",
-            description = "Remove ou subtrai a quantidade de uma peça vinculada à ordem de serviço, devolvendo o estoque correspondente. " +
+            description = "Remove ou subtrai a quantidade de uma peça vinculada à ordem de serviço, liberando a reserva de estoque correspondente. " +
                     "Se a quantidade informada for igual à vinculada, o vínculo é removido integralmente. Somente permitido enquanto a ordem estiver no status EM_DIAGNOSTICO.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Peça desvinculada com sucesso"),
@@ -95,7 +95,7 @@ public class VinculoOrdemDeServicoHttpController {
     }
 
     @Operation(summary = "Vincular Insumo",
-            description = "Vincula um insumo à ordem de serviço, baixando o estoque correspondente. " +
+            description = "Vincula um insumo à ordem de serviço, reservando o estoque correspondente (a baixa definitiva ocorre na aprovação do orçamento). " +
                     "Se o insumo já estiver vinculado, soma a quantidade informada. Somente permitido enquanto a ordem estiver no status RECEBIDA ou EM_DIAGNOSTICO.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Insumo vinculado com sucesso"),
@@ -113,7 +113,7 @@ public class VinculoOrdemDeServicoHttpController {
     }
 
     @Operation(summary = "Desvincular Insumo",
-            description = "Remove ou subtrai a quantidade de um insumo vinculado à ordem de serviço, devolvendo o estoque correspondente. " +
+            description = "Remove ou subtrai a quantidade de um insumo vinculado à ordem de serviço, liberando a reserva de estoque correspondente. " +
                     "Se a quantidade informada for igual à vinculada, o vínculo é removido integralmente. Somente permitido enquanto a ordem estiver no status EM_DIAGNOSTICO.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Insumo desvinculado com sucesso"),

@@ -104,3 +104,61 @@ resource "aws_lambda_permission" "apigw" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.gateway.execution_arn}/*/POST/auth/cliente"
 }
+
+# ---------------------------------------------------------------------------
+# fiap-estoque — rotas administrativas (/peca e /insumo).
+#
+# O estoque e um servico separado (outro repositorio, outro Service LoadBalancer, outro namespace). O gateway
+# continua sendo a porta de entrada UNICA divulgada: o cliente usa o mesmo host e o caminho decide o destino.
+# As rotas abaixo sao mais especificas que `ANY /{proxy+}`, e o HTTP API sempre escolhe a mais especifica.
+#
+# Nao ha rota para /reserva/** nem /catalogo/**: sao internas (so o fiap-mecanica as chama, pelo endereco do
+# cluster, com token de servico). Pelo gateway elas caem em `ANY /{proxy+}` e o fiap-mecanica responde 403.
+#
+# Duas rotas por prefixo, de proposito: `/peca/{proxy+}` NAO casa `/peca` (o {proxy+} exige ao menos um
+# segmento), e a listagem e justamente `GET /peca`. Alem disso, a URI da integracao precisa repetir o prefixo
+# (`/peca/{proxy}`): o {proxy} carrega so o que vem DEPOIS dele, entao sem o prefixo a chamada chegaria ao
+# estoque como `/1` em vez de `/peca/1`.
+# ---------------------------------------------------------------------------
+
+locals {
+  estoque_prefixos = var.estoque_elb_host != "" ? toset(["peca", "insumo"]) : toset([])
+}
+
+resource "aws_apigatewayv2_integration" "estoque_raiz" {
+  for_each = local.estoque_prefixos
+
+  api_id                 = aws_apigatewayv2_api.gateway.id
+  integration_type       = "HTTP_PROXY"
+  integration_method     = "ANY"
+  integration_uri        = "http://${var.estoque_elb_host}/${each.key}"
+  payload_format_version = "1.0"
+  timeout_milliseconds   = 30000
+}
+
+resource "aws_apigatewayv2_integration" "estoque_filhos" {
+  for_each = local.estoque_prefixos
+
+  api_id                 = aws_apigatewayv2_api.gateway.id
+  integration_type       = "HTTP_PROXY"
+  integration_method     = "ANY"
+  integration_uri        = "http://${var.estoque_elb_host}/${each.key}/{proxy}"
+  payload_format_version = "1.0"
+  timeout_milliseconds   = 30000
+}
+
+resource "aws_apigatewayv2_route" "estoque_raiz" {
+  for_each = local.estoque_prefixos
+
+  api_id    = aws_apigatewayv2_api.gateway.id
+  route_key = "ANY /${each.key}"
+  target    = "integrations/${aws_apigatewayv2_integration.estoque_raiz[each.key].id}"
+}
+
+resource "aws_apigatewayv2_route" "estoque_filhos" {
+  for_each = local.estoque_prefixos
+
+  api_id    = aws_apigatewayv2_api.gateway.id
+  route_key = "ANY /${each.key}/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.estoque_filhos[each.key].id}"
+}

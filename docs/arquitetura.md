@@ -89,6 +89,7 @@ sequenceDiagram
     participant L as Lambda auth
     participant APP as Aplicação (EKS)
     participant DB as RDS MySQL
+    participant EST as fiap-estoque
 
     C->>GW: POST /auth/cliente (cpf no corpo)
     GW->>L: AWS_PROXY
@@ -144,8 +145,10 @@ sequenceDiagram
     loop cada serviço
         APP->>DB: busca o serviço e insere o vínculo
     end
-    loop cada peça / insumo
-        APP->>DB: busca o item, baixa o estoque e insere o vínculo
+    opt há peças / insumos
+        APP->>EST: GET /catalogo/pecas|insumos?ids= (existência e preço)
+        APP->>EST: PUT /reserva/ordem-servico/{id}/itens (reserva em lote, atômica)
+        APP->>DB: insere os vínculos (se falhar, POST .../liberar compensa)
     end
     APP->>APP: notifica o cliente (NotificacaoGateway, mock via log)
     APP->>NR: incrementa a métrica os.criadas (OTLP, flush a cada 30s)
@@ -154,8 +157,8 @@ sequenceDiagram
 ```
 
 **Respostas de erro:** `401` token inválido/ausente · `403` perfil sem permissão · `404`
-cliente / veículo / serviço / peça / insumo inexistente · `400` veículo já com OS aberta,
-estoque insuficiente ou JSON inválido.
+cliente / veículo / serviço / peça / insumo inexistente · `400` veículo já com OS aberta
+ou JSON inválido · `422` estoque insuficiente · `503` fiap-estoque indisponível.
 
 ---
 

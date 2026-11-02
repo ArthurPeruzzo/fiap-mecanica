@@ -1,73 +1,42 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico;
 
-import com.fiap.mecanica.estoque.core.domain.Insumo;
-import com.fiap.mecanica.estoque.core.domain.Peca;
-import com.fiap.mecanica.estoque.core.exception.InsumoNaoEncontradoException;
-import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.mensagem.MensagemOrdemCanceladaFactory;
+import com.fiap.mecanica.ordemdeservico.core.gateway.EstoqueComandosGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.shared.notificacao.core.domain.MensagemParams;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 public abstract class OrcamentoRecusadoOrdemDeServicoUseCase {
 
 	protected final OrdemDeServicoGateway ordemDeServicoGateway;
-	private final PecaGateway pecaGateway;
-	private final InsumoGateway insumoGateway;
+	private final EstoqueComandosGateway estoqueComandosGateway;
+	private final TransacaoGateway transacaoGateway;
 	private final NotificacaoGateway notificacaoGateway;
 
 	protected OrcamentoRecusadoOrdemDeServicoUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
-													  PecaGateway pecaGateway,
-													  InsumoGateway insumoGateway,
+													  EstoqueComandosGateway estoqueComandosGateway,
+												  TransacaoGateway transacaoGateway,
 													  NotificacaoGateway notificacaoGateway) {
 		this.ordemDeServicoGateway = ordemDeServicoGateway;
-		this.pecaGateway = pecaGateway;
-		this.insumoGateway = insumoGateway;
+		this.estoqueComandosGateway = estoqueComandosGateway;
+		this.transacaoGateway = transacaoGateway;
 		this.notificacaoGateway = notificacaoGateway;
 	}
 
 	protected void recusar(OrdemDeServico ordemDeServico) {
 		ordemDeServico.cancelar();
-		devolverQuantidadesDePecaAoEstoque(ordemDeServico);
-		devolverQuantidadesDeInsumoAoEstoque(ordemDeServico);
-		ordemDeServicoGateway.atualizar(ordemDeServico);
+		// O cancelamento não depende do estoque estar no ar: o comando de liberação fica na outbox, na mesma
+		// transação que grava a OS, e o relay o entrega ao estoque (idempotente) quando houver broker.
+		transacaoGateway.executar(() -> {
+			ordemDeServicoGateway.atualizar(ordemDeServico);
+			estoqueComandosGateway.solicitarLiberacaoDeReservas(ordemDeServico.getId());
+		});
 		var params = MensagemParams.builder()
 				.clienteId(ordemDeServico.getClienteId())
 				.ordemId(ordemDeServico.getId())
 				.build();
 		notificacaoGateway.enviar(new MensagemOrdemCanceladaFactory().criar(params));
-	}
-
-	private void devolverQuantidadesDePecaAoEstoque(OrdemDeServico ordemDeServico) {
-		Map<Long, Integer> totalQuantidadePecasMapeadasPorId = ordemDeServico.getTotalQuantidadePecasMapeadasPorId();
-		List<Peca> pecas = new ArrayList<>();
-
-		totalQuantidadePecasMapeadasPorId.forEach((pecaId, quantidade) -> {
-			Peca peca = pecaGateway.buscarPorId(pecaId).orElseThrow(PecaNaoEncontradaException::new);
-			peca.devolverEstoque(quantidade);
-			pecas.add(peca);
-		});
-
-		pecas.forEach(pecaGateway::atualizar);
-	}
-
-	private void devolverQuantidadesDeInsumoAoEstoque(OrdemDeServico ordemDeServico) {
-		Map<Long, Integer> totalQuantidadeInsumosMapeadosPorId = ordemDeServico.getTotalQuantidadeInsumosMapeadosPorId();
-		List<Insumo> insumos = new ArrayList<>();
-
-		totalQuantidadeInsumosMapeadosPorId.forEach((insumoId, quantidade) -> {
-			Insumo insumo = insumoGateway.buscarPorId(insumoId).orElseThrow(InsumoNaoEncontradoException::new);
-			insumo.devolverEstoque(quantidade);
-			insumos.add(insumo);
-		});
-
-		insumos.forEach(insumoGateway::atualizar);
 	}
 }

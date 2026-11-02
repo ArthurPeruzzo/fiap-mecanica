@@ -14,6 +14,40 @@ services:
       timeout: 5s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:4.1-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_ADMIN_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_ADMIN_PASSWORD}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  # Cria o vhost e os usuarios de menor privilegio (mecanica so publica; estoque dono da fila) e termina.
+  rabbitmq-init:
+    image: curlimages/curl:8.11.1
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_ADMIN_USER: ${RABBITMQ_ADMIN_USER}
+      RABBITMQ_ADMIN_PASSWORD: ${RABBITMQ_ADMIN_PASSWORD}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-fiap}
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      RABBITMQ_ESTOQUE_USERNAME: ${RABBITMQ_ESTOQUE_USERNAME}
+      RABBITMQ_ESTOQUE_PASSWORD: ${RABBITMQ_ESTOQUE_PASSWORD}
+    volumes:
+      - ./docker/rabbitmq/init.sh:/init.sh:ro
+    entrypoint: ["sh", "/init.sh"]
+
   app:
     build: .
     ports:
@@ -23,10 +57,22 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      SERVICE_JWT_SECRET: ${SERVICE_JWT_SECRET}
       NEW_RELIC_LICENSE_KEY: ${NEW_RELIC_LICENSE_KEY}
+      # fiap-estoque sobe no compose do proprio repo (porta 8081 no host)
+      ESTOQUE_URL: ${ESTOQUE_URL:-http://host.docker.internal:8081}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-fiap}
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy
+      rabbitmq-init:
+        condition: service_completed_successfully
 
 volumes:
   db_data:
+  rabbitmq_data:

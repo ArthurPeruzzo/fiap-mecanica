@@ -1,10 +1,5 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase;
 
-import com.fiap.mecanica.estoque.core.domain.Insumo;
-import com.fiap.mecanica.estoque.core.domain.Peca;
-import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.LinkAprovacaoOrcamentoInvalidoException;
@@ -13,8 +8,11 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontra
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.EstoqueComandosGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.OrcamentoRecusadoViaTokenUseCase;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -42,10 +40,18 @@ class OrcamentoRecusadoViaTokenUseCaseUnitTest {
     private OrdemDeServicoGateway ordemDeServicoGateway;
 
     @Mock
-    private PecaGateway pecaGateway;
+    private EstoqueComandosGateway estoqueComandosGateway;
 
     @Mock
-    private InsumoGateway insumoGateway;
+    private TransacaoGateway transacaoGateway;
+
+    @BeforeEach
+    void executarTransacaoNaMesmaThread() {
+        Mockito.lenient().doAnswer(invocation -> {
+            ((Runnable) invocation.getArgument(0)).run();
+            return null;
+        }).when(transacaoGateway).executar(Mockito.any());
+    }
 
     @Mock
     private NotificacaoGateway notificacaoGateway;
@@ -121,10 +127,6 @@ class OrcamentoRecusadoViaTokenUseCaseUnitTest {
     void shouldRecusarOrcamentoViaTokenSuccessfully() {
         Mockito.when(linkAprovacaoOrcamentoGateway.buscarPorToken(TOKEN)).thenReturn(Optional.of(linkValido()));
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemAguardandoAprovacao()));
-        Mockito.when(pecaGateway.buscarPorId(PECA_ID)).thenReturn(Optional.of(
-                Peca.reconstituir(PECA_ID, "Filtro", "desc", new BigDecimal("45.00"), 5)));
-        Mockito.when(insumoGateway.buscarPorId(INSUMO_ID)).thenReturn(Optional.of(
-                Insumo.reconstituir(INSUMO_ID, "Óleo", "desc", new BigDecimal("35.00"), UnidadeMedida.LITRO, 10)));
 
         orcamentoRecusadoViaTokenUseCase.recusar(TOKEN);
 
@@ -137,8 +139,7 @@ class OrcamentoRecusadoViaTokenUseCaseUnitTest {
         Mockito.verify(linkAprovacaoOrcamentoGateway).atualizar(linkCaptor.capture());
         assertNotNull(linkCaptor.getValue().getDataUtilizacao());
 
-        Mockito.verify(pecaGateway).atualizar(Mockito.any());
-        Mockito.verify(insumoGateway).atualizar(Mockito.any());
+        Mockito.verify(estoqueComandosGateway).solicitarLiberacaoDeReservas(ORDEM_ID);
     }
 
     @Test
@@ -149,8 +150,7 @@ class OrcamentoRecusadoViaTokenUseCaseUnitTest {
                 () -> orcamentoRecusadoViaTokenUseCase.recusar(TOKEN));
 
         Mockito.verifyNoInteractions(ordemDeServicoGateway);
-        Mockito.verifyNoInteractions(pecaGateway);
-        Mockito.verifyNoInteractions(insumoGateway);
+        Mockito.verifyNoInteractions(estoqueComandosGateway);
     }
 
     @Test
@@ -214,10 +214,6 @@ class OrcamentoRecusadoViaTokenUseCaseUnitTest {
     void shouldNotAtualizarLinkWhenRecusarFails() {
         Mockito.when(linkAprovacaoOrcamentoGateway.buscarPorToken(TOKEN)).thenReturn(Optional.of(linkValido()));
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemAguardandoAprovacao()));
-        Mockito.when(pecaGateway.buscarPorId(PECA_ID)).thenReturn(Optional.of(
-                Peca.reconstituir(PECA_ID, "Filtro", "desc", new BigDecimal("45.00"), 5)));
-        Mockito.when(insumoGateway.buscarPorId(INSUMO_ID)).thenReturn(Optional.of(
-                Insumo.reconstituir(INSUMO_ID, "Óleo", "desc", new BigDecimal("35.00"), UnidadeMedida.LITRO, 10)));
         Mockito.doThrow(new RuntimeException("db error")).when(ordemDeServicoGateway).atualizar(Mockito.any());
 
         assertThrows(RuntimeException.class,

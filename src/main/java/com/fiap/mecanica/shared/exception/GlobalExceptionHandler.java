@@ -4,6 +4,7 @@ import com.fiap.mecanica.shared.exception.dto.ExceptionDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -69,6 +70,14 @@ public class GlobalExceptionHandler {
         log.warn("Método {} não suportado", e.getMethod());
         return ResponseEntity.status(BAD_REQUEST).body(
                 new ExceptionDto(BAD_REQUEST, LocalDateTime.now().format(FORMATTER), "Método " + e.getMethod() + " não suportado")
+        );
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ExceptionDto> httpMessageNotReadableExceptionHandler(HttpMessageNotReadableException e){
+        log.warn("Corpo da requisição ilegível: {}", e.getMessage());
+        return ResponseEntity.status(BAD_REQUEST).body(
+                new ExceptionDto(BAD_REQUEST, LocalDateTime.now().format(FORMATTER), "Corpo da requisição inválido ou malformado")
         );
     }
 

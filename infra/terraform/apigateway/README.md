@@ -54,6 +54,7 @@ O state deste módulo (`tfstate/apigateway.tfstate`) é **independente** do stat
 | `main.tf` | `aws_apigatewayv2_stage.default` | Stage `$default` com `auto_deploy` — ver "Por que `$default`" abaixo |
 | `main.tf` | `aws_apigatewayv2_integration.app` | Integração `HTTP_PROXY` → `http://<app_elb_host>/{proxy}`, timeout 30s. Criada só quando `app_elb_host != ""` |
 | `main.tf` | `aws_apigatewayv2_route.app_proxy` | Rota `ANY /{proxy+}`. Criada só quando `app_elb_host != ""` |
+| `main.tf` | `aws_apigatewayv2_integration.estoque_raiz/filhos` e `aws_apigatewayv2_route.estoque_raiz/filhos` | Rotas administrativas do **fiap-estoque**: `ANY /peca`, `ANY /peca/{proxy+}`, `ANY /insumo`, `ANY /insumo/{proxy+}` → ELB do estoque (`HTTP_PROXY`). Criadas só quando `estoque_elb_host != ""` |
 | `main.tf` | `data.aws_lambda_function.auth` | Referência à Function Lambda, criada no repo `fiap-mecanica-lambda`. Só avaliada quando `auth_lambda_name != ""` |
 | `main.tf` | `aws_apigatewayv2_integration.auth` | Integração `AWS_PROXY` → Lambda, `payload_format_version = "1.0"`, timeout 29s |
 | `main.tf` | `aws_apigatewayv2_route.auth` | Rota `POST /auth/cliente` |
@@ -78,6 +79,7 @@ ainda dispensa o `aws_apigatewayv2_deployment`.
 | `tags` | `{Name = "fiap-mecanica-terraform"}` | Tags aplicadas aos recursos |
 | `app_elb_host` | `""` | Hostname do ELB do Service K8s, sem esquema e sem barra final. Vazio ⇒ a rota da app não é criada e o gateway responde 404 em tudo |
 | `auth_lambda_name` | `""` | Nome da Lambda de autenticação. Ainda não consumido — reservado para a Fase 3 |
+| `estoque_elb_host` | `""` | Hostname do ELB do Service do `fiap-estoque` (publicado pelo CD do repositório dele). Vazio ⇒ `/peca` e `/insumo` não são roteados |
 
 Os defaults vazios são deliberados: permitem `terraform plan` no CI (em Pull Request não existe
 ELB) e permitem criar o gateway numa infra do zero, antes do primeiro deploy no Kubernetes.
@@ -88,6 +90,7 @@ ELB) e permitem criar o gateway numa infra do zero, antes do primeiro deploy no 
 |---|---|
 | `api_gateway_url` | URL pública do gateway. Consumida pelo `cd.yml` para montar `URL_APROVAR_ORCAMENTO`/`URL_RECUSAR_ORCAMENTO` |
 | `api_gateway_id` | ID da API — para montar a URL e consultar logs/métricas no CloudWatch |
+| `estoque_rotas_ativas` | `true` quando as rotas `/peca` e `/insumo` (estoque) foram criadas |
 
 ## Ordem de deploy
 
@@ -214,3 +217,27 @@ Lambda.
 >
 > Hoje a autorização continua 100% no app (`UserAuthenticationFilter`) e o gateway apenas roteia,
 > repassando o header `Authorization` intacto.
+
+## Rotas do fiap-estoque (porta de entrada única)
+
+O estoque é outro serviço (repositório, Service `LoadBalancer` e namespace próprios), mas o cliente continua usando **um
+só host**: o do gateway. O caminho decide o destino:
+
+| Rota | Destino |
+|---|---|
+| `ANY /peca`, `ANY /peca/{proxy+}`, `ANY /insumo`, `ANY /insumo/{proxy+}` | ELB do `fiap-estoque` |
+| `POST /auth/cliente` | Lambda |
+| `ANY /{proxy+}` (todo o resto) | ELB do `fiap-mecanica` |
+
+Duas rotas por prefixo, de propósito: `/peca/{proxy+}` **não** casa `/peca` (o `{proxy+}` exige ao menos um segmento), e a
+listagem é `GET /peca`. A URI da integração também repete o prefixo (`/peca/{proxy}`), porque o `{proxy}` carrega só o que
+vem depois dele.
+
+`/reserva/**` e `/catalogo/**` **não** têm rota: são internas (o `fiap-mecanica` as chama pelo endereço do cluster, com token
+de serviço). Pelo gateway elas caem em `ANY /{proxy+}` e o `fiap-mecanica` responde 403. O ELB do estoque, porém, é público;
+o gateway é a entrada única por convenção, não por imposição (ver o ADR-0001 do `fiap-estoque`).
+
+O `apigw-apply` descobre o ELB com `kubectl get svc fiap-estoque -n fiap-estoque` e o passa como
+`TF_VAR_estoque_elb_host`. **Ordem recomendada numa infra do zero: o CD do estoque roda antes do deste repositório** (o
+estoque só depende do cluster), e as rotas nascem na primeira passada. Se a ordem for invertida, o job avisa e as rotas só
+aparecem numa execução seguinte, depois de o CD do estoque ter criado o Service.

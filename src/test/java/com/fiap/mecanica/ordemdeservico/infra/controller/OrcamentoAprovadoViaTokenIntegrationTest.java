@@ -10,6 +10,11 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+
 class OrcamentoAprovadoViaTokenIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
 
     private String obterTokenLinkDeOrdemAguardandoAprovacao(Long ordemId) {
@@ -75,5 +80,23 @@ class OrcamentoAprovadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
         RestAssured.given()
                 .when().get("/ordem-servico/orcamento/externo/aprovar/" + token)
                 .then().statusCode(410);
+    }
+
+    @Test
+    void shouldConfirmarReservasNoEstoqueAoAprovarViaToken() {
+        String tokenAtendente = obterTokenAtendente();
+        String tokenMecanico = obterTokenMecanico();
+        Long pecaId = PECA_ID;
+        Long insumoId = INSUMO_ID;
+        Long ordemId = criarOrdemAguardandoAprovacaoComPecaEInsumoERetornarId(
+                tokenAtendente, tokenMecanico, pecaId, 3, insumoId, 2);
+        String token = obterTokenLinkDeOrdemAguardandoAprovacao(ordemId);
+
+        RestAssured.given()
+                .when().get("/ordem-servico/orcamento/externo/aprovar/" + token)
+                .then().statusCode(204);
+
+        estoque.verify(exactly(1), postRequestedFor(urlEqualTo("/reserva/ordem-servico/" + ordemId + "/confirmar")));
+        estoque.verify(exactly(0), postRequestedFor(urlPathMatching(LIBERAR)));
     }
 }

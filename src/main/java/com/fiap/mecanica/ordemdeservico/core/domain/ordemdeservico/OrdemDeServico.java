@@ -180,7 +180,7 @@ public class OrdemDeServico {
                 .findFirst();
         if (existente.isPresent()) {
             pecasVinculadas.remove(existente.get());
-            pecasVinculadas.add(new PecaVinculada(pecaId, existente.get().quantidade() + quantidade, preco));
+            pecasVinculadas.add(new PecaVinculada(pecaId, existente.get().quantidade() + quantidade, existente.get().preco()));
         } else {
             pecasVinculadas.add(new PecaVinculada(pecaId, quantidade, preco));
         }
@@ -215,7 +215,7 @@ public class OrdemDeServico {
                 .findFirst();
         if (existente.isPresent()) {
             insumosVinculados.remove(existente.get());
-            insumosVinculados.add(new InsumoVinculado(insumoId, existente.get().quantidade() + quantidade, preco));
+            insumosVinculados.add(new InsumoVinculado(insumoId, existente.get().quantidade() + quantidade, existente.get().preco()));
         } else {
             insumosVinculados.add(new InsumoVinculado(insumoId, quantidade, preco));
         }

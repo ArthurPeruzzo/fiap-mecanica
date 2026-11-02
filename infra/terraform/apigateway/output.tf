@@ -12,3 +12,8 @@ output "auth_route_ativa" {
   description = "Indica se a rota POST /auth/cliente (Function Lambda) foi criada. Falso enquanto auth_lambda_name estiver vazio."
   value       = var.auth_lambda_name != ""
 }
+
+output "estoque_rotas_ativas" {
+  description = "Indica se as rotas /peca e /insumo (fiap-estoque) foram criadas. Falso enquanto estoque_elb_host estiver vazio."
+  value       = var.estoque_elb_host != ""
+}

@@ -1,8 +1,9 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase;
 
-import com.fiap.mecanica.estoque.core.domain.Peca;
-import com.fiap.mecanica.estoque.core.exception.PecaNaoEncontradaException;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
+import com.fiap.mecanica.ordemdeservico.core.dto.ItemReserva;
+import com.fiap.mecanica.ordemdeservico.core.dto.ItemCatalogo;
+import com.fiap.mecanica.ordemdeservico.core.gateway.CatalogoEstoqueGateway;
+import com.fiap.mecanica.ordemdeservico.core.exception.PecaNaoEncontradaNoCatalogoException;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServicoStateFactory;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.PecaVinculada;
@@ -12,7 +13,9 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontra
 import com.fiap.mecanica.ordemdeservico.core.exception.PecaNaoVinculadaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.QuantidadeDesvincularInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.DesvincularPecaOrdemDeServicoUseCase;
+import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -38,7 +41,10 @@ class DesvincularPecaOrdemDeServicoUseCaseUnitTest {
     private OrdemDeServicoGateway ordemDeServicoGateway;
 
     @Mock
-    private PecaGateway pecaGateway;
+    private CatalogoEstoqueGateway catalogoEstoqueGateway;
+
+    @Mock
+    private ReservaEstoqueGateway reservaEstoqueGateway;
 
     private static final Long ORDEM_ID = 1L;
     private static final Long PECA_ID = 20L;
@@ -70,38 +76,53 @@ class DesvincularPecaOrdemDeServicoUseCaseUnitTest {
                 .build();
     }
 
-    private Peca pecaComEstoque(Integer estoque) {
-        return Peca.reconstituir(PECA_ID, "Pastilha de freio", "Pastilha dianteira", BigDecimal.TEN, estoque);
+    private ItemCatalogo pecaNoCatalogo() {
+        return new ItemCatalogo(PECA_ID, BigDecimal.TEN);
     }
 
     private void stubOrdem(OrdemDeServico os) {
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(os));
     }
 
-    private void stubPeca(Peca peca) {
-        Mockito.when(pecaGateway.buscarPorId(PECA_ID)).thenReturn(Optional.of(peca));
+    private void stubPeca(ItemCatalogo peca) {
+        Mockito.when(catalogoEstoqueGateway.buscarPeca(PECA_ID)).thenReturn(Optional.of(peca));
     }
 
     @Test
     void shouldDesvincularPecaSuccessfully() {
         stubOrdem(ordemEmDiagnosticoComPeca(5));
-        stubPeca(pecaComEstoque(3));
+        stubPeca(pecaNoCatalogo());
 
         desvincularPecaOrdemDeServicoUseCase.desvincular(ORDEM_ID, PECA_ID, QUANTIDADE);
 
-        Mockito.verify(pecaGateway).atualizar(Mockito.any());
+        Mockito.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.peca(PECA_ID, 3)));
         Mockito.verify(ordemDeServicoGateway).desvincularOuSubtrairPeca(ORDEM_ID, PECA_ID, QUANTIDADE);
     }
 
     @Test
     void shouldDesvincularIntegralmenteWhenQuantidadeIgualAVinculada() {
         stubOrdem(ordemEmDiagnosticoComPeca(QUANTIDADE));
-        stubPeca(pecaComEstoque(0));
+        stubPeca(pecaNoCatalogo());
 
         desvincularPecaOrdemDeServicoUseCase.desvincular(ORDEM_ID, PECA_ID, QUANTIDADE);
 
-        Mockito.verify(pecaGateway).atualizar(Mockito.any());
+        Mockito.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.peca(PECA_ID, 0)));
         Mockito.verify(ordemDeServicoGateway).desvincularOuSubtrairPeca(ORDEM_ID, PECA_ID, QUANTIDADE);
+    }
+
+    @Test
+    void shouldRestaurarReservaAnteriorQuandoGravacaoDoDesvinculoFalhaDepoisDeReservar() {
+        stubOrdem(ordemEmDiagnosticoComPeca(5));
+        stubPeca(pecaNoCatalogo());
+        Mockito.doThrow(new ErroAcessoBaseDeDadosException()).when(ordemDeServicoGateway)
+                .desvincularOuSubtrairPeca(Mockito.any(), Mockito.any(), Mockito.any());
+
+        assertThrows(ErroAcessoBaseDeDadosException.class,
+                () -> desvincularPecaOrdemDeServicoUseCase.desvincular(ORDEM_ID, PECA_ID, QUANTIDADE));
+
+        var ordem = Mockito.inOrder(reservaEstoqueGateway);
+        ordem.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.peca(PECA_ID, 3)));
+        ordem.verify(reservaEstoqueGateway).reservarItens(ORDEM_ID, List.of(ItemReserva.peca(PECA_ID, 5)));
     }
 
     @Test
@@ -111,19 +132,19 @@ class DesvincularPecaOrdemDeServicoUseCaseUnitTest {
         assertThrows(OrdemDeServicoNaoEncontradaException.class,
                 () -> desvincularPecaOrdemDeServicoUseCase.desvincular(ORDEM_ID, PECA_ID, QUANTIDADE));
 
-        Mockito.verifyNoInteractions(pecaGateway);
+        Mockito.verifyNoInteractions(catalogoEstoqueGateway, reservaEstoqueGateway);
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).desvincularOuSubtrairPeca(Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
     void shouldThrowWhenPecaNotFound() {
         stubOrdem(ordemEmDiagnosticoComPeca(5));
-        Mockito.when(pecaGateway.buscarPorId(PECA_ID)).thenReturn(Optional.empty());
+        Mockito.when(catalogoEstoqueGateway.buscarPeca(PECA_ID)).thenReturn(Optional.empty());
 
-        assertThrows(PecaNaoEncontradaException.class,
+        assertThrows(PecaNaoEncontradaNoCatalogoException.class,
                 () -> desvincularPecaOrdemDeServicoUseCase.desvincular(ORDEM_ID, PECA_ID, QUANTIDADE));
 
-        Mockito.verify(pecaGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(reservaEstoqueGateway);
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).desvincularOuSubtrairPeca(Mockito.any(), Mockito.any(), Mockito.any());
     }
 
@@ -152,12 +173,12 @@ class DesvincularPecaOrdemDeServicoUseCaseUnitTest {
                 .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.RECEBIDA))
                 .build();
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemRecebida));
-        stubPeca(pecaComEstoque(3));
+        stubPeca(pecaNoCatalogo());
 
         assertThrows(DesvincularPecaNaoAutorizadaException.class,
                 () -> desvincularPecaOrdemDeServicoUseCase.desvincular(ORDEM_ID, PECA_ID, QUANTIDADE));
 
-        Mockito.verify(pecaGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(reservaEstoqueGateway);
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).desvincularOuSubtrairPeca(Mockito.any(), Mockito.any(), Mockito.any());
     }
 
@@ -186,24 +207,24 @@ class DesvincularPecaOrdemDeServicoUseCaseUnitTest {
                 .state(OrdemDeServicoStateFactory.from(StatusOrdemDeServico.EM_DIAGNOSTICO))
                 .build();
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemSemPeca));
-        stubPeca(pecaComEstoque(3));
+        stubPeca(pecaNoCatalogo());
 
         assertThrows(PecaNaoVinculadaException.class,
                 () -> desvincularPecaOrdemDeServicoUseCase.desvincular(ORDEM_ID, PECA_ID, QUANTIDADE));
 
-        Mockito.verify(pecaGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(reservaEstoqueGateway);
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).desvincularOuSubtrairPeca(Mockito.any(), Mockito.any(), Mockito.any());
     }
 
     @Test
     void shouldThrowWhenQuantidadeMaiorQueVinculada() {
         stubOrdem(ordemEmDiagnosticoComPeca(1));
-        stubPeca(pecaComEstoque(3));
+        stubPeca(pecaNoCatalogo());
 
         assertThrows(QuantidadeDesvincularInvalidaException.class,
                 () -> desvincularPecaOrdemDeServicoUseCase.desvincular(ORDEM_ID, PECA_ID, 5));
 
-        Mockito.verify(pecaGateway, Mockito.never()).atualizar(Mockito.any());
+        Mockito.verifyNoInteractions(reservaEstoqueGateway);
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).desvincularOuSubtrairPeca(Mockito.any(), Mockito.any(), Mockito.any());
     }
 }

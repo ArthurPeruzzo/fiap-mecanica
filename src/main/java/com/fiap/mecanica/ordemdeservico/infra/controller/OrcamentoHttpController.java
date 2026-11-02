@@ -1,9 +1,10 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.EstoqueComandosGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -22,14 +23,15 @@ public class OrcamentoHttpController {
     private final OrcamentoCleanController cleanController;
 
     public OrcamentoHttpController(OrdemDeServicoGateway ordemDeServicoGateway,
-                                    PecaGateway pecaGateway,
-                                    InsumoGateway insumoGateway,
+                                    ReservaEstoqueGateway reservaEstoqueGateway,
+                                    EstoqueComandosGateway estoqueComandosGateway,
+                                    TransacaoGateway transacaoGateway,
                                     NotificacaoGateway notificacaoGateway,
                                     LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway,
                                     @Value("${url.aprovar.orcamento}") String urlAprovarOrcamento,
                                     @Value("${url.recusar.orcamento}") String urlRecusarOrcamento) {
         this.cleanController = new OrcamentoCleanController(
-                ordemDeServicoGateway, pecaGateway, insumoGateway,
+                ordemDeServicoGateway, reservaEstoqueGateway, estoqueComandosGateway, transacaoGateway,
                 notificacaoGateway, linkAprovacaoOrcamentoGateway,
                 urlAprovarOrcamento, urlRecusarOrcamento
         );
@@ -55,7 +57,8 @@ public class OrcamentoHttpController {
     @Operation(summary = "Recusar orçamento da Ordem de Serviço",
             description = "O atendente registra a recusa do cliente e cancela a ordem de serviço, avançando o status para CANCELADA. " +
                     "Somente permitido quando a ordem estiver no status AGUARDANDO_APROVACAO. " +
-                    "As quantidades de peças e insumos são devolvidas ao estoque.")
+                    "A devolução das peças e insumos ao estoque é pedida de forma assíncrona (mensageria): o cancelamento " +
+                    "não depende do estoque estar disponível e a reserva é liberada em instantes.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Orçamento recusado com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
@@ -87,7 +90,7 @@ public class OrcamentoHttpController {
 
     @Operation(summary = "Recusar orçamento via link público",
             description = "Endpoint público (sem autenticação) acionado pelo cliente a partir do link recebido por notificação. " +
-                    "Cancela a ordem de serviço avançando o status para CANCELADA e devolve peças e insumos ao estoque. " +
+                    "Cancela a ordem de serviço avançando o status para CANCELADA e pede, de forma assíncrona, a devolução de peças e insumos ao estoque. " +
                     "O link expira em 3 dias após o envio do orçamento e só pode ser utilizado uma vez.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Orçamento recusado com sucesso"),

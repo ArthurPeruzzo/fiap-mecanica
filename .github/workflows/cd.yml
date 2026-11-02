@@ -18,6 +18,15 @@ concurrency:
 env:
   AWS_REGION: us-east-1
   EKS_CLUSTER_NAME: eks-fiap-mecanica
+  # Integracao com os outros componentes do cluster. O fiap-mecanica fala com o estoque pelo endereco
+  # INTERNO do Service (nao pelo ELB publico) e publica no RabbitMQ do namespace `mensageria`, ambos
+  # publicados pelo CD do repositorio fiap-estoque. Enderecos fixos (DNS do cluster), nao dependem de
+  # nenhuma recriacao. Entram nos DOIS pontos que geram o ConfigMap (k8s-deploy e apigw-apply): se uma
+  # chave existir so em um deles, o outro a apaga.
+  ESTOQUE_URL: http://fiap-estoque.fiap-estoque.svc.cluster.local
+  RABBITMQ_HOST: rabbitmq.mensageria.svc.cluster.local
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_VHOST: fiap
 
 jobs:
 
@@ -211,11 +220,18 @@ jobs:
     - name: Aplicar namespace
       run: kubectl apply -f k8s/namespace.yaml
     - name: Gerar e aplicar Secret (a partir dos GitHub Secrets, sem gravar em disco)
+      env:
+        # Senha do usuario "mecanica" no RabbitMQ: criada pelo Job do CD do fiap-estoque, que usa o MESMO
+        # valor (GitHub Secret de mesmo nome nos dois repositorios).
+        RABBITMQ_PASSWORD: ${{ secrets.RABBITMQ_MECANICA_PASSWORD }}
       run: |
         kubectl create secret generic fiap-mecanica-secret -n fiap-mecanica \
           --from-literal=DB_USERNAME="${{ secrets.TF_VAR_DB_USERNAME }}" \
           --from-literal=DB_PASSWORD="${{ secrets.TF_VAR_DB_PASSWORD }}" \
           --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+          --from-literal=SERVICE_JWT_SECRET="${{ secrets.SERVICE_JWT_SECRET }}" \
+          --from-literal=RABBITMQ_USERNAME="mecanica" \
+          --from-literal=RABBITMQ_PASSWORD="$RABBITMQ_PASSWORD" \
           --from-literal=NEW_RELIC_LICENSE_KEY="${{ secrets.NEW_RELIC_LICENSE_KEY }}" \
           --dry-run=client -o yaml | kubectl apply -f -
     - name: Aplicar Service (antes do Deployment — só assim dá pra descobrir o hostname do LoadBalancer sem subir pods com config incompleta)
@@ -232,6 +248,10 @@ jobs:
           --from-literal=DB_URL="jdbc:mysql://${{ needs.app-infra-apply.outputs.db_endpoint }}/mecanica" \
           --from-literal=URL_APROVAR_ORCAMENTO="http://${{ steps.wait_lb.outputs.hostname }}/ordem-servico/orcamento/externo/aprovar/" \
           --from-literal=URL_RECUSAR_ORCAMENTO="http://${{ steps.wait_lb.outputs.hostname }}/ordem-servico/orcamento/externo/recusar/" \
+          --from-literal=ESTOQUE_URL="${ESTOQUE_URL}" \
+          --from-literal=RABBITMQ_HOST="${RABBITMQ_HOST}" \
+          --from-literal=RABBITMQ_PORT="${RABBITMQ_PORT}" \
+          --from-literal=RABBITMQ_VHOST="${RABBITMQ_VHOST}" \
           --dry-run=client -o yaml | kubectl apply -f -
     - name: Aplicar Deployment (pods já nascem com a config completa)
       run: kubectl apply -f k8s/deployment.yaml
@@ -283,6 +303,22 @@ jobs:
           echo "TF_VAR_auth_lambda_name=fiap-mecanica-auth" >> "$GITHUB_ENV"
         else
           echo "::warning::Function fiap-mecanica-auth não existe ainda — POST /auth/cliente não será criada nesta run. Rode o CD do repositório fiap-mecanica-lambda e depois este workflow novamente."
+        fi
+    # As rotas /peca e /insumo vao para o ELB do fiap-estoque (Service publicado pelo CD do repositorio
+    # fiap-estoque, em outro namespace). Ordem recomendada numa infra do zero: o CD do estoque ANTES deste (ele so
+    # depende do cluster), e as rotas nascem na primeira passada. Se a ordem for invertida o Service ainda nao
+    # existe e esta checagem evita derrubar o deploy; mesmo padrao da rota da Lambda: a proxima execucao cria as rotas.
+    - name: Habilitar as rotas do estoque somente se o Service dele já existir
+      working-directory: .
+      run: |
+        aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+        HOST=$(kubectl get svc fiap-estoque -n fiap-estoque \
+          -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+        if [ -n "$HOST" ]; then
+          echo "Service fiap-estoque encontrado — as rotas /peca e /insumo apontarão para $HOST."
+          echo "TF_VAR_estoque_elb_host=${HOST}" >> "$GITHUB_ENV"
+        else
+          echo "::warning::Service fiap-estoque não existe ainda — /peca e /insumo não serão roteados nesta run. Rode o CD do repositório fiap-estoque e depois este workflow novamente."
         fi
     - name: Terraform apply
       run: terraform apply -auto-approve
@@ -341,6 +377,8 @@ jobs:
           -o jsonpath='{.data.URL_APROVAR_ORCAMENTO}' 2>/dev/null || echo "")
         ATUAL_BASE=$(kubectl get configmap fiap-mecanica-config -n fiap-mecanica \
           -o jsonpath='{.data.PUBLIC_BASE_URL}' 2>/dev/null || echo "")
+        ATUAL_ESTOQUE=$(kubectl get configmap fiap-mecanica-config -n fiap-mecanica \
+          -o jsonpath='{.data.ESTOQUE_URL}' 2>/dev/null || echo "")
         DESEJADO="${API_URL}/ordem-servico/orcamento/externo/aprovar/"
 
         kubectl create configmap fiap-mecanica-config -n fiap-mecanica \
@@ -348,19 +386,24 @@ jobs:
           --from-literal=PUBLIC_BASE_URL="${API_URL}" \
           --from-literal=URL_APROVAR_ORCAMENTO="${DESEJADO}" \
           --from-literal=URL_RECUSAR_ORCAMENTO="${API_URL}/ordem-servico/orcamento/externo/recusar/" \
+          --from-literal=ESTOQUE_URL="${ESTOQUE_URL}" \
+          --from-literal=RABBITMQ_HOST="${RABBITMQ_HOST}" \
+          --from-literal=RABBITMQ_PORT="${RABBITMQ_PORT}" \
+          --from-literal=RABBITMQ_VHOST="${RABBITMQ_VHOST}" \
           --dry-run=client -o yaml | kubectl apply -f -
 
         # O ID do gateway é estável entre deploys, então a partir da segunda run os valores já
         # batem e o rollout extra é dispensado. Só o primeiro deploy (ou uma recriação do
         # gateway) paga o custo do restart.
         #
-        # As DUAS chaves são comparadas de propósito: comparar só a URL de orçamento faria uma
-        # chave nova (PUBLIC_BASE_URL) entrar no ConfigMap sem nunca chegar aos pods, porque a URL
-        # de orçamento já estaria correta e o rollout seria pulado.
-        if [ "$ATUAL_APROVAR" = "$DESEJADO" ] && [ "$ATUAL_BASE" = "$API_URL" ]; then
+        # As chaves são comparadas de propósito: comparar só a URL de orçamento faria uma chave nova
+        # (PUBLIC_BASE_URL, ESTOQUE_URL) entrar no ConfigMap sem nunca chegar aos pods, porque a URL
+        # de orçamento já estaria correta e o rollout seria pulado. ESTOQUE_URL entra aqui pelo mesmo
+        # motivo: um cluster já implantado antes da integração não tinha essa chave.
+        if [ "$ATUAL_APROVAR" = "$DESEJADO" ] && [ "$ATUAL_BASE" = "$API_URL" ] && [ "$ATUAL_ESTOQUE" = "$ESTOQUE_URL" ]; then
           echo "ConfigMap já aponta para o gateway — rollout dispensado."
         else
-          echo "ConfigMap mudou (aprovar: '$ATUAL_APROVAR' -> '$DESEJADO' | base: '$ATUAL_BASE' -> '$API_URL') — reiniciando os pods."
+          echo "ConfigMap mudou (aprovar: '$ATUAL_APROVAR' -> '$DESEJADO' | base: '$ATUAL_BASE' -> '$API_URL' | estoque: '$ATUAL_ESTOQUE' -> '$ESTOQUE_URL') — reiniciando os pods."
           kubectl rollout restart deployment/fiap-mecanica -n fiap-mecanica
           kubectl rollout status deployment/fiap-mecanica -n fiap-mecanica --timeout=300s
         fi

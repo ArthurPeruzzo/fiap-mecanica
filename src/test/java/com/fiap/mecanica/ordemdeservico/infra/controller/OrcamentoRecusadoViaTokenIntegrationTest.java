@@ -1,17 +1,26 @@
 package com.fiap.mecanica.ordemdeservico.infra.controller;
 
-import com.fiap.mecanica.estoque.infra.gateway.entity.PecaEntity;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.StatusOrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.LinkAprovacaoOrcamentoEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OrdemDeServicoEntity;
+import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OutboxEventoRepository;
 import io.restassured.RestAssured;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
+
 class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
+
+    @Autowired
+    private OutboxEventoRepository outboxEventoRepository;
 
     private String obterTokenLinkDeOrdemAguardandoAprovacao(Long ordemId) {
         return linkAprovacaoOrcamentoRepository.findByOrdemServicoId(ordemId)
@@ -40,11 +49,11 @@ class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
     }
 
     @Test
-    void shouldDevolverEstoqueAoRecusarViaToken() {
+    void shouldRegistrarComandoDeLiberacaoNaOutboxAoRecusarViaToken() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
 
-        Long pecaId = criarPecaERetornarId(10);
+        Long pecaId = PECA_ID;
         Long ordemId = criarOrdemEmDiagnosticoERetornarId(tokenAtendente, tokenMecanico);
         Long servicoId = criarServicoERetornarId();
 
@@ -70,16 +79,21 @@ class OrcamentoRecusadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
                 .when().post("/ordem-servico/orcamento/envio/" + ordemId)
                 .then().statusCode(204);
 
-        PecaEntity pecaAntes = pecaRepository.findById(pecaId).orElseThrow();
-        Assertions.assertEquals(7, pecaAntes.getQuantidadeEstoque());
+        estoque.verify(exactly(0), postRequestedFor(urlPathMatching(LIBERAR)));
+        Assertions.assertEquals(0, outboxEventoRepository.count());
 
         String token = obterTokenLinkDeOrdemAguardandoAprovacao(ordemId);
         RestAssured.given()
                 .when().get("/ordem-servico/orcamento/externo/recusar/" + token)
                 .then().statusCode(204);
 
-        PecaEntity pecaDepois = pecaRepository.findById(pecaId).orElseThrow();
-        Assertions.assertEquals(10, pecaDepois.getQuantidadeEstoque());
+        // Sem chamada HTTP ao estoque: o comando fica na outbox, pendente de envio ao broker.
+        estoque.verify(exactly(0), postRequestedFor(urlEqualTo("/reserva/ordem-servico/" + ordemId + "/liberar")));
+        var comandos = outboxEventoRepository.findAll();
+        Assertions.assertEquals(1, comandos.size());
+        Assertions.assertEquals("LIBERAR_RESERVA", comandos.getFirst().getTipo());
+        Assertions.assertEquals(ordemId, comandos.getFirst().getAgregadoId());
+        Assertions.assertNull(comandos.getFirst().getEnviadoEm());
     }
 
     @Test

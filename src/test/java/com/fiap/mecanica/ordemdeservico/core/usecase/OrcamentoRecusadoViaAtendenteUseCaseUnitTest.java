@@ -1,17 +1,16 @@
 package com.fiap.mecanica.ordemdeservico.core.usecase;
 
-import com.fiap.mecanica.estoque.core.domain.Insumo;
-import com.fiap.mecanica.estoque.core.domain.Peca;
-import com.fiap.mecanica.estoque.core.domain.UnidadeMedida;
-import com.fiap.mecanica.estoque.core.gateway.InsumoGateway;
-import com.fiap.mecanica.estoque.core.gateway.PecaGateway;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.*;
 import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.EstoqueComandosGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.OrcamentoRecusadoViaAtendenteUseCase;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
+import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -38,10 +37,18 @@ class OrcamentoRecusadoViaAtendenteUseCaseUnitTest {
     private OrdemDeServicoGateway ordemDeServicoGateway;
 
     @Mock
-    private PecaGateway pecaGateway;
+    private EstoqueComandosGateway estoqueComandosGateway;
 
     @Mock
-    private InsumoGateway insumoGateway;
+    private TransacaoGateway transacaoGateway;
+
+    @BeforeEach
+    void executarTransacaoNaMesmaThread() {
+        Mockito.lenient().doAnswer(invocation -> {
+            ((Runnable) invocation.getArgument(0)).run();
+            return null;
+        }).when(transacaoGateway).executar(Mockito.any());
+    }
 
     @Mock
     private NotificacaoGateway notificacaoGateway;
@@ -84,21 +91,9 @@ class OrcamentoRecusadoViaAtendenteUseCaseUnitTest {
                 .build();
     }
 
-    private Peca pecaComEstoque(Long id, int estoque) {
-        return Peca.reconstituir(id, "Peça", "desc", new BigDecimal("45.00"), estoque);
-    }
-
-    private Insumo insumoComEstoque(Long id, int estoque) {
-        return Insumo.reconstituir(id, "Insumo", "desc", new BigDecimal("35.00"), UnidadeMedida.LITRO, estoque);
-    }
-
     @Test
     void shouldRecusarOrcamentoSuccessfully() {
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemAguardandoAprovacao()));
-        Mockito.when(pecaGateway.buscarPorId(PECA_ID_1)).thenReturn(Optional.of(pecaComEstoque(PECA_ID_1, 7)));
-        Mockito.when(pecaGateway.buscarPorId(PECA_ID_2)).thenReturn(Optional.of(pecaComEstoque(PECA_ID_2, 8)));
-        Mockito.when(insumoGateway.buscarPorId(INSUMO_ID_1)).thenReturn(Optional.of(insumoComEstoque(INSUMO_ID_1, 6)));
-        Mockito.when(insumoGateway.buscarPorId(INSUMO_ID_2)).thenReturn(Optional.of(insumoComEstoque(INSUMO_ID_2, 9)));
 
         orcamentoRecusadoViaAtendenteUseCase.recusar(ORDEM_ID);
 
@@ -108,8 +103,61 @@ class OrcamentoRecusadoViaAtendenteUseCaseUnitTest {
         assertEquals(StatusOrdemDeServico.CANCELADA, os.getStatus());
         assertNotNull(os.getDataCancelamento());
 
-        Mockito.verify(pecaGateway, Mockito.times(2)).atualizar(Mockito.any());
-        Mockito.verify(insumoGateway, Mockito.times(2)).atualizar(Mockito.any());
+        Mockito.verify(estoqueComandosGateway).solicitarLiberacaoDeReservas(ORDEM_ID);
+    }
+
+    @Test
+    void shouldPropagarErroENaoRegistrarComandoNemNotificarQuandoGravacaoDaOrdemFalha() {
+        Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemAguardandoAprovacao()));
+        Mockito.doThrow(new ErroAcessoBaseDeDadosException()).when(ordemDeServicoGateway).atualizar(Mockito.any());
+
+        assertThrows(ErroAcessoBaseDeDadosException.class,
+                () -> orcamentoRecusadoViaAtendenteUseCase.recusar(ORDEM_ID));
+
+        Mockito.verify(estoqueComandosGateway, Mockito.never()).solicitarLiberacaoDeReservas(Mockito.any());
+        Mockito.verifyNoInteractions(notificacaoGateway);
+    }
+
+    @Test
+    void shouldPropagarErroENaoNotificarQuandoRegistroDoComandoFalha() {
+        // Na prática a transação desfaz a gravação da OS; aqui basta garantir que o erro não é engolido.
+        Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemAguardandoAprovacao()));
+        Mockito.doThrow(new ErroAcessoBaseDeDadosException()).when(estoqueComandosGateway)
+                .solicitarLiberacaoDeReservas(ORDEM_ID);
+
+        assertThrows(ErroAcessoBaseDeDadosException.class,
+                () -> orcamentoRecusadoViaAtendenteUseCase.recusar(ORDEM_ID));
+
+        Mockito.verifyNoInteractions(notificacaoGateway);
+    }
+
+    @Test
+    void shouldGravarOrdemEComandoDentroDaMesmaTransacao() {
+        Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemAguardandoAprovacao()));
+
+        orcamentoRecusadoViaAtendenteUseCase.recusar(ORDEM_ID);
+
+        var ordem = Mockito.inOrder(transacaoGateway, ordemDeServicoGateway, estoqueComandosGateway, notificacaoGateway);
+        ordem.verify(transacaoGateway).executar(Mockito.any());
+        ordem.verify(ordemDeServicoGateway).atualizar(Mockito.any());
+        ordem.verify(estoqueComandosGateway).solicitarLiberacaoDeReservas(ORDEM_ID);
+        ordem.verify(notificacaoGateway).enviar(Mockito.any());
+    }
+
+    @Test
+    void shouldPermitirRepetirRecusaDepoisDeFalhaNaGravacao() {
+        // A OS segue AGUARDANDO_APROVACAO no banco após a falha e nenhum comando foi registrado.
+        Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenAnswer(i -> Optional.of(ordemAguardandoAprovacao()));
+        Mockito.doThrow(new ErroAcessoBaseDeDadosException()).doNothing()
+                .when(ordemDeServicoGateway).atualizar(Mockito.any());
+
+        assertThrows(ErroAcessoBaseDeDadosException.class,
+                () -> orcamentoRecusadoViaAtendenteUseCase.recusar(ORDEM_ID));
+        orcamentoRecusadoViaAtendenteUseCase.recusar(ORDEM_ID);
+
+        Mockito.verify(estoqueComandosGateway, Mockito.times(1)).solicitarLiberacaoDeReservas(ORDEM_ID);
+        Mockito.verify(ordemDeServicoGateway, Mockito.times(2)).atualizar(Mockito.any());
+        Mockito.verify(notificacaoGateway, Mockito.times(1)).enviar(Mockito.any());
     }
 
     @Test
@@ -120,8 +168,7 @@ class OrcamentoRecusadoViaAtendenteUseCaseUnitTest {
                 () -> orcamentoRecusadoViaAtendenteUseCase.recusar(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
-        Mockito.verifyNoInteractions(pecaGateway);
-        Mockito.verifyNoInteractions(insumoGateway);
+        Mockito.verifyNoInteractions(estoqueComandosGateway);
     }
 
     @Test
@@ -154,7 +201,6 @@ class OrcamentoRecusadoViaAtendenteUseCaseUnitTest {
                 () -> orcamentoRecusadoViaAtendenteUseCase.recusar(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
-        Mockito.verifyNoInteractions(pecaGateway);
-        Mockito.verifyNoInteractions(insumoGateway);
+        Mockito.verifyNoInteractions(estoqueComandosGateway);
     }
 }
