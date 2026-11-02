@@ -2,6 +2,9 @@ package com.fiap.mecanica.ordemdeservico.infra.gateway.outbox;
 
 import com.fiap.mecanica.ordemdeservico.infra.gateway.entity.OutboxEventoEntity;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OutboxEventoRepository;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
+import io.micrometer.tracing.propagation.Propagator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageBuilder;
@@ -18,6 +21,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -25,6 +29,9 @@ import java.util.concurrent.TimeUnit;
  * confirma que a mensagem chegou a uma fila (publisher confirm sem retorno de "não roteada"); qualquer falha
  * deixa a linha pendente para a próxima rodada. A entrega é, portanto, "pelo menos uma vez": o consumidor
  * precisa tolerar duplicatas.
+ * <p>
+ * A publicação é um span filho do trace gravado na linha (coluna traceparent) e a mensagem sai com o contexto desse span
+ * no cabeçalho traceparent: o consumidor no estoque continua o trace da requisição que gerou o comando.
  */
 @Component
 @Slf4j
@@ -34,6 +41,8 @@ public class OutboxRelay {
     private final OutboxEventoRepository outboxEventoRepository;
     private final RabbitTemplate rabbitTemplate;
     private final TransactionTemplate transactionTemplate;
+    private final Tracer tracer;
+    private final Propagator propagator;
     private final String exchange;
     private final String routingKeyLiberarReserva;
     private final int tamanhoDoLote;
@@ -42,6 +51,8 @@ public class OutboxRelay {
     public OutboxRelay(OutboxEventoRepository outboxEventoRepository,
                        RabbitTemplate rabbitTemplate,
                        TransactionTemplate transactionTemplate,
+                       Tracer tracer,
+                       Propagator propagator,
                        @Value("${estoque.mensageria.exchange}") String exchange,
                        @Value("${estoque.mensageria.routing-key.liberar-reserva}") String routingKeyLiberarReserva,
                        @Value("${outbox.relay.lote:50}") int tamanhoDoLote,
@@ -49,6 +60,8 @@ public class OutboxRelay {
         this.outboxEventoRepository = outboxEventoRepository;
         this.rabbitTemplate = rabbitTemplate;
         this.transactionTemplate = transactionTemplate;
+        this.tracer = tracer;
+        this.propagator = propagator;
         this.exchange = exchange;
         this.routingKeyLiberarReserva = routingKeyLiberarReserva;
         this.tamanhoDoLote = tamanhoDoLote;
@@ -84,6 +97,29 @@ public class OutboxRelay {
     }
 
     private void publicar(OutboxEventoEntity evento) throws Exception {
+        Span span = iniciarSpanDePublicacao(evento);
+        try (Tracer.SpanInScope ignored = tracer.withSpan(span)) {
+            publicarMensagem(evento, span);
+        } catch (Exception e) {
+            span.error(e);
+            throw e;
+        } finally {
+            span.end();
+        }
+    }
+
+    /** Span filho do trace gravado na linha; sem traceparent gravado, abre um trace novo. */
+    private Span iniciarSpanDePublicacao(OutboxEventoEntity evento) {
+        String nome = "outbox publish " + evento.getTipo();
+        Span span = evento.getTraceparent() == null
+                ? tracer.nextSpan().name(nome)
+                : propagator.extract(Map.of(EstoqueComandosOutboxGateway.TRACEPARENT, evento.getTraceparent()), Map::get)
+                        .name(nome).kind(Span.Kind.PRODUCER).start();
+        return span.tag("outbox.evento.id", evento.getId())
+                .tag("outbox.agregado.id", String.valueOf(evento.getAgregadoId()));
+    }
+
+    private void publicarMensagem(OutboxEventoEntity evento, Span span) throws Exception {
         Message mensagem = MessageBuilder
                 .withBody(evento.getPayload().getBytes(StandardCharsets.UTF_8))
                 .setContentType(MessageProperties.CONTENT_TYPE_JSON)
@@ -91,6 +127,8 @@ public class OutboxRelay {
                 .setType(evento.getTipo())
                 .setDeliveryMode(MessageDeliveryMode.PERSISTENT)
                 .build();
+        propagator.inject(span.context(), mensagem.getMessageProperties(),
+                (propriedades, chave, valor) -> propriedades.setHeader(chave, valor));
 
         CorrelationData correlacao = new CorrelationData(evento.getId());
         rabbitTemplate.send(exchange, routingKeyLiberarReserva, mensagem, correlacao);

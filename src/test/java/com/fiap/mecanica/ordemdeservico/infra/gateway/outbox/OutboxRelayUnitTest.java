@@ -13,6 +13,8 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
+import io.micrometer.tracing.Tracer;
+import io.micrometer.tracing.propagation.Propagator;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -44,8 +46,9 @@ class OutboxRelayUnitTest {
             acao.accept(null);
             return null;
         }).when(transactionTemplate).executeWithoutResult(Mockito.any());
+        // Tracer/Propagator NOOP: estes testes cobrem a publicação; o trace é coberto no teste de integração.
         relay = new OutboxRelay(outboxEventoRepository, rabbitTemplate, transactionTemplate,
-                EXCHANGE, ROUTING_KEY, 50, Duration.ofMillis(200));
+                Tracer.NOOP, Propagator.NOOP, EXCHANGE, ROUTING_KEY, 50, Duration.ofMillis(200));
     }
 
     private OutboxEventoEntity pendente(String id, long ordemId) {

@@ -44,6 +44,10 @@ public class OutboxEventoEntity {
     @Column(name = "ultimo_erro", length = 500)
     private String ultimoErro;
 
+    /** Cabeçalho W3C traceparent da requisição que gerou o evento (null se não havia trace ativo). */
+    @Column(name = "traceparent", length = 100)
+    private String traceparent;
+
     public void marcarComoEnviado() {
         this.enviadoEm = LocalDateTime.now();
         this.ultimoErro = null;

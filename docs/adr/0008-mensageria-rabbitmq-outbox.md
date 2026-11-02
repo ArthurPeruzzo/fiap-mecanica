@@ -27,6 +27,9 @@ confirmar, catálogo) continua síncrono por HTTP, com o token de serviço do
 2. O `OutboxRelay` (`@Scheduled`, intervalo de 1 s) lê as linhas pendentes
    (`SELECT ... FOR UPDATE SKIP LOCKED`, lote de 50) e publica no exchange `estoque.comandos`
    (direct, chave `reserva.liberar`), com mensagem persistente e `messageId` igual ao id da linha.
+   O contexto de trace da requisição (`traceparent`) é gravado na mesma linha (`V19`) e o relay publica dentro de um
+   span filho dele, com o `traceparent` no cabeçalho da mensagem: o consumo no estoque continua o **mesmo trace** do
+   cancelamento, apesar de a publicação acontecer depois, em outra thread.
 3. A linha só é marcada como enviada depois do *publisher confirm* do broker **e** sem mensagem
    devolvida como não roteada (`mandatory` + *returns*). Qualquer falha mantém a linha pendente,
    incrementa `tentativas`, grava `ultimo_erro` e interrompe o lote (preserva a ordem).
@@ -73,9 +76,11 @@ dono dos recursos `estoque.*`. Credenciais por serviço, não compartilhadas.
   primeira vez, a mensagem volta como não roteada e fica pendente até a fila existir.
 - **Propriedade de retry do Spring Boot 4:** o nome é `max-retries` (tentativas depois da primeira),
   e não `max-attempts`; o nome antigo é ignorado sem aviso. Coberto por teste.
-- **Infra ainda não provisionada:** não há broker no cluster nem Secret `RABBITMQ_*`/`cd.yml` para
-  ele; subir esta versão sem isso faz o monólito (e o estoque) falharem na partida. O provisionamento
-  segue o [ADR-0004](0004-infra-quatro-repositorios.md).
+- **Dependência do broker no cluster:** o RabbitMQ roda no namespace `mensageria`, publicado pelo CD do
+  repositório `fiap-estoque` (StatefulSet com disco EBS; o Amazon MQ está bloqueado na conta Academy). O
+  `cd.yml` deste repositório injeta `RABBITMQ_*` e `ESTOQUE_URL`; sem o broker no ar o monólito sobe e
+  acumula os comandos na outbox, mas sem as variáveis ele falha na partida. O disco EBS (driver CSI com a
+  `LabRole`) ainda não foi validado numa conta real.
 
 ## Alternativas consideradas
 

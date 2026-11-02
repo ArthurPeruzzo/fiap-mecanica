@@ -4,6 +4,7 @@ import com.fiap.mecanica.ordemdeservico.core.gateway.EstoqueComandosGateway;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OutboxEventoRepository;
 import com.fiap.mecanica.resources.testcontainer.AbstractContainer;
 import com.fiap.mecanica.resources.testcontainer.RabbitTestContainer;
+import io.micrometer.tracing.Tracer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.AmqpAdmin;
@@ -30,7 +31,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * permanece pendente e entrega assim que a fila passa a existir.
  */
 @ActiveProfiles("integration-test")
-@TestPropertySource(properties = {"outbox.relay.enabled=true", "outbox.relay.intervalo=1h"})
+@TestPropertySource(properties = {"outbox.relay.enabled=true", "outbox.relay.intervalo=1h",
+        "management.tracing.sampling.probability=1.0"})
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class OutboxRelayRabbitIntegrationTest extends AbstractContainer {
 
@@ -57,6 +59,7 @@ class OutboxRelayRabbitIntegrationTest extends AbstractContainer {
     @Autowired private RabbitTemplate rabbitTemplate;
     @Autowired private AmqpAdmin amqpAdmin;
     @Autowired private DirectExchange exchange;
+    @Autowired private Tracer tracer;
 
     @Value("${estoque.mensageria.routing-key.liberar-reserva}")
     private String routingKey;
@@ -112,6 +115,48 @@ class OutboxRelayRabbitIntegrationTest extends AbstractContainer {
         var entregue = outboxEventoRepository.findById(id).orElseThrow();
         assertNotNull(entregue.getEnviadoEm());
         assertNull(entregue.getUltimoErro());
+    }
+
+    @Test
+    void shouldLevarOTraceDaRequisicaoAteAMensagemPublicada() {
+        ligarFila();
+        // Simula a requisição: um span em andamento quando o comando é gravado (como no recusar do orçamento).
+        var requisicao = tracer.nextSpan().name("requisicao-de-teste").start();
+        String traceIdDaRequisicao = requisicao.context().traceId();
+        try (var ignored = tracer.withSpan(requisicao)) {
+            estoqueComandosGateway.solicitarLiberacaoDeReservas(9L);
+        } finally {
+            requisicao.end();
+        }
+        var gravado = outboxEventoRepository.findAll().getFirst();
+        assertNotNull(gravado.getTraceparent(), "o contexto de trace deveria ter sido guardado na outbox");
+        assertTrue(gravado.getTraceparent().contains(traceIdDaRequisicao));
+
+        // O relay roda em OUTRA thread, sem requisição nem span ativo: o trace só sobrevive pela coluna da outbox.
+        relay.publicarPendentes();
+
+        Message recebida = rabbitTemplate.receive(FILA, 5000);
+        assertNotNull(recebida);
+        String traceparent = (String) recebida.getMessageProperties().getHeaders().get("traceparent");
+        assertNotNull(traceparent, "a mensagem deveria carregar o traceparent");
+        var partes = traceparent.split("-");
+        assertEquals(traceIdDaRequisicao, partes[1], "mesmo trace da requisição que gerou o comando");
+        assertNotEquals(requisicao.context().spanId(), partes[2],
+                "a publicação é um span próprio (filho da requisição), não o span da requisição");
+    }
+
+    @Test
+    void shouldPublicarComTraceNovoQuandoOEventoNaoTemTraceGravado() {
+        ligarFila();
+        estoqueComandosGateway.solicitarLiberacaoDeReservas(9L); // sem span ativo: nada a guardar
+        assertNull(outboxEventoRepository.findAll().getFirst().getTraceparent());
+
+        relay.publicarPendentes();
+
+        Message recebida = rabbitTemplate.receive(FILA, 5000);
+        assertNotNull(recebida);
+        assertNotNull(recebida.getMessageProperties().getHeaders().get("traceparent"),
+                "mesmo sem trace de origem a mensagem sai com um trace próprio");
     }
 
     @Test

@@ -5,6 +5,11 @@ metadata:
   namespace: fiap-mecanica
 data:
   DB_URL: "jdbc:mysql://SEU_ENDPOINT_RDS:3306/mecanica"
+  # fiap-estoque: endereco INTERNO do Service (nao o ELB publico). Broker no namespace `mensageria`.
+  ESTOQUE_URL: "http://fiap-estoque.fiap-estoque.svc.cluster.local"
+  RABBITMQ_HOST: "rabbitmq.mensageria.svc.cluster.local"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_VHOST: "fiap"
   # URL publica do API Gateway (output api_gateway_url de infra/terraform/apigateway).
   # Alimenta o campo servers do OpenAPI — sem ela, o Swagger aponta para o ELB e o
   # "Try it out" sai por fora do gateway.
