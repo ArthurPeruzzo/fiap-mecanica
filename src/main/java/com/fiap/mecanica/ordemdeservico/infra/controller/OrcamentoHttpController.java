@@ -3,7 +3,7 @@ package com.fiap.mecanica.ordemdeservico.infra.controller;
 import com.fiap.mecanica.ordemdeservico.core.gateway.EstoqueComandosGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
-import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.PagamentoComandosGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,7 +23,7 @@ public class OrcamentoHttpController {
     private final OrcamentoCleanController cleanController;
 
     public OrcamentoHttpController(OrdemDeServicoGateway ordemDeServicoGateway,
-                                    ReservaEstoqueGateway reservaEstoqueGateway,
+                                    PagamentoComandosGateway pagamentoComandosGateway,
                                     EstoqueComandosGateway estoqueComandosGateway,
                                     TransacaoGateway transacaoGateway,
                                     NotificacaoGateway notificacaoGateway,
@@ -31,7 +31,7 @@ public class OrcamentoHttpController {
                                     @Value("${url.aprovar.orcamento}") String urlAprovarOrcamento,
                                     @Value("${url.recusar.orcamento}") String urlRecusarOrcamento) {
         this.cleanController = new OrcamentoCleanController(
-                ordemDeServicoGateway, reservaEstoqueGateway, estoqueComandosGateway, transacaoGateway,
+                ordemDeServicoGateway, pagamentoComandosGateway, estoqueComandosGateway, transacaoGateway,
                 notificacaoGateway, linkAprovacaoOrcamentoGateway,
                 urlAprovarOrcamento, urlRecusarOrcamento
         );
@@ -73,7 +73,7 @@ public class OrcamentoHttpController {
     }
 
     @Operation(summary = "Aprovar orçamento da Ordem de Serviço",
-            description = "Registra a aprovação do cliente e libera a execução dos serviços, avançando o status para EM_EXECUCAO. " +
+            description = "Registra a aprovação do cliente e inicia a saga de pagamento, avançando o status para AGUARDANDO_PAGAMENTO; a OS só entra em EM_EXECUCAO depois que a cobrança e a baixa do estoque forem confirmadas. " +
                     "Somente permitido quando a ordem estiver no status AGUARDANDO_APROVACAO.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Orçamento aprovado com sucesso"),
@@ -106,7 +106,7 @@ public class OrcamentoHttpController {
 
     @Operation(summary = "Aprovar orçamento via link público",
             description = "Endpoint público (sem autenticação) acionado pelo cliente a partir do link recebido por notificação. " +
-                    "Registra a aprovação do orçamento e libera a execução dos serviços, avançando o status para EM_EXECUCAO. " +
+                    "Registra a aprovação do orçamento e inicia a saga de pagamento, avançando o status para AGUARDANDO_PAGAMENTO. " +
                     "O link expira em 3 dias após o envio do orçamento e só pode ser utilizado uma vez.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Orçamento aprovado com sucesso"),

@@ -12,7 +12,6 @@ import java.util.UUID;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 
 class OrcamentoAprovadoViaTokenIntegrationTest extends AbstractOrdemDeServicoIntegrationTest {
@@ -35,7 +34,7 @@ class OrcamentoAprovadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
                 .then().statusCode(204);
 
         OrdemDeServicoEntity ordem = ordemDeServicoRepository.findById(ordemId).orElseThrow();
-        Assertions.assertEquals(StatusOrdemDeServico.EM_EXECUCAO, ordem.getStatus());
+        Assertions.assertEquals(StatusOrdemDeServico.AGUARDANDO_PAGAMENTO, ordem.getStatus());
         Assertions.assertNotNull(ordem.getDataAprovacao());
 
         LinkAprovacaoOrcamentoEntity link = linkAprovacaoOrcamentoRepository
@@ -83,7 +82,7 @@ class OrcamentoAprovadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
     }
 
     @Test
-    void shouldConfirmarReservasNoEstoqueAoAprovarViaToken() {
+    void shouldSolicitarPagamentoPelaOutboxENaoConfirmarReservasAoAprovarViaToken() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();
         Long pecaId = PECA_ID;
@@ -96,7 +95,9 @@ class OrcamentoAprovadoViaTokenIntegrationTest extends AbstractOrdemDeServicoInt
                 .when().get("/ordem-servico/orcamento/externo/aprovar/" + token)
                 .then().statusCode(204);
 
-        estoque.verify(exactly(1), postRequestedFor(urlEqualTo("/reserva/ordem-servico/" + ordemId + "/confirmar")));
+        estoque.verify(exactly(0), postRequestedFor(urlPathMatching(CONFIRMAR)));
         estoque.verify(exactly(0), postRequestedFor(urlPathMatching(LIBERAR)));
+        Assertions.assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM outbox_evento WHERE agregado_id = ? AND tipo = 'SOLICITAR_PAGAMENTO'", Integer.class, ordemId));
     }
 }

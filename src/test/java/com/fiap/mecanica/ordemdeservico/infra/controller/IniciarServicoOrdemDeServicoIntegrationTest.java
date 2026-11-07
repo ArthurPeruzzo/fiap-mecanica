@@ -39,6 +39,8 @@ class IniciarServicoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServico
                 .when().post("/ordem-servico/orcamento/aprovar/" + ordemId)
                 .then().statusCode(204);
 
+        concluirSagaDePagamento(ordemId);
+
         return new OrdemComServico(ordemId, servicoId);
     }
 

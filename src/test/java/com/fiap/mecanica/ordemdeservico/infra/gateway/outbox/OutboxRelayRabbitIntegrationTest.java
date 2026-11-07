@@ -1,6 +1,7 @@
 package com.fiap.mecanica.ordemdeservico.infra.gateway.outbox;
 
 import com.fiap.mecanica.ordemdeservico.core.gateway.EstoqueComandosGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.PagamentoComandosGateway;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OutboxEventoRepository;
 import com.fiap.mecanica.resources.testcontainer.AbstractContainer;
 import com.fiap.mecanica.resources.testcontainer.RabbitTestContainer;
@@ -15,6 +16,7 @@ import org.springframework.amqp.core.MessageDeliveryMode;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -52,13 +54,16 @@ class OutboxRelayRabbitIntegrationTest extends AbstractContainer {
     }
 
     private static final String FILA = "teste.liberar-reserva";
+    private static final String FILA_BAIXA = "teste.confirmar-baixa";
 
     @Autowired private OutboxRelay relay;
     @Autowired private EstoqueComandosGateway estoqueComandosGateway;
     @Autowired private OutboxEventoRepository outboxEventoRepository;
     @Autowired private RabbitTemplate rabbitTemplate;
     @Autowired private AmqpAdmin amqpAdmin;
-    @Autowired private DirectExchange exchange;
+    @Autowired @Qualifier("estoqueComandosExchange") private DirectExchange exchange;
+    @Autowired @Qualifier("cobrancaComandosExchange") private DirectExchange exchangeCobranca;
+    @Autowired private PagamentoComandosGateway pagamentoComandosGateway;
     @Autowired private Tracer tracer;
 
     @Value("${estoque.mensageria.routing-key.liberar-reserva}")
@@ -94,6 +99,41 @@ class OutboxRelayRabbitIntegrationTest extends AbstractContainer {
         assertNotNull(enviado.getEnviadoEm());
         assertEquals(0, enviado.getTentativas());
         assertEquals(0, outboxEventoRepository.countByEnviadoEmIsNull());
+    }
+
+    @Test
+    void shouldEntregarCadaComandoAoExchangeDoSeuServico() {
+        String filaCobranca = "teste.solicitar-pagamento";
+        Queue fila = new Queue(filaCobranca, false);
+        amqpAdmin.declareQueue(fila);
+        amqpAdmin.declareBinding(BindingBuilder.bind(fila).to(exchangeCobranca).with("pagamento.solicitar"));
+        ligarFila();
+        try {
+            pagamentoComandosGateway.solicitarPagamento(9L, 3L, new java.math.BigDecimal("345.00"));
+            estoqueComandosGateway.solicitarConfirmacaoDeBaixa(9L);
+            ligarFilaDeBaixa();
+
+            relay.publicarPendentes();
+
+            Message pagamento = rabbitTemplate.receive(filaCobranca, 5000);
+            assertNotNull(pagamento, "o pedido de pagamento deveria ter chegado a fila da cobranca");
+            assertEquals("{\"ordemServicoId\":9,\"clienteId\":3,\"valor\":345.00}",
+                    new String(pagamento.getBody(), StandardCharsets.UTF_8));
+            assertEquals("SOLICITAR_PAGAMENTO", pagamento.getMessageProperties().getType());
+            Message baixa = rabbitTemplate.receive(FILA_BAIXA, 5000);
+            assertNotNull(baixa, "o pedido de baixa deveria ter chegado a fila do estoque");
+            assertEquals("CONFIRMAR_BAIXA", baixa.getMessageProperties().getType());
+            assertEquals(0, outboxEventoRepository.countByEnviadoEmIsNull());
+        } finally {
+            amqpAdmin.deleteQueue(filaCobranca);
+            amqpAdmin.deleteQueue(FILA_BAIXA);
+        }
+    }
+
+    private void ligarFilaDeBaixa() {
+        Queue fila = new Queue(FILA_BAIXA, false);
+        amqpAdmin.declareQueue(fila);
+        amqpAdmin.declareBinding(BindingBuilder.bind(fila).to(exchange).with("reserva.confirmar-baixa"));
     }
 
     @Test

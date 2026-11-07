@@ -26,6 +26,13 @@ public class OutboxEventoEntity {
     @Column(name = "tipo", nullable = false, length = 60)
     private String tipo;
 
+    /** Exchange de destino (cada serviço tem o seu: estoque.comandos, cobranca.comandos). */
+    @Column(name = "exchange", nullable = false, length = 100)
+    private String exchange;
+
+    @Column(name = "routing_key", nullable = false, length = 100)
+    private String routingKey;
+
     @Column(name = "agregado_id", nullable = false)
     private Long agregadoId;
 

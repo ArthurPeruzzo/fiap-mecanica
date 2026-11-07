@@ -20,7 +20,16 @@ public interface OrdemDeServicoState {
         throw new TransicaoDeStatusInvalidaException();
     }
 
+    /** Compensação da saga de pagamento: só o estado que aguarda o pagamento a aceita. */
+    default void cancelarPorPagamentoRecusado(OrdemDeServico ordemDeServico) {
+        throw new TransicaoDeStatusInvalidaException();
+    }
+
     default void aprovar(OrdemDeServico ordemDeServico) {
+        throw new TransicaoDeStatusInvalidaException();
+    }
+
+    default void iniciarExecucao(OrdemDeServico ordemDeServico) {
         throw new TransicaoDeStatusInvalidaException();
     }
 

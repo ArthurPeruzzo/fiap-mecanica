@@ -13,6 +13,6 @@ class OrdemDeServicoAguardandoAprovacaoState implements OrdemDeServicoState {
 	@Override
 	public void aprovar(OrdemDeServico ordemDeServico) {
 		ordemDeServico.setDataAprovacao(LocalDateTime.now());
-		ordemDeServico.transicionarPara(StatusOrdemDeServico.EM_EXECUCAO, new OrdemDeServicoEmExecucaoState());
+		ordemDeServico.transicionarPara(StatusOrdemDeServico.AGUARDANDO_PAGAMENTO, new OrdemDeServicoAguardandoPagamentoState());
 	}
 }

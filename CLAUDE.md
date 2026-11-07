@@ -216,7 +216,9 @@ Use cases that don't produce output (create/update/delete) return `void` — no 
 ```
 RECEBIDA → (iniciarDiagnostico) → EM_DIAGNOSTICO → (concluirDiagnostico) → DIAGNOSTICO_CONCLUIDO → (enviarOrcamento) → AGUARDANDO_APROVACAO
                                                                                                                                ├─ (cancelar) → CANCELADA
-                                                                                                                               └─ (aprovar)  → EM_EXECUCAO → (finalizar*) → FINALIZADA → (entregar) → ENTREGUE
+                                                                                                                               └─ (aprovar)  → AGUARDANDO_PAGAMENTO
+                                                                                                                                                  ├─ (cancelarPorPagamentoRecusado) → CANCELADA
+                                                                                                                                                  └─ (iniciarExecucao) → EM_EXECUCAO → (finalizar*) → FINALIZADA → (entregar) → ENTREGUE
 ```
 \* `finalizar` is called automatically by `finalizarServico` when all linked `ServicoVinculado` entries reach `StatusServico.FINALIZADO`.
 
@@ -226,7 +228,7 @@ RECEBIDA → (iniciarDiagnostico) → EM_DIAGNOSTICO → (concluirDiagnostico) �
 - `concluirDiagnostico` is split: the `OrdemDeServico` domain method checks `isMecanicoResponsavel` and `servicosVinculados.isEmpty()` (throwing `MecanicoNaoResponsavelPelaOrdemDeServicoException` and `OrdemDeServicoSemServicosException` respectively), then delegates to `OrdemDeServicoEmDiagnosticoState.concluirDiagnostico()`, which calls `calcularOrcamento()` and transitions to `DIAGNOSTICO_CONCLUIDO`. `calcularOrcamento()` sums prices across `ServicoVinculado`, `PecaVinculada` (`preco * quantidade`), and `InsumoVinculado` (`preco * quantidade`) and sets `Orcamento orcamento` (record with a single `BigDecimal valorTotal`).
 - `enviarOrcamento` (in `OrdemDeServicoDiagnosticoConcluidoState`) sets `dataEnvioOrcamento` and transitions to `AGUARDANDO_APROVACAO`.
 - `cancelar` (in `OrdemDeServicoAguardandoAprovacaoState`) sets `dataCancelamento` and transitions to `CANCELADA`.
-- `aprovar` (in `OrdemDeServicoAguardandoAprovacaoState`) sets `dataAprovacao` and transitions to `EM_EXECUCAO`.
+- `aprovar` (in `OrdemDeServicoAguardandoAprovacaoState`) sets `dataAprovacao` and transitions to `AGUARDANDO_PAGAMENTO` (saga de pagamento, ADR-0009), which registers `SOLICITAR_PAGAMENTO` in the outbox. The saga answers arrive over RabbitMQ (`ordemservico.respostas`): `pagamento.confirmado` → `CONFIRMAR_BAIXA` command; `baixa.confirmada` → `iniciarExecucao` (→ `EM_EXECUCAO`); `pagamento.recusado` → `cancelarPorPagamentoRecusado` + `LIBERAR_RESERVA`. `AGUARDANDO_PAGAMENTO` has NO manual `cancelar` (recusar endpoints answer 422): only the saga leaves it.
 - `finalizar` (in `OrdemDeServicoEmExecucaoState`) sets `dataFinalizacao` and transitions to `FINALIZADA`.
 - `entregar` (in `OrdemDeServicoFinalizadaState`) sets `dataEntrega` and transitions to `ENTREGUE`.
 
@@ -273,7 +275,7 @@ The join tables `ordem_servico_peca` and `ordem_servico_insumo` each have a `UNI
 2. `ReservaEstoqueGateway.reservarItens(osId, List<ItemReserva>)` with the item's new total in the OS (0 after a full desvincular); throws `EstoqueInsuficienteParaOrdemException` (422) if the fiap-estoque answers 422, `EstoqueIndisponivelException` (503) on any other failure.
 3. `ordemDeServicoGateway.vincularOuSomar.../desvincularOuSubtrair...(...)` to persist the link.
 
-Aprovar orçamento → `reservaEstoqueGateway.confirmarReservas(osId)` (synchronous HTTP; stock is decremented). Recusar → `estoqueComandosGateway.solicitarLiberacaoDeReservas(osId)` (asynchronous, via outbox; see "Asynchronous commands" below). Reservations live in the fiap-estoque database, not here.
+Aprovar orçamento → `AGUARDANDO_PAGAMENTO` + outbox `SOLICITAR_PAGAMENTO` (stock is decremented only after the payment is confirmed, by the `CONFIRMAR_BAIXA` command; the old synchronous `confirmarReservas` is no longer used by the OS). Recusar → `estoqueComandosGateway.solicitarLiberacaoDeReservas(osId)` (asynchronous, via outbox; see "Asynchronous commands" below). Reservations live in the fiap-estoque database, not here.
 
 **Use case flow for enviarOrcamento** (`POST /ordem-servico/orcamento/envio/{id}`, requires `ROLE_ATENDENTE`):
 1. Load `OrdemDeServico` → call `gravarEnvioOrcamento()` which delegates to `state.enviarOrcamento(this)` (only succeeds from `DIAGNOSTICO_CONCLUIDO`).

@@ -51,12 +51,6 @@ public class FalhasDeEstoqueSteps {
         estoque.stubForaDoAr();
     }
 
-    @Quando("o estoque volta a responder")
-    public void oEstoqueVoltaAResponder() {
-        estoque.stubReservaOk();
-        estoque.stubConfirmarELiberarOk();
-    }
-
     // ----------------------------------------------------------------- ações
 
     @Quando("o atendente tenta abrir uma OS com {int} unidades da peça {long} e {int} do insumo {long}")
@@ -94,12 +88,6 @@ public class FalhasDeEstoqueSteps {
                 .header("Authorization", "Bearer " + ordemDeServico.tokenMecanico())
                 .body("{\"quantidade\":" + quantidade + "}")
                 .when().put("/ordem-servico/" + ordemDeServico.ordemId() + "/pecas/" + pecaId);
-    }
-
-    @Quando("o atendente tenta aprovar o orçamento")
-    public void oAtendenteTentaAprovar() {
-        ultimaResposta = RestAssured.given().header("Authorization", "Bearer " + ordemDeServico.tokenAtendente())
-                .when().post("/ordem-servico/orcamento/aprovar/" + ordemDeServico.ordemId());
     }
 
     @Quando("o atendente recusa o orçamento")
@@ -141,12 +129,6 @@ public class FalhasDeEstoqueSteps {
         assertThat(jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM ordem_servico_peca WHERE ordem_servico_id = ? AND peca_id = ?",
                 Integer.class, ordemDeServico.ordemId(), pecaId)).isZero();
-    }
-
-    @Então("a baixa das reservas foi confirmada uma única vez com sucesso")
-    public void aBaixaFoiConfirmadaUmaUnicaVez() {
-        // Houve uma tentativa recusada (503) e uma aceita (204): só a aceita conta, então não há baixa dobrada.
-        assertThat(estoque.confirmacoesBemSucedidas(ordemDeServico.ordemId())).isEqualTo(1);
     }
 
     @Então("a liberação das reservas da OS ficou agendada para quando o estoque voltar")

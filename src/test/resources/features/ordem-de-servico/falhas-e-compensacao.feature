@@ -36,18 +36,26 @@ Funcionalidade: Falhas na integração com o estoque e compensação
     Então o pedido é recusado com o status 422 e a mensagem "Estoque insuficiente para realizar a operação"
     E a OS não tem a peça 11 vinculada
 
-  Cenário: Aprovação com o estoque fora do ar pode ser repetida sem baixar duas vezes
+  Cenário: Pagamento recusado cancela a OS e agenda a liberação das reservas
     Dado que o atendente abre uma OS com 2 unidades da peça 11 e 3 do insumo 21
     E o mecânico inicia e conclui o diagnóstico
     E o atendente envia o orçamento ao cliente
-    E que o estoque está fora do ar
-    Quando o atendente tenta aprovar o orçamento
-    Então o pedido é recusado com o status 503
-    E a OS está "AGUARDANDO_APROVACAO"
-    Quando o estoque volta a responder
     E o atendente aprova o orçamento
+    Quando a cobrança recusa o pagamento
+    Então a OS está "CANCELADA"
+    E a liberação das reservas da OS ficou agendada para quando o estoque voltar
+    E o pedido de baixa das reservas ainda não foi registrado
+
+  Cenário: Resposta repetida da cobrança não pede a baixa duas vezes
+    Dado que o atendente abre uma OS com 2 unidades da peça 11 e 3 do insumo 21
+    E o mecânico inicia e conclui o diagnóstico
+    E o atendente envia o orçamento ao cliente
+    E o atendente aprova o orçamento
+    E a cobrança confirma o pagamento
+    E o estoque confirma a baixa das reservas
+    Quando a cobrança confirma o pagamento
     Então a OS está "EM_EXECUCAO"
-    E a baixa das reservas foi confirmada uma única vez com sucesso
+    E o pedido de baixa das reservas foi registrado uma única vez para o estoque
 
   Cenário: Cancelamento não depende do estoque e agenda a liberação das reservas
     Dado que o atendente abre uma OS com 2 unidades da peça 11 e 3 do insumo 21

@@ -3,15 +3,17 @@ package com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico;
 import com.fiap.mecanica.ordemdeservico.core.domain.ordemdeservico.OrdemDeServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
-import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.PagamentoComandosGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 
 public class OrcamentoAprovadoViaAtendenteUseCase extends OrcamentoAprovadoOrdemDeServicoUseCase {
 
     public OrcamentoAprovadoViaAtendenteUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
-                                                ReservaEstoqueGateway reservaEstoqueGateway,
+                                                PagamentoComandosGateway pagamentoComandosGateway,
+                                                TransacaoGateway transacaoGateway,
                                                 NotificacaoGateway notificacaoGateway) {
-        super(ordemDeServicoGateway, reservaEstoqueGateway, notificacaoGateway);
+        super(ordemDeServicoGateway, pagamentoComandosGateway, transacaoGateway, notificacaoGateway);
     }
 
     public void aprovar(Long ordemDeServicoId) {

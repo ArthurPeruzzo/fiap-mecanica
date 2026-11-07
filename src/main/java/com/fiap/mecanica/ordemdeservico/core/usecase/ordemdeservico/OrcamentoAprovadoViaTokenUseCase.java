@@ -7,7 +7,8 @@ import com.fiap.mecanica.ordemdeservico.core.exception.LinkAprovacaoOrcamentoNao
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
-import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.PagamentoComandosGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 
 public class OrcamentoAprovadoViaTokenUseCase extends OrcamentoAprovadoOrdemDeServicoUseCase {
@@ -15,10 +16,11 @@ public class OrcamentoAprovadoViaTokenUseCase extends OrcamentoAprovadoOrdemDeSe
     private final LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway;
 
     public OrcamentoAprovadoViaTokenUseCase(OrdemDeServicoGateway ordemDeServicoGateway,
-                                            ReservaEstoqueGateway reservaEstoqueGateway,
+                                            PagamentoComandosGateway pagamentoComandosGateway,
+                                            TransacaoGateway transacaoGateway,
                                             NotificacaoGateway notificacaoGateway,
                                             LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway) {
-        super(ordemDeServicoGateway, reservaEstoqueGateway, notificacaoGateway);
+        super(ordemDeServicoGateway, pagamentoComandosGateway, transacaoGateway, notificacaoGateway);
         this.linkAprovacaoOrcamentoGateway = linkAprovacaoOrcamentoGateway;
     }
 

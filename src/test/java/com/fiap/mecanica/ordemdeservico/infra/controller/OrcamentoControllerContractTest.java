@@ -6,7 +6,7 @@ import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.EstoqueComandosGateway;
-import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.PagamentoComandosGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.resources.NoSecurityConfiguration;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
@@ -41,7 +41,7 @@ class OrcamentoControllerContractTest {
 
     @MockitoBean private OrdemDeServicoGateway ordemDeServicoGateway;
     @MockitoBean private CatalogoEstoqueGateway catalogoEstoqueGateway;
-    @MockitoBean private ReservaEstoqueGateway reservaEstoqueGateway;
+    @MockitoBean private PagamentoComandosGateway pagamentoComandosGateway;
     @MockitoBean private EstoqueComandosGateway estoqueComandosGateway;
     @MockitoBean private TransacaoGateway transacaoGateway;
     @MockitoBean private NotificacaoGateway notificacaoGateway;

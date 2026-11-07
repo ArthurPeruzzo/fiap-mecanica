@@ -8,4 +8,7 @@ public interface EstoqueComandosGateway {
 
     /** Pede ao estoque que devolva ao saldo tudo que está reservado para a ordem de serviço. */
     void solicitarLiberacaoDeReservas(Long ordemServicoId);
+
+    /** Pede ao estoque que transforme as reservas da ordem de serviço em baixa definitiva (pagamento aprovado). */
+    void solicitarConfirmacaoDeBaixa(Long ordemServicoId);
 }
