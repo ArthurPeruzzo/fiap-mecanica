@@ -346,6 +346,26 @@ Two validation patterns in use:
 
 Standard field-level constraints: `@NotBlank`, `@NotNull`, `@CPF`, `@CNPJ` (Hibernate Validator), `@Min`/`@Max`.
 
+## BDD (Cucumber)
+
+Executable specifications in Portuguese Gherkin, a **complement** to the JUnit integration tests (not a replacement): the integration
+tests cover one rule or edge case per method; the BDD tells a few end-to-end business flows step by step. Cucumber 8 on the JUnit
+Platform, with `cucumber-spring`.
+
+- `src/test/resources/features/**.feature` (`# language: pt`): `Dado`/`Quando`/`Então`. Today: `ordem-de-servico/ciclo-completo.feature`
+  (create → diagnóstico → orçamento → aprovar → executar → entregar, checking the estoque calls at each stage) and `ordem-de-servico/falhas-e-compensacao.feature` (estoque sem saldo/erro/timeout ao abrir a OS, vincular peça sem saldo, aprovar
+  com o estoque fora do ar e repetir sem baixa dupla, recusar com o estoque fora do ar deixando a liberação na outbox).
+- `src/test/java/com/fiap/mecanica/bdd/`: `BddRunnerTest` (`@Suite`, runs in every `mvn test`; reports in `target/cucumber-reports`,
+  uploaded as the `cucumber-report` artifact by `build-test.yml`), `CucumberSpringConfig` (`@CucumberContextConfiguration`, same
+  Testcontainers MySQL + WireMock estoque as the integration tests), `Hooks` (truncates tables and resets the WireMock per scenario —
+  the JUnit `@BeforeEach/@AfterEach` of `AbstractContainer` do NOT run under Cucumber) and the `*Steps` glue.
+- Steps talk to the app only through HTTP (REST Assured) and assert the estoque by what the monolith ASKED it (WireMock); the real
+  effect on the stock is only observable end-to-end against the deployed environment.
+- Shared test infra lives in public classes under `com.fiap.mecanica.resources` (`MassaDeTestes`, `EstoqueSimulado`, `BancoDeTestes`),
+  used by both `AbstractOrdemDeServicoIntegrationTest` (which only delegates, same signatures) and the BDD steps. Glue classes cannot
+  extend the Spring test base (an inherited `@SpringBootTest` is rejected), and helpers must NOT be `@Component` (the app's component
+  scan would pull them into every test context).
+
 ## Test profiles and structure
 
 | Profile | Purpose |

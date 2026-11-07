@@ -22,5 +22,13 @@ jobs:
       run: ./mvnw -B compile
     - name: Run tests
       run: ./mvnw -B test
+    # Evidência da Fase 4: relatório do BDD (Cucumber) com os cenários, passo a passo, em HTML e JSON.
+    - name: Publicar o relatório do BDD (Cucumber)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: cucumber-report
+        path: target/cucumber-reports
+        if-no-files-found: ignore
     - name: Package
       run: ./mvnw -B package -DskipTests
