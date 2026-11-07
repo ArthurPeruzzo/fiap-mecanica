@@ -255,6 +255,35 @@ Swagger UI, gerado automaticamente via SpringDoc OpenAPI.
 
 Os testes de integração usam Testcontainers e requerem Docker em execução.
 
+```bash
+./mvnw test                          # toda a suíte (unitários, contrato, integração e BDD)
+./mvnw test -Dtest=BddRunnerTest     # só o BDD
+```
+
+| Camada | Para que serve |
+|---|---|
+| Unitários | Regras de domínio e casos de uso isolados (Mockito) |
+| Contrato | Controllers com `@WebMvcTest` e `MockMvc` |
+| Integração | Aplicação completa com MySQL no Testcontainers e o `fiap-estoque` simulado em WireMock; uma regra ou caso de borda por método |
+| BDD | Fluxos de negócio de ponta a ponta, descritos em Gherkin em português (abaixo) |
+
+**Cobertura:** JaCoCo (`target/site/jacoco/index.html`). Medição de 06/11/2026: **97,9 % das linhas**, 97,3 % das instruções e 93,0 % dos branches, acima do mínimo de 80 %.
+
+### BDD (Cucumber)
+
+As especificações executáveis ficam em [`src/test/resources/features/`](src/test/resources/features/) e rodam em todo `mvn test` e no CI. São um **complemento** dos testes de integração, não uma substituição: contam os fluxos de negócio passo a passo, em linguagem que o negócio entende.
+
+| Feature | Cenários |
+|---|---|
+| [`ciclo-completo.feature`](src/test/resources/features/ordem-de-servico/ciclo-completo.feature) | OS aprovada é executada e entregue com a baixa do estoque: abertura com reserva, diagnóstico, orçamento (R$ 345 = 150 + 2×45 + 3×35), aprovação com pedido de baixa, execução, finalização e entrega |
+| [`falhas-e-compensacao.feature`](src/test/resources/features/ordem-de-servico/falhas-e-compensacao.feature) | Estoque sem saldo, erro interno e resposta perdida (com liberação da reserva) ao abrir a OS; vincular peça sem saldo; aprovar com o estoque fora do ar e repetir sem baixa dupla; recusar com o estoque fora do ar, com a liberação guardada na outbox |
+
+**Evidência:** a cada execução o Cucumber gera o relatório passo a passo em `target/cucumber-reports/cucumber.html` (e `cucumber.json`). No CI, ele fica como artefato **`cucumber-report`** do workflow `build-test.yml` (GitHub → Actions → execução → Artifacts).
+
+**Limite:** nestes cenários o `fiap-estoque` é simulado, então o BDD prova o que o monólito *pediu* ao estoque e em que ordem, não o efeito real no saldo. Esse efeito é conferido contra o ambiente implantado.
+
+A estrutura do código do BDD (runner, contexto Spring, hooks e passos) está descrita no [`CLAUDE.md`](CLAUDE.md).
+
 ## Documentação da Arquitetura
 
 A documentação arquitetural da Fase 3 — diagramas de componentes e de sequência, RFCs, ADRs, justificativa da escolha do banco e modelo de dados (ER) — fica em [`docs/`](docs/).
