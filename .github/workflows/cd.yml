@@ -320,6 +320,20 @@ jobs:
         else
           echo "::warning::Service fiap-estoque não existe ainda — /peca e /insumo não serão roteados nesta run. Rode o CD do repositório fiap-estoque e depois este workflow novamente."
         fi
+    # A rota /pagamentos vai para o ELB do fiap-cobranca (Service publicado pelo CD do repositorio fiap-cobranca).
+    # Ordem numa infra do zero: CD do estoque, CD da cobranca e depois este. Se a cobranca ainda nao existir, a checagem
+    # evita derrubar o deploy e a proxima execucao cria as rotas (mesmo padrao do estoque).
+    - name: Habilitar a rota de pagamentos somente se o Service da cobrança já existir
+      working-directory: .
+      run: |
+        HOST=$(kubectl get svc fiap-cobranca -n fiap-cobranca \
+          -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+        if [ -n "$HOST" ]; then
+          echo "Service fiap-cobranca encontrado — /pagamentos apontará para $HOST."
+          echo "TF_VAR_cobranca_elb_host=${HOST}" >> "$GITHUB_ENV"
+        else
+          echo "::warning::Service fiap-cobranca não existe ainda — /pagamentos não será roteado nesta run. Rode o CD do repositório fiap-cobranca e depois este workflow novamente."
+        fi
     - name: Terraform apply
       run: terraform apply -auto-approve
     - name: Capturar a URL do gateway

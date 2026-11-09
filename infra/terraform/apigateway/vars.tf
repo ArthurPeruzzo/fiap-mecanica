@@ -51,3 +51,16 @@ variable "estoque_elb_host" {
   type        = string
   default     = ""
 }
+
+variable "cobranca_elb_host" {
+  description = <<-EOT
+    Hostname do LoadBalancer do Service do fiap-cobranca (sem esquema e sem barra final). O Service e publicado
+    pelo CD do repositorio fiap-cobranca, em outro namespace; o job `apigw-apply` do cd.yml o descobre com kubectl
+    e passa via TF_VAR_cobranca_elb_host.
+
+    Default vazio de proposito (mesmo padrao de `estoque_elb_host`): enquanto estiver vazio, as rotas /pagamentos
+    nao sao criadas e este modulo nao depende de a cobranca ja estar no ar.
+  EOT
+  type        = string
+  default     = ""
+}

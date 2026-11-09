@@ -162,3 +162,54 @@ resource "aws_apigatewayv2_route" "estoque_filhos" {
   route_key = "ANY /${each.key}/{proxy+}"
   target    = "integrations/${aws_apigatewayv2_integration.estoque_filhos[each.key].id}"
 }
+
+# ---------------------------------------------------------------------------
+# fiap-cobranca — rotas de pagamento (/pagamentos).
+#
+# Mesmo desenho do estoque (ver acima): duas rotas por prefixo e a URI da integracao repete o prefixo. A cobranca
+# tambem recebe o comando de pagamento pelo broker, mas isso nao passa pelo gateway; aqui so a consulta e a decisao
+# (aprovar/recusar) do pagamento. O gateway repassa o header Authorization e quem valida o JWT (perfil ATENDENTE ou
+# ADMINISTRADOR) e a propria cobranca.
+# ---------------------------------------------------------------------------
+
+locals {
+  cobranca_prefixos = var.cobranca_elb_host != "" ? toset(["pagamentos"]) : toset([])
+}
+
+resource "aws_apigatewayv2_integration" "cobranca_raiz" {
+  for_each = local.cobranca_prefixos
+
+  api_id                 = aws_apigatewayv2_api.gateway.id
+  integration_type       = "HTTP_PROXY"
+  integration_method     = "ANY"
+  integration_uri        = "http://${var.cobranca_elb_host}/${each.key}"
+  payload_format_version = "1.0"
+  timeout_milliseconds   = 30000
+}
+
+resource "aws_apigatewayv2_integration" "cobranca_filhos" {
+  for_each = local.cobranca_prefixos
+
+  api_id                 = aws_apigatewayv2_api.gateway.id
+  integration_type       = "HTTP_PROXY"
+  integration_method     = "ANY"
+  integration_uri        = "http://${var.cobranca_elb_host}/${each.key}/{proxy}"
+  payload_format_version = "1.0"
+  timeout_milliseconds   = 30000
+}
+
+resource "aws_apigatewayv2_route" "cobranca_raiz" {
+  for_each = local.cobranca_prefixos
+
+  api_id    = aws_apigatewayv2_api.gateway.id
+  route_key = "ANY /${each.key}"
+  target    = "integrations/${aws_apigatewayv2_integration.cobranca_raiz[each.key].id}"
+}
+
+resource "aws_apigatewayv2_route" "cobranca_filhos" {
+  for_each = local.cobranca_prefixos
+
+  api_id    = aws_apigatewayv2_api.gateway.id
+  route_key = "ANY /${each.key}/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.cobranca_filhos[each.key].id}"
+}
