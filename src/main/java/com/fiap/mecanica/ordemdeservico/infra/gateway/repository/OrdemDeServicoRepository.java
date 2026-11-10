@@ -54,10 +54,11 @@ public interface OrdemDeServicoRepository extends JpaRepository<OrdemDeServicoEn
             ORDER BY
               CASE status
                 WHEN 'EM_EXECUCAO'           THEN 1
-                WHEN 'AGUARDANDO_APROVACAO'  THEN 2
-                WHEN 'EM_DIAGNOSTICO'        THEN 3
-                WHEN 'DIAGNOSTICO_CONCLUIDO' THEN 4
-                WHEN 'RECEBIDA'              THEN 5
+                WHEN 'AGUARDANDO_PAGAMENTO'  THEN 2
+                WHEN 'AGUARDANDO_APROVACAO'  THEN 3
+                WHEN 'EM_DIAGNOSTICO'        THEN 4
+                WHEN 'DIAGNOSTICO_CONCLUIDO' THEN 5
+                WHEN 'RECEBIDA'              THEN 6
               END ASC,
               data_criacao ASC
             """,

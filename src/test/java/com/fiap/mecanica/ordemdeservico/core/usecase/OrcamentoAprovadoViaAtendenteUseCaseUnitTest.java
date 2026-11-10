@@ -5,10 +5,12 @@ import com.fiap.mecanica.ordemdeservico.core.domain.servico.StatusServico;
 import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontradaException;
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
-import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.PagamentoComandosGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.OrcamentoAprovadoViaAtendenteUseCase;
 import com.fiap.mecanica.shared.exception.ErroAcessoBaseDeDadosException;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -35,10 +37,21 @@ class OrcamentoAprovadoViaAtendenteUseCaseUnitTest {
     private OrdemDeServicoGateway ordemDeServicoGateway;
 
     @Mock
-    private ReservaEstoqueGateway reservaEstoqueGateway;
+    private PagamentoComandosGateway pagamentoComandosGateway;
+
+    @Mock
+    private TransacaoGateway transacaoGateway;
 
     @Mock
     private NotificacaoGateway notificacaoGateway;
+
+    @BeforeEach
+    void executarTransacaoNaMesmaThread() {
+        Mockito.lenient().doAnswer(i -> {
+            ((Runnable) i.getArgument(0)).run();
+            return null;
+        }).when(transacaoGateway).executar(Mockito.any());
+    }
 
     private static final Long ORDEM_ID = 1L;
     private static final Long CLIENTE_ID = 10L;
@@ -77,26 +90,27 @@ class OrcamentoAprovadoViaAtendenteUseCaseUnitTest {
         var captor = ArgumentCaptor.forClass(OrdemDeServico.class);
         Mockito.verify(ordemDeServicoGateway).atualizar(captor.capture());
         var os = captor.getValue();
-        assertEquals(StatusOrdemDeServico.EM_EXECUCAO, os.getStatus());
+        assertEquals(StatusOrdemDeServico.AGUARDANDO_PAGAMENTO, os.getStatus());
         assertNotNull(os.getDataAprovacao());
-        Mockito.verify(reservaEstoqueGateway).confirmarReservas(ORDEM_ID);
+        Mockito.verify(pagamentoComandosGateway).solicitarPagamento(ORDEM_ID, CLIENTE_ID, new BigDecimal("150.00"));
+        Mockito.verify(notificacaoGateway).enviar(Mockito.any());
     }
 
     @Test
-    void shouldPropagarErroENaoNotificarQuandoGravacaoFalhaDepoisDeConfirmarReservas() {
+    void shouldPropagarErroENaoNotificarQuandoGravacaoFalha() {
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenReturn(Optional.of(ordemAguardandoAprovacao()));
         Mockito.doThrow(new ErroAcessoBaseDeDadosException()).when(ordemDeServicoGateway).atualizar(Mockito.any());
 
         assertThrows(ErroAcessoBaseDeDadosException.class,
                 () -> orcamentoAprovadoViaAtendenteUseCase.aprovar(ORDEM_ID));
 
-        Mockito.verify(reservaEstoqueGateway).confirmarReservas(ORDEM_ID);
+        Mockito.verify(pagamentoComandosGateway, Mockito.never()).solicitarPagamento(Mockito.any(), Mockito.any(), Mockito.any());
         Mockito.verifyNoInteractions(notificacaoGateway);
     }
 
     @Test
     void shouldPermitirRepetirAprovacaoDepoisDeFalhaNaGravacao() {
-        // A OS segue AGUARDANDO_APROVACAO no banco após a falha; o estoque trata confirmar como idempotente.
+        // A transação desfez tudo: a OS segue AGUARDANDO_APROVACAO no banco e nenhum pedido de pagamento ficou na outbox.
         Mockito.when(ordemDeServicoGateway.buscarPorId(ORDEM_ID)).thenAnswer(i -> Optional.of(ordemAguardandoAprovacao()));
         Mockito.doThrow(new ErroAcessoBaseDeDadosException()).doNothing()
                 .when(ordemDeServicoGateway).atualizar(Mockito.any());
@@ -105,7 +119,7 @@ class OrcamentoAprovadoViaAtendenteUseCaseUnitTest {
                 () -> orcamentoAprovadoViaAtendenteUseCase.aprovar(ORDEM_ID));
         orcamentoAprovadoViaAtendenteUseCase.aprovar(ORDEM_ID);
 
-        Mockito.verify(reservaEstoqueGateway, Mockito.times(2)).confirmarReservas(ORDEM_ID);
+        Mockito.verify(pagamentoComandosGateway, Mockito.times(1)).solicitarPagamento(ORDEM_ID, CLIENTE_ID, new BigDecimal("150.00"));
         Mockito.verify(ordemDeServicoGateway, Mockito.times(2)).atualizar(Mockito.any());
         Mockito.verify(notificacaoGateway, Mockito.times(1)).enviar(Mockito.any());
     }
@@ -150,6 +164,6 @@ class OrcamentoAprovadoViaAtendenteUseCaseUnitTest {
                 () -> orcamentoAprovadoViaAtendenteUseCase.aprovar(ORDEM_ID));
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
-        Mockito.verifyNoInteractions(reservaEstoqueGateway);
+        Mockito.verifyNoInteractions(pagamentoComandosGateway);
     }
 }

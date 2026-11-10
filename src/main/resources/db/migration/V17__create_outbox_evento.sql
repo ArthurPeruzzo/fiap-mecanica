@@ -3,6 +3,8 @@
 CREATE TABLE IF NOT EXISTS outbox_evento (
     id           CHAR(36)     NOT NULL,
     tipo         VARCHAR(60)  NOT NULL,
+    exchange     VARCHAR(100) NOT NULL,
+    routing_key  VARCHAR(100) NOT NULL,
     agregado_id  BIGINT       NOT NULL,
     payload      VARCHAR(2000) NOT NULL,
     criado_em    DATETIME(3)  NOT NULL,

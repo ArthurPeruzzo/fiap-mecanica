@@ -25,8 +25,13 @@ public abstract class OrcamentoRecusadoOrdemDeServicoUseCase {
 		this.notificacaoGateway = notificacaoGateway;
 	}
 
-	protected void recusar(OrdemDeServico ordemDeServico) {
+	/** Transição de cancelamento; a recusa do pagamento usa outra (ver {@link PagamentoRecusadoOrdemDeServicoUseCase}). */
+	protected void cancelar(OrdemDeServico ordemDeServico) {
 		ordemDeServico.cancelar();
+	}
+
+	protected void recusar(OrdemDeServico ordemDeServico) {
+		cancelar(ordemDeServico);
 		// O cancelamento não depende do estoque estar no ar: o comando de liberação fica na outbox, na mesma
 		// transação que grava a OS, e o relay o entrega ao estoque (idempotente) quando houver broker.
 		transacaoGateway.executar(() -> {

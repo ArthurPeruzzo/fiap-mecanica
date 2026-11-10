@@ -86,6 +86,28 @@ class OrcamentoRecusadoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServ
     }
 
     @Test
+    void shouldNaoCancelarOrdemAguardandoPagamentoEDeixarASagaDecidir() {
+        String tokenAtendente = obterTokenAtendente();
+        String tokenMecanico = obterTokenMecanico();
+        Long ordemId = criarOrdemAguardandoAprovacaoERetornarId(tokenAtendente, tokenMecanico);
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenAtendente)
+                .when().post("/ordem-servico/orcamento/aprovar/" + ordemId)
+                .then().statusCode(204);
+        outboxEventoRepository.deleteAll(); // descarta o SOLICITAR_PAGAMENTO: so interessa o que o cancelamento enviaria
+
+        RestAssured.given()
+                .header("Authorization", "Bearer " + tokenAtendente)
+                .when().post("/ordem-servico/orcamento/recusar/" + ordemId)
+                .then().statusCode(422);
+
+        OrdemDeServicoEntity ordem = ordemDeServicoRepository.findById(ordemId).orElseThrow();
+        Assertions.assertEquals(StatusOrdemDeServico.AGUARDANDO_PAGAMENTO, ordem.getStatus());
+        Assertions.assertNull(ordem.getDataCancelamento());
+        Assertions.assertEquals(0, outboxEventoRepository.count(), "nenhuma liberacao de reserva pode sair");
+    }
+
+    @Test
     void shouldRecusarOrcamentoSuccessfully() {
         String tokenAtendente = obterTokenAtendente();
         String tokenMecanico = obterTokenMecanico();

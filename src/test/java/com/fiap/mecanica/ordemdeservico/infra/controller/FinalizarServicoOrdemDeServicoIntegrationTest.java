@@ -39,6 +39,8 @@ class FinalizarServicoOrdemDeServicoIntegrationTest extends AbstractOrdemDeServi
                 .when().post("/ordem-servico/orcamento/aprovar/" + ordemId)
                 .then().statusCode(204);
 
+        concluirSagaDePagamento(ordemId);
+
         RestAssured.given()
                 .header("Authorization", "Bearer " + tokenMecanico)
                 .when().patch("/ordem-servico/" + ordemId + "/servicos/" + servicoId + "/iniciar")

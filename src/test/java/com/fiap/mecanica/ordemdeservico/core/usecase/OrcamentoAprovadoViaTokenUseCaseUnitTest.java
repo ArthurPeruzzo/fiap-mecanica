@@ -8,9 +8,11 @@ import com.fiap.mecanica.ordemdeservico.core.exception.OrdemDeServicoNaoEncontra
 import com.fiap.mecanica.ordemdeservico.core.exception.TransicaoDeStatusInvalidaException;
 import com.fiap.mecanica.ordemdeservico.core.gateway.LinkAprovacaoOrcamentoGateway;
 import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
-import com.fiap.mecanica.ordemdeservico.core.gateway.ReservaEstoqueGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.PagamentoComandosGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.OrcamentoAprovadoViaTokenUseCase;
 import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -38,13 +40,24 @@ class OrcamentoAprovadoViaTokenUseCaseUnitTest {
     private OrdemDeServicoGateway ordemDeServicoGateway;
 
     @Mock
-    private ReservaEstoqueGateway reservaEstoqueGateway;
+    private PagamentoComandosGateway pagamentoComandosGateway;
+
+    @Mock
+    private TransacaoGateway transacaoGateway;
 
     @Mock
     private NotificacaoGateway notificacaoGateway;
 
     @Mock
     private LinkAprovacaoOrcamentoGateway linkAprovacaoOrcamentoGateway;
+
+    @BeforeEach
+    void executarTransacaoNaMesmaThread() {
+        Mockito.lenient().doAnswer(i -> {
+            ((Runnable) i.getArgument(0)).run();
+            return null;
+        }).when(transacaoGateway).executar(Mockito.any());
+    }
 
     private static final Long ORDEM_ID = 1L;
     private static final Long CLIENTE_ID = 10L;
@@ -115,13 +128,13 @@ class OrcamentoAprovadoViaTokenUseCaseUnitTest {
 
         var ordemCaptor = ArgumentCaptor.forClass(OrdemDeServico.class);
         Mockito.verify(ordemDeServicoGateway).atualizar(ordemCaptor.capture());
-        assertEquals(StatusOrdemDeServico.EM_EXECUCAO, ordemCaptor.getValue().getStatus());
+        assertEquals(StatusOrdemDeServico.AGUARDANDO_PAGAMENTO, ordemCaptor.getValue().getStatus());
         assertNotNull(ordemCaptor.getValue().getDataAprovacao());
 
         var linkCaptor = ArgumentCaptor.forClass(LinkAprovacaoOrcamento.class);
         Mockito.verify(linkAprovacaoOrcamentoGateway).atualizar(linkCaptor.capture());
         assertNotNull(linkCaptor.getValue().getDataUtilizacao());
-        Mockito.verify(reservaEstoqueGateway).confirmarReservas(ORDEM_ID);
+        Mockito.verify(pagamentoComandosGateway).solicitarPagamento(ORDEM_ID, CLIENTE_ID, new BigDecimal("150.00"));
     }
 
     @Test
@@ -189,7 +202,7 @@ class OrcamentoAprovadoViaTokenUseCaseUnitTest {
 
         Mockito.verify(ordemDeServicoGateway, Mockito.never()).atualizar(Mockito.any());
         Mockito.verify(linkAprovacaoOrcamentoGateway, Mockito.never()).atualizar(Mockito.any());
-        Mockito.verifyNoInteractions(reservaEstoqueGateway);
+        Mockito.verifyNoInteractions(pagamentoComandosGateway);
     }
 
     @Test

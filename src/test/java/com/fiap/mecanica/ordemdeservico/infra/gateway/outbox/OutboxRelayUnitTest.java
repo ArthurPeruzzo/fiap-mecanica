@@ -48,12 +48,12 @@ class OutboxRelayUnitTest {
         }).when(transactionTemplate).executeWithoutResult(Mockito.any());
         // Tracer/Propagator NOOP: estes testes cobrem a publicação; o trace é coberto no teste de integração.
         relay = new OutboxRelay(outboxEventoRepository, rabbitTemplate, transactionTemplate,
-                Tracer.NOOP, Propagator.NOOP, EXCHANGE, ROUTING_KEY, 50, Duration.ofMillis(200));
+                Tracer.NOOP, Propagator.NOOP, 50, Duration.ofMillis(200));
     }
 
     private OutboxEventoEntity pendente(String id, long ordemId) {
         return OutboxEventoEntity.builder()
-                .id(id).tipo("LIBERAR_RESERVA").agregadoId(ordemId)
+                .id(id).tipo("LIBERAR_RESERVA").exchange(EXCHANGE).routingKey(ROUTING_KEY).agregadoId(ordemId)
                 .payload("{\"ordemServicoId\":" + ordemId + "}")
                 .criadoEm(LocalDateTime.now()).build();
     }

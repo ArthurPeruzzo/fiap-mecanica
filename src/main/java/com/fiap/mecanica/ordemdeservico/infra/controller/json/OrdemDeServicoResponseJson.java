@@ -34,7 +34,7 @@ public class OrdemDeServicoResponseJson {
 
     @Schema(description = "Status atual da ordem de serviço", example = "EM_DIAGNOSTICO",
             allowableValues = {"RECEBIDA", "EM_DIAGNOSTICO", "DIAGNOSTICO_CONCLUIDO",
-                    "AGUARDANDO_APROVACAO", "EM_EXECUCAO", "FINALIZADA", "ENTREGUE", "CANCELADA"})
+                    "AGUARDANDO_APROVACAO", "AGUARDANDO_PAGAMENTO", "EM_EXECUCAO", "FINALIZADA", "ENTREGUE", "CANCELADA"})
     private String status;
 
     @Schema(description = "Descrição do problema relatado pelo cliente")

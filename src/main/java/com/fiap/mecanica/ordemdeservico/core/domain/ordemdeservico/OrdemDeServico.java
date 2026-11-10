@@ -83,8 +83,18 @@ public class OrdemDeServico {
         state.cancelar(this);
     }
 
+    /** Resposta "pagamento recusado" da cobrança: cancela a OS que aguardava o pagamento. */
+    public void cancelarPorPagamentoRecusado() {
+        state.cancelarPorPagamentoRecusado(this);
+    }
+
     public void aprovar() {
         state.aprovar(this);
+    }
+
+    /** Pagamento e baixa do estoque concluídos: a saga termina e os serviços podem começar. */
+    public void iniciarExecucao() {
+        state.iniciarExecucao(this);
     }
 
     public void entregar() {

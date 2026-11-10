@@ -31,7 +31,7 @@ import java.util.concurrent.TimeUnit;
  * precisa tolerar duplicatas.
  * <p>
  * A publicação é um span filho do trace gravado na linha (coluna traceparent) e a mensagem sai com o contexto desse span
- * no cabeçalho traceparent: o consumidor no estoque continua o trace da requisição que gerou o comando.
+ * no cabeçalho traceparent: o consumidor (estoque ou cobranca) continua o trace da requisição que gerou o comando.
  */
 @Component
 @Slf4j
@@ -43,8 +43,6 @@ public class OutboxRelay {
     private final TransactionTemplate transactionTemplate;
     private final Tracer tracer;
     private final Propagator propagator;
-    private final String exchange;
-    private final String routingKeyLiberarReserva;
     private final int tamanhoDoLote;
     private final Duration timeoutDaConfirmacao;
 
@@ -53,8 +51,6 @@ public class OutboxRelay {
                        TransactionTemplate transactionTemplate,
                        Tracer tracer,
                        Propagator propagator,
-                       @Value("${estoque.mensageria.exchange}") String exchange,
-                       @Value("${estoque.mensageria.routing-key.liberar-reserva}") String routingKeyLiberarReserva,
                        @Value("${outbox.relay.lote:50}") int tamanhoDoLote,
                        @Value("${outbox.relay.timeout-confirmacao:5s}") Duration timeoutDaConfirmacao) {
         this.outboxEventoRepository = outboxEventoRepository;
@@ -62,8 +58,6 @@ public class OutboxRelay {
         this.transactionTemplate = transactionTemplate;
         this.tracer = tracer;
         this.propagator = propagator;
-        this.exchange = exchange;
-        this.routingKeyLiberarReserva = routingKeyLiberarReserva;
         this.tamanhoDoLote = tamanhoDoLote;
         this.timeoutDaConfirmacao = timeoutDaConfirmacao;
     }
@@ -113,7 +107,7 @@ public class OutboxRelay {
         String nome = "outbox publish " + evento.getTipo();
         Span span = evento.getTraceparent() == null
                 ? tracer.nextSpan().name(nome)
-                : propagator.extract(Map.of(EstoqueComandosOutboxGateway.TRACEPARENT, evento.getTraceparent()), Map::get)
+                : propagator.extract(Map.of(OutboxRegistrador.TRACEPARENT, evento.getTraceparent()), Map::get)
                         .name(nome).kind(Span.Kind.PRODUCER).start();
         return span.tag("outbox.evento.id", evento.getId())
                 .tag("outbox.agregado.id", String.valueOf(evento.getAgregadoId()));
@@ -131,14 +125,14 @@ public class OutboxRelay {
                 (propriedades, chave, valor) -> propriedades.setHeader(chave, valor));
 
         CorrelationData correlacao = new CorrelationData(evento.getId());
-        rabbitTemplate.send(exchange, routingKeyLiberarReserva, mensagem, correlacao);
+        rabbitTemplate.send(evento.getExchange(), evento.getRoutingKey(), mensagem, correlacao);
 
         CorrelationData.Confirm confirmacao = correlacao.getFuture().get(timeoutDaConfirmacao.toMillis(), TimeUnit.MILLISECONDS);
         if (!confirmacao.ack()) {
             throw new IllegalStateException("broker recusou a mensagem: " + confirmacao.reason());
         }
         if (correlacao.getReturned() != null) {
-            // Confirmada pelo broker, mas sem fila ligada à chave (o estoque ainda não declarou a fila).
+            // Confirmada pelo broker, mas sem fila ligada à chave (o consumidor ainda não declarou a fila).
             throw new IllegalStateException("mensagem nao roteada: " + correlacao.getReturned().getReplyText());
         }
     }

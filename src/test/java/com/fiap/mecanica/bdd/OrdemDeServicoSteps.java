@@ -4,7 +4,13 @@ import com.fiap.mecanica.gestao.infra.gateway.repository.AtendenteRepository;
 import com.fiap.mecanica.gestao.infra.gateway.repository.ClienteRepository;
 import com.fiap.mecanica.gestao.infra.gateway.repository.MecanicoRepository;
 import com.fiap.mecanica.gestao.infra.gateway.repository.VeiculoRepository;
+import com.fiap.mecanica.ordemdeservico.core.gateway.EstoqueComandosGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.gateway.TransacaoGateway;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.ServicoRepository;
+import com.fiap.mecanica.ordemdeservico.infra.mensageria.RespostaDaSagaMensagem;
+import com.fiap.mecanica.ordemdeservico.infra.mensageria.RespostasDaSagaListener;
+import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.resources.EstoqueSimulado;
 import com.fiap.mecanica.resources.MassaDeTestes;
 import com.fiap.mecanica.shared.seguranca.infra.config.SecurityConfiguration;
@@ -39,6 +45,10 @@ public class OrdemDeServicoSteps {
     @Autowired private VeiculoRepository veiculoRepository;
     @Autowired private ServicoRepository servicoRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private OrdemDeServicoGateway ordemDeServicoGateway;
+    @Autowired private EstoqueComandosGateway estoqueComandosGateway;
+    @Autowired private TransacaoGateway transacaoGateway;
+    @Autowired private NotificacaoGateway notificacaoGateway;
 
     private final EstoqueSimulado estoque = new EstoqueSimulado(CucumberSpringConfig.estoqueSimulado());
 
@@ -119,6 +129,23 @@ public class OrdemDeServicoSteps {
         post("/ordem-servico/orcamento/aprovar/" + ordemId, tokenAtendente);
     }
 
+    // As respostas da saga chegam por mensagem (o RabbitMQ está fora dos cenários); os passos as entregam ao mesmo
+    // listener que consome a fila ordemservico.respostas em produção.
+    @Quando("a cobrança confirma o pagamento")
+    public void aCobrancaConfirmaOPagamento() {
+        listener().receber(new RespostaDaSagaMensagem(ordemId), "pagamento.confirmado");
+    }
+
+    @Quando("a cobrança recusa o pagamento")
+    public void aCobrancaRecusaOPagamento() {
+        listener().receber(new RespostaDaSagaMensagem(ordemId), "pagamento.recusado");
+    }
+
+    @Quando("o estoque confirma a baixa das reservas")
+    public void oEstoqueConfirmaABaixa() {
+        listener().receber(new RespostaDaSagaMensagem(ordemId), "baixa.confirmada");
+    }
+
     @Quando("o mecânico executa e finaliza o serviço")
     public void oMecanicoExecutaEFinalizaOServico() {
         patch("/ordem-servico/" + ordemId + "/servicos/" + servicoId + "/iniciar", tokenMecanico);
@@ -155,19 +182,33 @@ public class OrdemDeServicoSteps {
         assertThat(total).isEqualByComparingTo(BigDecimal.valueOf(valor));
     }
 
-    @Então("o estoque ainda não recebeu o pedido de baixa das reservas")
-    public void oEstoqueAindaNaoRecebeuABaixa() {
-        assertThat(estoque.pedidosDeConfirmacao(ordemId)).isZero();
+    @Então("um pedido de pagamento de {int} reais foi registrado para a cobrança")
+    public void umPedidoDePagamentoFoiRegistrado(int valor) {
+        var payloads = jdbcTemplate.queryForList(
+                "SELECT payload FROM outbox_evento WHERE agregado_id = ? AND tipo = 'SOLICITAR_PAGAMENTO' AND exchange = 'cobranca.comandos'",
+                String.class, ordemId);
+        assertThat(payloads).hasSize(1);
+        assertThat(payloads.getFirst()).contains("\"ordemServicoId\":" + ordemId).contains("\"valor\":" + valor + ".00");
     }
 
-    @Então("o estoque foi instruído a confirmar a baixa das reservas da OS")
-    public void oEstoqueFoiInstruidoAConfirmar() {
-        assertThat(estoque.pedidosDeConfirmacao(ordemId)).isEqualTo(1);
+    @Então("o pedido de baixa das reservas ainda não foi registrado")
+    public void oPedidoDeBaixaAindaNaoFoiRegistrado() {
+        assertThat(pedidosNaOutbox("CONFIRMAR_BAIXA")).isZero();
+    }
+
+    @Então("o pedido de baixa das reservas foi registrado uma única vez para o estoque")
+    public void oPedidoDeBaixaFoiRegistradoUmaVez() {
+        assertThat(pedidosNaOutbox("CONFIRMAR_BAIXA")).isEqualTo(1);
     }
 
     @Então("o estoque não recebeu nenhum pedido de liberação das reservas")
     public void oEstoqueNaoRecebeuLiberacao() {
         assertThat(estoque.pedidosDeLiberacao(ordemId)).isZero();
+    }
+
+    @Então("nenhum pedido de liberação das reservas foi registrado")
+    public void nenhumPedidoDeLiberacaoFoiRegistrado() {
+        assertThat(pedidosNaOutbox("LIBERAR_RESERVA")).isZero();
     }
 
     // Estado do cenário compartilhado com os passos de falha (as classes de cola são beans do cenário e se injetam).
@@ -178,6 +219,16 @@ public class OrdemDeServicoSteps {
     Long clienteId() { return clienteId; }
     Long veiculoId() { return veiculoId; }
     Long servicoId() { return servicoId; }
+
+    private RespostasDaSagaListener listener() {
+        return new RespostasDaSagaListener(ordemDeServicoGateway, estoqueComandosGateway, transacaoGateway,
+                notificacaoGateway, "pagamento.confirmado", "pagamento.recusado", "baixa.confirmada", "reserva.liberada");
+    }
+
+    private int pedidosNaOutbox(String tipo) {
+        return jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM outbox_evento WHERE agregado_id = ? AND tipo = ?", Integer.class, ordemId, tipo);
+    }
 
     private void patch(String caminho, String token) {
         RestAssured.given().header("Authorization", "Bearer " + token).when().patch(caminho).then().statusCode(204);

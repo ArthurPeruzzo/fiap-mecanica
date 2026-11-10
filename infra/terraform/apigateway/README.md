@@ -80,6 +80,7 @@ ainda dispensa o `aws_apigatewayv2_deployment`.
 | `app_elb_host` | `""` | Hostname do ELB do Service K8s, sem esquema e sem barra final. Vazio ⇒ a rota da app não é criada e o gateway responde 404 em tudo |
 | `auth_lambda_name` | `""` | Nome da Lambda de autenticação. Ainda não consumido — reservado para a Fase 3 |
 | `estoque_elb_host` | `""` | Hostname do ELB do Service do `fiap-estoque` (publicado pelo CD do repositório dele). Vazio ⇒ `/peca` e `/insumo` não são roteados |
+| `cobranca_elb_host` | `""` | Hostname do ELB do Service do `fiap-cobranca` (publicado pelo CD do repositório dele). Vazio ⇒ `/pagamentos` não é roteado |
 
 Os defaults vazios são deliberados: permitem `terraform plan` no CI (em Pull Request não existe
 ELB) e permitem criar o gateway numa infra do zero, antes do primeiro deploy no Kubernetes.
@@ -241,3 +242,8 @@ O `apigw-apply` descobre o ELB com `kubectl get svc fiap-estoque -n fiap-estoque
 `TF_VAR_estoque_elb_host`. **Ordem recomendada numa infra do zero: o CD do estoque roda antes do deste repositório** (o
 estoque só depende do cluster), e as rotas nascem na primeira passada. Se a ordem for invertida, o job avisa e as rotas só
 aparecem numa execução seguinte, depois de o CD do estoque ter criado o Service.
+
+A rota `/pagamentos` (fiap-cobranca) segue o mesmo desenho: o `apigw-apply` descobre o ELB com
+`kubectl get svc fiap-cobranca -n fiap-cobranca` e o passa como `TF_VAR_cobranca_elb_host`. Ordem numa infra do zero:
+CD do estoque, CD da cobrança e por último este. Se a cobrança ainda não existir, o job avisa e a rota só nasce na
+execução seguinte. O JWT (perfil ATENDENTE ou ADMINISTRADOR) é validado pela própria cobrança.

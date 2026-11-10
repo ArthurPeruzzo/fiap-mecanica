@@ -10,6 +10,7 @@ public class OrdemDeServicoStateFactory {
             case EM_DIAGNOSTICO       -> new OrdemDeServicoEmDiagnosticoState();
             case DIAGNOSTICO_CONCLUIDO -> new OrdemDeServicoDiagnosticoConcluidoState();
             case AGUARDANDO_APROVACAO -> new OrdemDeServicoAguardandoAprovacaoState();
+            case AGUARDANDO_PAGAMENTO -> new OrdemDeServicoAguardandoPagamentoState();
             case CANCELADA            -> new OrdemDeServicoCanceladaState();
             case EM_EXECUCAO          -> new OrdemDeServicoEmExecucaoState();
             case FINALIZADA           -> new OrdemDeServicoFinalizadaState();

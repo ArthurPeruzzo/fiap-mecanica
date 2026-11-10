@@ -17,3 +17,8 @@ output "estoque_rotas_ativas" {
   description = "Indica se as rotas /peca e /insumo (fiap-estoque) foram criadas. Falso enquanto estoque_elb_host estiver vazio."
   value       = var.estoque_elb_host != ""
 }
+
+output "cobranca_rotas_ativas" {
+  description = "Indica se as rotas /pagamentos (fiap-cobranca) foram criadas. Falso enquanto cobranca_elb_host estiver vazio."
+  value       = var.cobranca_elb_host != ""
+}

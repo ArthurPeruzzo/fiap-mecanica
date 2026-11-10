@@ -13,3 +13,4 @@ consequências. Uma decisão registrada aqui só muda com um novo ADR que a subs
 | [0006](0006-jwt-hs256-segredo-compartilhado.md) | JWT HS256 stateless com segredo compartilhado; autorização na aplicação | Aceito |
 | [0007](0007-token-de-servico-entre-microsservicos.md) | Token de serviço (JWT HS256, segredo próprio, gerado por chamada) entre monólito e estoque | Aceito |
 | [0008](0008-mensageria-rabbitmq-outbox.md) | Comandos assíncronos ao estoque via RabbitMQ com outbox transacional (substitui parcialmente o 0002) | Aceito |
+| [0009](0009-saga-de-pagamento-orquestrada.md) | Saga de pagamento orquestrada pela OS: estado AGUARDANDO_PAGAMENTO, outbox genérica e fila única de respostas | Aceito |

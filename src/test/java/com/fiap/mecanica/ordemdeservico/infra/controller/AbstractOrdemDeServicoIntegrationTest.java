@@ -4,6 +4,8 @@ import com.fiap.mecanica.gestao.infra.gateway.repository.AtendenteRepository;
 import com.fiap.mecanica.gestao.infra.gateway.repository.ClienteRepository;
 import com.fiap.mecanica.gestao.infra.gateway.repository.MecanicoRepository;
 import com.fiap.mecanica.gestao.infra.gateway.repository.VeiculoRepository;
+import com.fiap.mecanica.ordemdeservico.core.gateway.OrdemDeServicoGateway;
+import com.fiap.mecanica.ordemdeservico.core.usecase.ordemdeservico.BaixaConfirmadaOrdemDeServicoUseCase;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.LinkAprovacaoOrcamentoRepository;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.OrdemDeServicoRepository;
 import com.fiap.mecanica.ordemdeservico.infra.gateway.repository.ServicoRepository;
@@ -45,6 +47,15 @@ abstract class AbstractOrdemDeServicoIntegrationTest extends AbstractContainer {
     @Autowired protected LinkAprovacaoOrcamentoRepository linkAprovacaoOrcamentoRepository;
     @Autowired protected ServicoRepository servicoRepository;
     @Autowired protected JdbcTemplate jdbcTemplate;
+    @Autowired protected OrdemDeServicoGateway ordemDeServicoGateway;
+
+    /**
+     * Aprovar o orçamento só leva a OS a AGUARDANDO_PAGAMENTO; quem a leva a EM_EXECUCAO é a resposta do estoque no fim da
+     * saga (mensagem, sem broker nestes testes). Este atalho aplica essa última resposta pelo mesmo caso de uso do listener.
+     */
+    protected void concluirSagaDePagamento(Long ordemId) {
+        new BaixaConfirmadaOrdemDeServicoUseCase(ordemDeServicoGateway).executar(ordemId);
+    }
 
     /** Ids do catálogo do fiap-estoque simulado: o monólito não guarda peça nem insumo. */
     protected static final Long PECA_ID = EstoqueSimulado.PECA_ID;

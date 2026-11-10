@@ -28,6 +28,7 @@
 	</scm>
 	<properties>
 		<java.version>25</java.version>
+		<jacoco.cobertura.minima>0.80</jacoco.cobertura.minima>
 		<cucumber.version>8.0.4</cucumber.version>
 	</properties>
 	<dependencies>
@@ -290,6 +291,28 @@
 						<goals>
 							<goal>report</goal>
 						</goals>
+					</execution>
+					<!-- Exigencia da Fase 4: cobertura minima de 80% por servico. Reprova o build (e o CI) abaixo disso. -->
+					<execution>
+						<id>check</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<rule>
+									<element>BUNDLE</element>
+									<limits>
+										<limit>
+											<counter>LINE</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>${jacoco.cobertura.minima}</minimum>
+										</limit>
+									</limits>
+								</rule>
+							</rules>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>
