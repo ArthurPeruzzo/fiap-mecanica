@@ -75,7 +75,7 @@ Flyway migrations: `src/main/resources/db/migration/V{version}__{description}.sq
 
 ## Architecture
 
-The project follows **Clean Architecture** with a strict split between `core` (domain) and `infra` (framework/DB/HTTP). There are four top-level business modules alongside `shared`:
+The project follows **Clean Architecture** with a strict split between `core` (domain) and `infra` (framework/DB/HTTP). There are two business modules (`gestao` and `ordemdeservico`) alongside `shared`; the estoque is the separate `fiap-estoque` service and the payment is the separate `fiap-cobranca` service:
 
 ```
 com.fiap.mecanica
@@ -319,7 +319,7 @@ Peças, insumos and reservations belong to the separate `fiap-estoque` service (
 
 The `RestClient`s are built by `RestClientFactory` with the Spring `ObservationRegistry` (`RestClient.builder().observationRegistry(...)`), which creates one span per HTTP call and injects the W3C `traceparent` header, so a request's trace continues in the fiap-estoque (`PropagacaoDeTraceEstoqueIntegrationTest`). A plain `RestClient.builder()` is NOT instrumented — Boot 4 does not auto-configure `RestClient.Builder` here. The trace also crosses the outbox/RabbitMQ (below).
 
-Vincular/desvincular peça/insumo reserve first and persist the link second; `ReservaComCompensacao` (same package as the use cases) re-reserves the item's **previous total** if persisting (or an uncertain reservation) fails — safe because `reservarItens` is absolute and idempotent. A 422 (insufficient stock) is not compensated (the estoque rejects atomically). Aprovar calls the estoque (`confirmar`, idempotent) before saving the OS, so a failed save is fixed by retrying.
+Vincular/desvincular peça/insumo reserve first and persist the link second; `ReservaComCompensacao` (same package as the use cases) re-reserves the item's **previous total** if persisting (or an uncertain reservation) fails — safe because `reservarItens` is absolute and idempotent. A 422 (insufficient stock) is not compensated (the estoque rejects atomically). Aprovar does NOT call the estoque: it saves `AGUARDANDO_PAGAMENTO` and the `SOLICITAR_PAGAMENTO` command in the outbox in one transaction; the stock is only confirmed later, by the `CONFIRMAR_BAIXA` command after the payment is confirmed (ADR-0009).
 
 ### Asynchronous commands (RabbitMQ + transactional outbox)
 
@@ -330,7 +330,7 @@ Recusar orçamento (atendente or token) no longer calls the estoque: the cancell
 
 **Trace through the outbox.** The relay runs on another thread, with no request, so the request's trace would be lost there. `EstoqueComandosOutboxGateway` stores the current span's W3C `traceparent` in `outbox_evento.traceparent` (migration `V19`); `OutboxRelay` opens an `outbox publish` span as a **child** of that stored context (`Propagator.extract`) and injects its `traceparent` into the AMQP message headers; the estoque enables `spring.rabbitmq.listener.simple.observation-enabled`, so the consumer span continues the same trace. Result: request → `outbox publish` → consumer in the estoque is ONE trace. Tests: `OutboxRelayRabbitIntegrationTest`, `PropagacaoDeTraceOutboxIntegrationTest` (and `LiberarReservaListenerIntegrationTest` in the estoque).
 
-Consequences to keep in mind: `204` on recusar means "cancelled", not "stock released" (eventual consistency; the error direction is safe — availability is temporarily understated, never overstated); the broker being down never fails the request, rows pile up in `outbox_evento`; `management.health.rabbit.enabled=false` keeps the probes up when the broker is down. `aprovar` stays synchronous on purpose (its failure direction would be unsafe). The broker user can only publish to `estoque.comandos` (see `docker/rabbitmq/init.sh`). Spring Boot 4 names the retry property `max-retries` (retries after the first attempt), not `max-attempts`.
+Consequences to keep in mind: `204` on recusar means "cancelled", not "stock released" (eventual consistency; the error direction is safe — availability is temporarily understated, never overstated); the broker being down never fails the request, rows pile up in `outbox_evento`; `management.health.rabbit.enabled=false` keeps the probes up when the broker is down. `aprovar` no longer calls the estoque: it only writes the payment command (ADR-0009), and the stock is confirmed after the payment, by command. The broker user (`mecanica`) owns `ordemservico.*` (it reads the `ordemservico.respostas` queue) and can publish only to `estoque.comandos` and `cobranca.comandos`; `estoque` and `cobranca` publish to `ordemservico.eventos` (see `docker/rabbitmq/init.sh`). Spring Boot 4 names the retry property `max-retries` (retries after the first attempt), not `max-attempts`.
 
 ### Security filter flow
 
@@ -355,8 +355,8 @@ tests cover one rule or edge case per method; the BDD tells a few end-to-end bus
 Platform, with `cucumber-spring`.
 
 - `src/test/resources/features/**.feature` (`# language: pt`): `Dado`/`Quando`/`Então`. Today: `ordem-de-servico/ciclo-completo.feature`
-  (create → diagnóstico → orçamento → aprovar → executar → entregar, checking the estoque calls at each stage) and `ordem-de-servico/falhas-e-compensacao.feature` (estoque sem saldo/erro/timeout ao abrir a OS, vincular peça sem saldo, aprovar
-  com o estoque fora do ar e repetir sem baixa dupla, recusar com o estoque fora do ar deixando a liberação na outbox).
+  (create → diagnóstico → orçamento → aprovar → executar → entregar, checking the estoque calls at each stage) and `ordem-de-servico/falhas-e-compensacao.feature` (estoque sem saldo/erro/timeout ao abrir a OS, vincular peça sem saldo, pagamento
+  recusado cancelando a OS e agendando a liberação das reservas, resposta repetida da cobrança sem pedir a baixa duas vezes, cancelar sem depender do estoque).
 - `src/test/java/com/fiap/mecanica/bdd/`: `BddRunnerTest` (`@Suite`, runs in every `mvn test`; reports in `target/cucumber-reports`,
   uploaded as the `cucumber-report` artifact by `build-test.yml`), `CucumberSpringConfig` (`@CucumberContextConfiguration`, same
   Testcontainers MySQL + WireMock estoque as the integration tests), `Hooks` (truncates tables and resets the WireMock per scenario —

@@ -1,6 +1,6 @@
 # Manifests Kubernetes — fiap-mecanica
 
-Assume um cluster EKS já provisionado (repositório `fiap-mecanica-infra-k8s`) e o RDS MySQL já aplicado (repositório `fiap-mecanica-infra-db`). A aplicação roda no cluster; o banco fica fora (RDS gerenciado).
+Assume um cluster EKS já provisionado (repositório `fiap-mecanica-infra-k8s`) e o RDS MySQL já aplicado (repositório `fiap-mecanica-infra-db`). A aplicação roda no cluster; o banco fica fora (RDS gerenciado). A aplicação **não sobe sem o RabbitMQ** (`RABBITMQ_*` são obrigatórias), que é criado pelo CD do `fiap-estoque` no namespace `mensageria`; o deploy completo também depende do estoque e da cobrança (ver a ordem de deploy no README principal).
 
 ## Fluxo (macro)
 
@@ -16,13 +16,15 @@ graph TB
             P2["Pod"]
         end
         HPA["HPA<br/>CPU 70% · 1–4 pods"]
-        CM["ConfigMap<br/>DB_URL · URLs"]
-        SEC["Secret<br/>DB cred · JWT"]
+        CM["ConfigMap<br/>DB_URL · URLs · estoque · broker"]
+        SEC["Secret<br/>DB cred · JWT · broker · New Relic"]
         MS["Metrics Server"]
     end
 
-    subgraph NR["namespace newrelic"]
-        NRB["nri-bundle<br/>(infra + kube-state-metrics + Fluent Bit)"]
+    subgraph OUT["Outros namespaces do cluster"]
+        EST["fiap-estoque<br/>(namespace fiap-estoque)"]
+        MQ["RabbitMQ<br/>(namespace mensageria)"]
+        NRB["nri-bundle<br/>(namespace newrelic)"]
     end
 
     ECR["ECR"]
@@ -37,6 +39,8 @@ graph TB
     HPA -->|escala| DEP
     ECR -->|imagem| DEP
     P1 -->|JDBC| RDS
+    P1 -->|"HTTP + token de serviço"| EST
+    P1 <-->|"outbox · respostas da saga"| MQ
     P1 -.->|traces/métricas OTLP| NEWRELIC
     NRB -->|CPU/mem dos nós/pods + logs| NEWRELIC
 ```
@@ -59,10 +63,11 @@ graph TB
 2. **Preencher o `secret.yaml`** (nunca commitar — está no `.gitignore`):
    ```bash
    cp k8s/secret.yaml.example k8s/secret.yaml
-   # editar k8s/secret.yaml com DB_USERNAME / DB_PASSWORD / JWT_SECRET reais
+   # editar k8s/secret.yaml com os valores reais: DB_USERNAME, DB_PASSWORD, JWT_SECRET, SERVICE_JWT_SECRET,
+   # RABBITMQ_PASSWORD (o usuário é `mecanica`) e NEW_RELIC_LICENSE_KEY
    ```
 
-   Ajuste o `DB_URL` no `configmap.yaml` com o endpoint atual do RDS — ele **muda a cada recriação do banco**, por isso não fica fixado no repo. Pegue o valor atual com `terraform output -raw db_endpoint` no repositório `fiap-mecanica-infra-db`.
+   Ajuste o `DB_URL` no `configmap.yaml` com o endpoint atual do RDS (e confira `ESTOQUE_URL`, `RABBITMQ_HOST`/`PORT`/`VHOST` e `PUBLIC_BASE_URL`, que já vêm com os valores internos do cluster) — ele **muda a cada recriação do banco**, por isso não fica fixado no repo. Pegue o valor atual com `terraform output -raw db_endpoint` no repositório `fiap-mecanica-infra-db`.
 
    Pré-requisito: o cluster precisa ter o **metrics-server** e a integração da New Relic já instalados — isso agora é feito pelo CD do repositório `fiap-mecanica-infra-k8s`, não daqui (ver "Metrics Server" e "New Relic" abaixo).
 
@@ -111,8 +116,8 @@ instalação: ver o README de `fiap-mecanica-infra-k8s`.
 | Arquivo | O que é |
 |---|---|
 | `namespace.yaml` | Namespace `fiap-mecanica` |
-| `configmap.yaml` | Config não sensível (DB_URL, URLs de orçamento) — referência para uso manual; o `cd.yml` gera o seu próprio ConfigMap dinamicamente, não aplica este arquivo |
-| `secret.yaml.example` | Template do Secret (credenciais DB, JWT). Copiar para `secret.yaml` e preencher — não commitar |
+| `configmap.yaml` | Config não sensível (DB_URL, URLs de orçamento, `ESTOQUE_URL`, `RABBITMQ_*`, `PUBLIC_BASE_URL`) — referência para uso manual; o `cd.yml` gera o seu próprio ConfigMap dinamicamente, não aplica este arquivo |
+| `secret.yaml.example` | Template do Secret (credenciais do DB, `JWT_SECRET`, `SERVICE_JWT_SECRET`, credenciais do broker e chave da New Relic). Copiar para `secret.yaml` e preencher — não commitar |
 | `deployment.yaml` | Deployment da app, probes de liveness/readiness via Actuator, requests/limits de CPU/memória |
 | `service.yaml` | Service `LoadBalancer`, expõe a porta 80 → 8080. É o alvo da integração `HTTP_PROXY` do API Gateway — o hostname do ELB é gerado pela AWS e **muda a cada recriação do Service**, por isso o `cd.yml` o descobre em runtime e repassa ao módulo `infra/terraform/apigateway` |
 | `hpa.yaml` | HorizontalPodAutoscaler (CPU 70%, 1–4 réplicas) |

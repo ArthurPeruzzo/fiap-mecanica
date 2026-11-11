@@ -58,13 +58,15 @@ decidido segura a OS e a reserva, e não há estorno depois de um pagamento conf
 - Spring Data JPA + Hibernate · Flyway · Lombok
 - SpringDoc OpenAPI (Swagger UI)
 - Micrometer + OpenTelemetry (exportação OTLP) · logs estruturados em JSON (formato ECS)
-- Testcontainers · MySQL 8.4
+- Spring AMQP · RabbitMQ (comandos e respostas da saga, com outbox transacional)
+- Testcontainers · MySQL 8.4 (Docker Compose e testes; o RDS na AWS é MySQL 8.0)
 
 **Plataforma**
 
 - Docker · Kubernetes (AWS EKS) com HorizontalPodAutoscaler
 - AWS API Gateway (HTTP API v2) · AWS Lambda (Node.js + TypeScript — repositório `fiap-mecanica-lambda`)
-- Amazon RDS for MySQL
+- Amazon RDS for MySQL (mecanica e estoque) · Amazon DynamoDB (cobrança)
+- RabbitMQ no cluster (namespace `mensageria`, StatefulSet com disco EBS), mantido pelo CD do `fiap-estoque`
 - Terraform (um root module por repositório de infra)
 - New Relic (APM via OTLP, integração Kubernetes `nri-bundle`, alertas e dashboards)
 - GitHub Actions (CI/CD)
@@ -74,24 +76,47 @@ decidido segura a OS e a reserva, e não há estorno depois de um pagamento conf
 ```mermaid
 graph TD
     Cli["Cliente / Swagger / Postman"]
-    APIGW["AWS API Gateway<br/>HTTP API v2 · ANY /{proxy+}"]
+    APIGW["AWS API Gateway<br/>HTTP API v2"]
     Lambda["AWS Lambda<br/>auth por CPF · repo fiap-mecanica-lambda"]
 
-    subgraph EKS["AWS EKS · namespace fiap-mecanica"]
-        ELB["Service LoadBalancer (ELB)<br/>:80 → 8080"]
-        Pods["Deployment · Pods<br/>HPA 1–4 (CPU 70%)"]
+    subgraph EKS["AWS EKS"]
+        subgraph NSM["namespace fiap-mecanica"]
+            ELB["Service LoadBalancer<br/>:80 → 8080"]
+            Pods["fiap-mecanica<br/>HPA 1–4 (CPU 70%)<br/>orquestra a saga"]
+        end
+        subgraph NSE["namespace fiap-estoque"]
+            ELBE["Service LoadBalancer<br/>:80 → 8081"]
+            PodsE["fiap-estoque<br/>HPA 1–3"]
+        end
+        subgraph NSC["namespace fiap-cobranca"]
+            ELBC["Service LoadBalancer<br/>:80 → 8082"]
+            PodsC["fiap-cobranca<br/>HPA 1–3"]
+        end
+        subgraph NSQ["namespace mensageria"]
+            MQ["RabbitMQ<br/>StatefulSet + disco EBS · vhost fiap"]
+        end
         NRI["nri-bundle<br/>infra K8s + logs"]
     end
 
-    RDS[("Amazon RDS<br/>MySQL")]
+    RDS[("RDS MySQL 8.0<br/>mecanica")]
+    RDSE[("RDS MySQL 8.4<br/>estoque")]
+    DDB[("DynamoDB<br/>cobranca-pagamento")]
     NR(["New Relic<br/>traces · métricas · logs · alertas"])
 
     Cli -->|HTTPS| APIGW
     APIGW -->|"HTTP_PROXY (ANY /{proxy+})"| ELB --> Pods
+    APIGW -->|"/peca · /insumo"| ELBE --> PodsE
+    APIGW -->|"/pagamentos"| ELBC --> PodsC
     APIGW -->|"AWS_PROXY (POST /auth/cliente)"| Lambda
     Lambda -->|GET /authenticate/cliente/status| ELB
+    Pods -->|"HTTP + token de serviço<br/>catálogo e reserva"| PodsE
+    Pods <-->|"comandos (outbox) e respostas"| MQ
+    PodsE <-->|"consome comandos, responde"| MQ
+    PodsC <-->|"consome comandos, responde"| MQ
     Pods -->|JDBC| RDS
-    Pods -.->|OTLP| NR
+    PodsE -->|JDBC| RDSE
+    PodsC -->|AWS SDK| DDB
+    Pods & PodsE & PodsC -.->|OTLP| NR
     NRI -.->|CPU/mem de nós e pods · logs| NR
 ```
 
@@ -121,6 +146,8 @@ A Fase 3 exige a infraestrutura dividida em quatro repositórios, cada um com CI
 
 Na Fase 4 entram mais dois repositórios, de microsserviço: **`fiap-estoque`** (RDS próprio, RabbitMQ no cluster, ECR, manifestos e pipeline) e **`fiap-cobranca`** (tabela DynamoDB, ECR, manifestos e pipeline). Eles dependem só do cluster, não do banco deste repositório.
 
+Existe ainda o **`fiap-mecanica-gestao`**, extração em andamento de clientes e veículos (estratégia *strangler fig*, passo 1). **Não faz parte do ambiente validado:** o API Gateway não roteia para ele, o monólito continua dono de clientes e veículos, e o repositório ainda não tem análise Sonar nem gate de cobertura. Os três serviços da Fase 4 são `fiap-mecanica`, `fiap-estoque` e `fiap-cobranca`.
+
 **Dependência entre os states Terraform** (leitura via `terraform_remote_state` — mesmo bucket S3, chaves distintas):
 
 ```
@@ -144,13 +171,14 @@ Duas formas de obter um token JWT (HS256):
 
 O token vai no header `Authorization: Bearer <token>` nas demais requisições. O token de cliente dá acesso a `GET /ordem-servico/minhas-ordens`.
 
-O gateway apenas **roteia** (`ANY /{proxy+}` → ELB via `HTTP_PROXY`, header `Authorization` repassado intacto); a autorização por rota e perfil continua inteiramente na aplicação (`SecurityConfiguration` + `UserAuthenticationFilter`). Os trade-offs desta estratégia serão registrados em [`docs/`](docs/).
+O gateway apenas **roteia** (`ANY /{proxy+}` → ELB via `HTTP_PROXY`, header `Authorization` repassado intacto); a autorização por rota e perfil continua inteiramente na aplicação (`SecurityConfiguration` + `UserAuthenticationFilter`). Os trade-offs desta estratégia estão registrados no [ADR-0006](docs/adr/0006-jwt-hs256-segredo-compartilhado.md) e no [RFC-0003](docs/rfc/0003-estrategia-de-autenticacao.md).
 
 ## Observabilidade
 
 - **Traces e métricas** da aplicação são exportados via **OTLP** para a New Relic (Micrometer + OpenTelemetry). Métricas de negócio: `os.criadas`, `os.duracao{fase}`.
 - **Consumo do cluster** (CPU/memória de nós e pods) e **logs** chegam pela integração Kubernetes da New Relic (`nri-bundle`), instalada pelo CD do `fiap-mecanica-infra-k8s`.
-- **Logs estruturados em JSON** (formato ECS), com `trace.id` / `span.id` para correlação com os traces.
+- **Logs estruturados em JSON** (formato ECS), com `traceId` / `spanId` (campos de topo) para correlação com os traces.
+- **Trace distribuído entre os serviços:** o `traceparent` W3C segue nas chamadas HTTP ao estoque e atravessa a outbox e o RabbitMQ (o relay grava e reenvia o contexto da requisição; os listeners abrem o span do consumo como filho dele). Aprovar o orçamento (mecanica → cobrança) e decidir o pagamento (cobrança → mecanica → estoque) são duas requisições, então cada OS gera **dois traces**, cada um passando pelos serviços envolvidos. Os logs de cada pod carregam o mesmo `traceId`, o que permite seguir a OS entre eles (`kubectl logs ... | grep <traceId>`).
 - **Dashboards** (Terraform, `infra/terraform/aws/newrelic-dashboards.tf`):
   - *Observabilidade de Negócio* — volume diário de OS, tempo médio por fase (diagnóstico / execução / entrega), taxa de erro, erros por rota, falhas de acesso ao banco.
   - *Performance e Disponibilidade* — latência das APIs (p50/p90/p95/p99), uptime do healthcheck, CPU/memória dos pods.
@@ -231,7 +259,7 @@ As migrations do Flyway rodam automaticamente na inicialização e criam todas a
 
 ## Deploy
 
-**Produção — automático.** Cada `pull request` para a `main` dos repositórios dispara o **CI** (`ci.yml`: `verify` com testes, BDD e cobertura mínima de 80%, análise do SonarCloud com Quality Gate, build da imagem e `terraform plan`, sem aplicar nada). O merge dispara o **CD** (`cd.yml`), que faz o deploy na AWS, **sem repetir os testes**: a `main` é protegida e só aceita merge de pull request atualizado e com o check `build-test` verde, inclusive para administradores.
+**Produção — automático.** Cada `pull request` para a `main` dos repositórios dispara o **CI** (`ci.yml`: `verify` com testes, BDD e cobertura mínima de 80%, análise do SonarCloud com Quality Gate, build da imagem e `terraform plan`, sem aplicar nada). O merge dispara o **CD** (`cd.yml`), que faz o deploy na AWS, **sem repetir os testes**: em todos os repositórios a `main` é protegida e só aceita merge de pull request atualizado e com os checks obrigatórios verdes, inclusive para administradores (sem push direto nem force push): `build-test` e `terraform-plan` nos serviços e na Lambda (a mecanica só exige `build-test`), `terraform-plan` nos repositórios de infraestrutura e `build-test` no `fiap-mecanica-gestao`.
 
 CD deste repositório, na ordem de execução:
 
@@ -267,7 +295,7 @@ A migration `V16` carrega um conjunto de dados iniciais com clientes, veículos,
 
 ## Documentação da API
 
-Swagger UI, gerado automaticamente via SpringDoc OpenAPI.
+Swagger UI, gerado automaticamente via SpringDoc OpenAPI. Cada serviço tem o seu: o do `fiap-estoque` (porta 8081) e o do `fiap-cobranca` (porta 8082) ficam em `/swagger-ui.html` do próprio serviço, acessível pelo ELB do respectivo Service (o API Gateway só roteia `/peca`, `/insumo` e `/pagamentos`, não a documentação deles).
 
 - **Local:** `http://localhost:8080/swagger-ui.html`
 - **Produção:** a porta de entrada é o **API Gateway**, com URL estável entre deploys. Descubra a URL atual com:
