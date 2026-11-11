@@ -2,7 +2,7 @@
 
 API REST para gestão de uma oficina mecânica, desenvolvida como projeto acadêmico na FIAP. O sistema cobre o ciclo completo de uma ordem de serviço — da abertura ao diagnóstico, orçamento, aprovação, execução e entrega — com reserva de estoque de peças e insumos (microsserviço `fiap-estoque`) e autenticação baseada em perfis de acesso.
 
-Este é o repositório da **aplicação principal** (Fase 3): além do código da API, contém a infraestrutura específica da aplicação (ECR, API Gateway e alertas/dashboards New Relic) e o pipeline que builda, testa e faz o deploy no cluster Kubernetes. VPC/EKS, o banco gerenciado e a Function Lambda de autenticação vivem em [três repositórios separados](#estrutura-em-4-repositórios).
+Este é o repositório da **aplicação principal** (Fases 3 e 4): além do código da API, que **orquestra a saga de pagamento** da ordem de serviço, contém a infraestrutura específica da aplicação (ECR, API Gateway e alertas/dashboards New Relic) e o pipeline que faz o deploy no cluster Kubernetes. VPC/EKS, o banco gerenciado e a Function Lambda de autenticação vivem em [três repositórios separados](#estrutura-em-4-repositórios), e os microsserviços `fiap-estoque` e `fiap-cobranca` têm repositório, banco e pipeline próprios ([Fase 4](#fase-4--microsserviços-e-saga-de-pagamento)).
 
 ## Objetivos
 
@@ -10,6 +10,7 @@ Este é o repositório da **aplicação principal** (Fase 3): além do código d
 - Controlar o ciclo de vida de ordens de serviço
 - Reservar e liberar estoque de peças e insumos ao vincular/desvincular itens de ordens, delegando ao microsserviço `fiap-estoque`
 - Restringir operações por perfil: administrador, atendente, mecânico e cliente
+- Orquestrar a saga de pagamento da OS (cobrança, depois baixa do estoque) com compensação em caso de falha, em parceria com `fiap-cobranca` e `fiap-estoque`
 
 ### Fase 3 — Objetivo desta etapa
 
@@ -19,6 +20,34 @@ Partindo da Fase 2 (Clean Architecture no código, containerização via Docker,
 - **Autenticação serverless por CPF**: uma AWS Lambda valida o CPF do cliente, confirma o cadastro na base de dados e devolve um JWT para consumo das rotas protegidas.
 - **Observabilidade ponta a ponta** com New Relic: traces e métricas via OTLP, consumo de CPU/memória do cluster, healthchecks, alertas e dashboards de negócio.
 - **Infraestrutura separada em 4 repositórios**, cada um com CI/CD próprio e deploy automático.
+
+### Fase 4 — Microsserviços e saga de pagamento
+
+O sistema passou a três microsserviços independentes, cada um com repositório, infraestrutura, pipeline e banco próprios:
+
+| Serviço | Responsabilidade | Banco |
+|---|---|---|
+| `fiap-mecanica` (este) | Ordem de serviço, clientes, veículos, orçamento e **orquestração da saga** | MySQL (RDS) |
+| `fiap-estoque` | Peças, insumos, reservas e baixa de estoque | MySQL (RDS próprio) |
+| `fiap-cobranca` | Pagamento da ordem de serviço | DynamoDB (NoSQL) |
+
+Nenhum serviço acessa o banco de outro. A comunicação é **síncrona** (HTTP, com token de serviço, ADR-0007) onde a resposta é
+necessária na hora (consultar catálogo e reservar estoque ao abrir ou alterar a OS) e **assíncrona** (RabbitMQ, comandos e respostas,
+ADR-0008) para o fluxo de pagamento e de compensação.
+
+**Estratégia da saga: orquestrada** (decisão e alternativas em [ADR-0008](docs/adr/0008-mensageria-rabbitmq-outbox.md) e
+[ADR-0009](docs/adr/0009-saga-de-pagamento-orquestrada.md)). Esta aplicação, dona do estado da OS, manda **comandos** e reage às
+**respostas**; os outros serviços não conhecem o ciclo de vida da OS (na coreografia o estoque teria de reagir a eventos da OS). Cada
+comando passa por uma *outbox* gravada na mesma transação da mudança de estado, então nenhum comando se perde se o broker cair.
+
+1. Aprovar o orçamento move a OS para `AGUARDANDO_PAGAMENTO` e enfileira `pagamento.solicitar` para a cobrança.
+2. A cobrança grava o pagamento `PENDENTE`; quando ele é decidido, responde `pagamento.confirmado` ou `pagamento.recusado`.
+3. Pagamento confirmado: a OS pede ao estoque a baixa das reservas; `baixa.confirmada` leva a OS a `EM_EXECUCAO` (fim da saga).
+4. Pagamento recusado: a OS vai para `CANCELADA` e a reserva do estoque é liberada (`reserva.liberada` encerra a compensação).
+
+Cobra-se primeiro e baixa-se o estoque depois, então nenhuma falha exige estorno: a compensação é sempre liberar a reserva e cancelar a OS.
+Respostas repetidas ou atrasadas são ignoradas (idempotência) e mensagens inválidas vão para a DLQ. Riscos aceitos: pagamento que nunca é
+decidido segura a OS e a reserva, e não há estorno depois de um pagamento confirmado.
 
 ## Stack
 
@@ -90,6 +119,8 @@ A Fase 3 exige a infraestrutura dividida em quatro repositórios, cada um com CI
 | **`fiap-mecanica-infra-db`** | Amazon RDS for MySQL — instância, subnet group e security group. |
 | **`fiap-mecanica-lambda`** | Function Lambda de autenticação de cliente por CPF (Node.js + TypeScript) + seu Terraform. |
 
+Na Fase 4 entram mais dois repositórios, de microsserviço: **`fiap-estoque`** (RDS próprio, RabbitMQ no cluster, ECR, manifestos e pipeline) e **`fiap-cobranca`** (tabela DynamoDB, ECR, manifestos e pipeline). Eles dependem só do cluster, não do banco deste repositório.
+
 **Dependência entre os states Terraform** (leitura via `terraform_remote_state` — mesmo bucket S3, chaves distintas):
 
 ```
@@ -97,7 +128,7 @@ infra-k8s  ◄──  infra-db  ◄──  app-infra / apigateway
                                lambda (state próprio, independente)
 ```
 
-**Ordem de deploy numa infra do zero:** `infra-k8s` → `infra-db` → `lambda` → `fiap-mecanica`, esperando cada CD ficar verde antes do próximo. Como a Lambda já está no ar quando o `fiap-mecanica` roda, a rota `POST /auth/cliente` é criada na primeira passada. Não há gatilho automático entre os repositórios — cada CD dispara no push da própria `main`. (Só é preciso re-executar o CD do `fiap-mecanica` se ele rodar **antes** de a Lambda existir — o job `apigw-apply` detecta e avisa.)
+**Ordem de deploy numa infra do zero:** `infra-k8s` → (`infra-db`, `lambda` e `fiap-estoque`, que podem rodar em paralelo) → `fiap-cobranca` (precisa do broker e do usuário criados pelo CD do estoque) → `fiap-mecanica`, esperando cada CD ficar verde antes do próximo. Como a Lambda, o estoque e a cobrança já estão no ar quando o `fiap-mecanica` roda, as rotas `POST /auth/cliente`, `/peca`, `/insumo` e `/pagamentos` são criadas na primeira passada. Não há gatilho automático entre os repositórios — cada CD dispara no push da própria `main`. (Só é preciso re-executar o CD do `fiap-mecanica` se ele rodar **antes** de a Lambda, do estoque ou da cobrança existirem — o job `apigw-apply` detecta e avisa.)
 
 ## Autenticação
 
@@ -160,8 +191,9 @@ O `.env.example` já traz valores padrão (`root`/`root`) suficientes para rodar
 | `SERVICE_JWT_SECRET` | Chave do token de serviço enviado ao `fiap-estoque`. Base64URL, mínimo 32 bytes, **diferente** do `JWT_SECRET` e igual à do estoque (ver [ADR-0007](docs/adr/0007-token-de-servico-entre-microsservicos.md)) |
 | `RABBITMQ_ADMIN_USER` / `RABBITMQ_ADMIN_PASSWORD` | Administrador do broker (container `rabbitmq`); só o script de inicialização usa |
 | `RABBITMQ_VHOST` | Virtual host do broker (padrão `fiap`) |
-| `RABBITMQ_USERNAME` / `RABBITMQ_PASSWORD` | Usuário desta aplicação no broker (só publica no exchange `estoque.comandos`) |
+| `RABBITMQ_USERNAME` / `RABBITMQ_PASSWORD` | Usuário desta aplicação no broker (publica em `estoque.comandos` e `cobranca.comandos` e é dono da fila de respostas `ordemservico.respostas`) |
 | `RABBITMQ_ESTOQUE_USERNAME` / `RABBITMQ_ESTOQUE_PASSWORD` | Usuário do `fiap-estoque` no broker; o serviço `rabbitmq-init` o cria, e o estoque usa o mesmo par em `RABBITMQ_USERNAME`/`RABBITMQ_PASSWORD` do `.env` dele. Use valores alfanuméricos |
+| `RABBITMQ_COBRANCA_USERNAME` / `RABBITMQ_COBRANCA_PASSWORD` | Usuário do `fiap-cobranca` no broker; o `rabbitmq-init` o cria e a cobrança usa o mesmo par no `.env` dela |
 
 > O Docker Compose carrega o `.env` automaticamente por estar no mesmo diretório do `docker-compose.yml` — não é preciso passar nenhuma flag adicional.
 
@@ -176,7 +208,7 @@ docker compose up
 
 A aplicação ficará disponível em `http://localhost:8080`.
 
-O `docker compose` também sobe o **RabbitMQ** (`localhost:5672`; painel de gerenciamento em `http://localhost:15672`, com o usuário `RABBITMQ_ADMIN_USER`) e executa o serviço de uso único `rabbitmq-init`, que cria o virtual host e os usuários de menor privilégio. O broker é compartilhado com o `fiap-estoque`, que se conecta em `localhost:5672`. Quando um orçamento é recusado, a liberação do estoque segue por mensageria (ver [ADR-0008](docs/adr/0008-mensageria-rabbitmq-outbox.md)); se o broker ou o estoque estiverem fora do ar, o cancelamento da OS não é afetado e o comando é entregue quando voltarem.
+O `docker compose` também sobe o **RabbitMQ** (`localhost:5672`; painel de gerenciamento em `http://localhost:15672`, com o usuário `RABBITMQ_ADMIN_USER`) e executa o serviço de uso único `rabbitmq-init`, que cria o virtual host e os usuários de menor privilégio. O broker é compartilhado com o `fiap-estoque` e o `fiap-cobranca`, que se conectam em `localhost:5672`. Quando um orçamento é recusado, a liberação do estoque segue por mensageria (ver [ADR-0008](docs/adr/0008-mensageria-rabbitmq-outbox.md)); se o broker ou o estoque estiverem fora do ar, o cancelamento da OS não é afetado e o comando é entregue quando voltarem.
 
 O MySQL ficará acessível no host em `localhost:3307` (útil para conectar com DBeaver ou outro cliente SQL). Com os valores padrão do `.env.example`:
 
@@ -199,7 +231,7 @@ As migrations do Flyway rodam automaticamente na inicialização e criam todas a
 
 ## Deploy
 
-**Produção — automático.** Cada `pull request` para a `main` de qualquer um dos 4 repositórios dispara o **CI** (`ci.yml`: build + testes + `terraform plan`, sem aplicar nada). O merge dispara o **CD** (`cd.yml`), que faz o deploy na AWS. A branch `main` é protegida — merge só via pull request.
+**Produção — automático.** Cada `pull request` para a `main` dos repositórios dispara o **CI** (`ci.yml`: `verify` com testes, BDD e cobertura mínima de 80%, análise do SonarCloud com Quality Gate, build da imagem e `terraform plan`, sem aplicar nada). O merge dispara o **CD** (`cd.yml`), que faz o deploy na AWS, **sem repetir os testes**: a `main` é protegida e só aceita merge de pull request atualizado e com o check `build-test` verde, inclusive para administradores.
 
 CD deste repositório, na ordem de execução:
 
@@ -209,11 +241,11 @@ CD deste repositório, na ordem de execução:
 | `docker-build-push` | Builda a imagem versionada (versão do `pom.xml`) e publica no ECR. Falha se a tag já existir — faça o bump da versão antes do merge. |
 | `newrelic-apply` | `terraform apply` de `infra/terraform/aws` — alertas e dashboards New Relic; descobre a URL do API Gateway para o monitor de uptime. |
 | `k8s-deploy` | `kubectl apply` de namespace/secret/configmap/deployment/service/hpa, `kubectl set image` com a versão publicada e aguarda o rollout. Gera o ConfigMap com o `DB_URL` real (endpoint do RDS lido do job anterior). |
-| `apigw-apply` | `terraform apply` de `infra/terraform/apigateway` — roda por último porque a integração `HTTP_PROXY` precisa do hostname do ELB, criado no `k8s-deploy`. Habilita a rota `POST /auth/cliente` se a Lambda já existir. |
+| `apigw-apply` | `terraform apply` de `infra/terraform/apigateway` — roda por último porque a integração `HTTP_PROXY` precisa do hostname do ELB, criado no `k8s-deploy`. Habilita `POST /auth/cliente` se a Lambda já existir e as rotas `/peca`, `/insumo` e `/pagamentos` se os Services do estoque e da cobrança já existirem. |
 
 **Deploy manual / infra do zero:** ver os READMEs específicos — [`k8s/README.md`](k8s/README.md), [`infra/terraform/app-infra/README.md`](infra/terraform/app-infra/README.md), [`infra/terraform/apigateway/README.md`](infra/terraform/apigateway/README.md), [`infra/terraform/aws/README.md`](infra/terraform/aws/README.md) — e os repositórios `fiap-mecanica-infra-k8s`, `fiap-mecanica-infra-db` e `fiap-mecanica-lambda`.
 
-**GitHub Secrets** (por repositório): credenciais AWS (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` — temporárias, rotacionam a cada sessão), além de `JWT_SECRET`, `NEW_RELIC_*` e `TF_VAR_DB_*` conforme o repo. O script `scripts/refresh-aws-secrets.sh` (na raiz do workspace) publica os secrets nos 4 repositórios de uma vez.
+**GitHub Secrets** (por repositório): credenciais AWS (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` — temporárias, rotacionam a cada sessão), além de `JWT_SECRET`, `SONAR_TOKEN` (análise do SonarCloud, nos 3 serviços), `NEW_RELIC_*` e `TF_VAR_DB_*` conforme o repo. O script `scripts/refresh-aws-secrets.sh` (na raiz do workspace) publica os secrets AWS nos 6 repositórios de uma vez.
 
 ## Usuários padrão
 
@@ -231,7 +263,7 @@ Use o token retornado no header `Authorization: Bearer <token>` nas demais requi
 
 ## Dados de exemplo
 
-A migration `V14` carrega um conjunto de dados iniciais com clientes, veículos, peças, insumos, serviços e ordens de serviço em todos os status possíveis, prontos para exploração imediata da API.
+A migration `V16` carrega um conjunto de dados iniciais com clientes, veículos, peças, insumos, serviços e ordens de serviço em todos os status possíveis, prontos para exploração imediata da API.
 
 ## Documentação da API
 
@@ -256,7 +288,8 @@ Swagger UI, gerado automaticamente via SpringDoc OpenAPI.
 Os testes de integração usam Testcontainers e requerem Docker em execução.
 
 ```bash
-./mvnw test                          # toda a suíte (unitários, contrato, integração e BDD)
+./mvnw verify                        # toda a suíte (unitários, contrato, integração e BDD) + relatório e gate de cobertura
+./mvnw test                          # só os testes, sem o gate
 ./mvnw test -Dtest=BddRunnerTest     # só o BDD
 ```
 
@@ -267,7 +300,7 @@ Os testes de integração usam Testcontainers e requerem Docker em execução.
 | Integração | Aplicação completa com MySQL no Testcontainers e o `fiap-estoque` simulado em WireMock; uma regra ou caso de borda por método |
 | BDD | Fluxos de negócio de ponta a ponta, descritos em Gherkin em português (abaixo) |
 
-**Cobertura:** JaCoCo (`target/site/jacoco/index.html`). Medição de 06/11/2026: **97,9 % das linhas**, 97,3 % das instruções e 93,0 % dos branches, acima do mínimo de 80 %.
+**Cobertura:** JaCoCo (`target/site/jacoco/index.html`). Medição de 10/11/2026: **97,5 % das linhas** (2.359 de 2.420), 96,8 % das instruções e 93,6 % dos branches, acima do mínimo de 80 %, que o `./mvnw verify` aplica (`jacoco:check`) e que reprova o CI abaixo disso. O resumo aparece em cada execução e o relatório HTML é publicado como artefato `jacoco-report`.
 
 ### BDD (Cucumber)
 
@@ -275,18 +308,18 @@ As especificações executáveis ficam em [`src/test/resources/features/`](src/t
 
 | Feature | Cenários |
 |---|---|
-| [`ciclo-completo.feature`](src/test/resources/features/ordem-de-servico/ciclo-completo.feature) | OS aprovada é executada e entregue com a baixa do estoque: abertura com reserva, diagnóstico, orçamento (R$ 345 = 150 + 2×45 + 3×35), aprovação com pedido de baixa, execução, finalização e entrega |
-| [`falhas-e-compensacao.feature`](src/test/resources/features/ordem-de-servico/falhas-e-compensacao.feature) | Estoque sem saldo, erro interno e resposta perdida (com liberação da reserva) ao abrir a OS; vincular peça sem saldo; aprovar com o estoque fora do ar e repetir sem baixa dupla; recusar com o estoque fora do ar, com a liberação guardada na outbox |
+| [`ciclo-completo.feature`](src/test/resources/features/ordem-de-servico/ciclo-completo.feature) | OS aprovada é paga, executada e entregue com a baixa do estoque: abertura com reserva, diagnóstico, orçamento (R$ 345 = 150 + 2×45 + 3×35), aprovação com pedido de pagamento à cobrança, confirmação do pagamento, baixa do estoque (uma única vez), execução, finalização e entrega |
+| [`falhas-e-compensacao.feature`](src/test/resources/features/ordem-de-servico/falhas-e-compensacao.feature) | Estoque sem saldo, erro interno e resposta perdida (com liberação da reserva) ao abrir a OS; vincular peça sem saldo; pagamento recusado cancela a OS e agenda a liberação das reservas; resposta repetida da cobrança não pede a baixa duas vezes; cancelamento não depende do estoque |
 
 **Evidência:** a cada execução o Cucumber gera o relatório passo a passo em `target/cucumber-reports/cucumber.html` (e `cucumber.json`). No CI, ele fica como artefato **`cucumber-report`** do workflow `build-test.yml` (GitHub → Actions → execução → Artifacts).
 
-**Limite:** nestes cenários o `fiap-estoque` é simulado, então o BDD prova o que o monólito *pediu* ao estoque e em que ordem, não o efeito real no saldo. Esse efeito é conferido contra o ambiente implantado.
+**Limite:** nestes cenários o `fiap-estoque` e o `fiap-cobranca` são simulados, então o BDD prova o que o monólito *pediu* a eles e em que ordem, não o efeito real no saldo nem no pagamento. Esse efeito é conferido contra o ambiente implantado (ver `scripts/validacao/` na raiz do workspace).
 
 A estrutura do código do BDD (runner, contexto Spring, hooks e passos) está descrita no [`CLAUDE.md`](CLAUDE.md).
 
 ## Qualidade de código (SonarCloud)
 
-O `build-test` (usado por CI e CD) roda `./mvnw verify` — testes, relatório do JaCoCo e mínimo de 80% de cobertura — e depois a
+O `build-test` do CI (pull request) roda `./mvnw verify` — testes, relatório do JaCoCo e mínimo de 80% de cobertura — e depois a
 análise do **SonarCloud** (plano gratuito, repositório público) sobre as classes e o relatório já gerados. O passo usa
 `-Dsonar.qualitygate.wait=true`: se o Quality Gate falhar, o pipeline falha. A configuração está nas propriedades `sonar.*` do
 `pom.xml` (projeto `ArthurPeruzzo_fiap-mecanica`).
@@ -297,7 +330,7 @@ secret não existir (ou em PR de fork), o passo é pulado com um aviso e o resta
 
 ## Documentação da Arquitetura
 
-A documentação arquitetural da Fase 3 — diagramas de componentes e de sequência, RFCs, ADRs, justificativa da escolha do banco e modelo de dados (ER) — fica em [`docs/`](docs/).
+A documentação arquitetural — diagramas de componentes e de sequência, RFCs, ADRs, justificativa da escolha do banco e modelo de dados (ER) — fica em [`docs/`](docs/). As decisões da Fase 4 estão nos ADRs [0007](docs/adr/0007-token-de-servico-entre-microsservicos.md) (token de serviço), [0008](docs/adr/0008-mensageria-rabbitmq-outbox.md) (mensageria e outbox) e [0009](docs/adr/0009-saga-de-pagamento-orquestrada.md) (saga de pagamento).
 
 ## Linguagem Ubíqua
 
@@ -320,9 +353,18 @@ Dicionário de termos do domínio utilizados no sistema.
 | **Peça** | Item físico de estoque (cadastrado e mantido no `fiap-estoque`). Ex: pastilha de freio, correia dentada. |
 | **Insumo** | Item consumível de estoque com unidade de medida variável (litros, ml, unidades). Ex: óleo de motor, fluido de freio. |
 | **Reserva de Estoque** | Quantidade de uma peça ou insumo separada para uma ordem ao vinculá-la; ajustada ao vincular/desvincular. A reserva e o estoque ficam no `fiap-estoque`. |
-| **Baixa de Estoque** | Confirmação das reservas da ordem, abatendo do estoque, quando o orçamento é aprovado. |
-| **Liberação de Reserva** | Devolução das reservas ao saldo disponível quando o orçamento é recusado. |
+| **Baixa de Estoque** | Confirmação das reservas da ordem, abatendo do estoque, depois que o pagamento é confirmado. |
+| **Liberação de Reserva** | Devolução das reservas ao saldo disponível quando o orçamento ou o pagamento é recusado. |
 | **Estoque Insuficiente** | Condição que impede o vínculo quando a quantidade solicitada supera o disponível (o estoque responde 422). |
+
+### Pagamento e saga
+
+| Termo | Definição |
+|---|---|
+| **Pagamento** | Registro da cobrança de uma ordem de serviço, guardado no `fiap-cobranca`. Status: **Pendente**, **Confirmado** ou **Recusado**. |
+| **Saga de pagamento** | Sequência distribuída que vai da aprovação do orçamento até a baixa do estoque (ou a compensação), coordenada por esta aplicação (orquestrador). |
+| **Compensação** | Desfazer o que a saga já fez quando uma etapa falha: liberar a reserva do estoque e cancelar a ordem. |
+| **Outbox** | Tabela gravada na mesma transação da mudança de estado, de onde os comandos saem para o broker, para que nenhum comando se perca. |
 
 ### Ordem de Serviço
 
@@ -344,10 +386,11 @@ Dicionário de termos do domínio utilizados no sistema.
 | **Em Diagnóstico** | Diagnóstico iniciado pelo mecânico responsável. Permite vincular serviços, peças e insumos. |
 | **Diagnóstico Concluído** | Diagnóstico encerrado e orçamento calculado. Aguarda envio ao cliente. |
 | **Aguardando Aprovação** | Orçamento enviado ao cliente via notificação com link de aprovação. O cliente ou o atendente registram a decisão. |
-| **Em Execução** (Ordem de Serviço) | Orçamento aprovado. Os serviços vinculados podem ser iniciados e finalizados individualmente pelo mecânico. |
+| **Aguardando Pagamento** | Orçamento aprovado. A cobrança registrou o pagamento e a ordem espera a decisão; só a saga encerra este estado. |
+| **Em Execução** (Ordem de Serviço) | Pagamento confirmado e baixa do estoque concluída. Os serviços vinculados podem ser iniciados e finalizados individualmente pelo mecânico. |
 | **Finalizada** | Todos os serviços vinculados foram concluídos. Aguarda entrega do veículo. |
 | **Entregue** | Veículo devolvido ao cliente. Estado terminal positivo. |
-| **Cancelada** | Orçamento recusado pelo cliente. Estado terminal negativo. Reservas liberadas no estoque. |
+| **Cancelada** | Orçamento recusado pelo cliente ou pagamento recusado. Estado terminal negativo. Reservas liberadas no estoque. |
 
 ### Execução de serviços
 
