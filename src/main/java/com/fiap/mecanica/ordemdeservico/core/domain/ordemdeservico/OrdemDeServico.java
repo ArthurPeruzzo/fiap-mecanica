@@ -9,6 +9,7 @@ import lombok.Getter;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -334,7 +335,14 @@ public class OrdemDeServico {
 
     private static Duration entre(LocalDateTime inicio, LocalDateTime fim) {
         if (inicio == null || fim == null) return null;
-        return Duration.between(inicio, fim);
+        return duracao(inicio, fim);
+    }
+
+    // As datas são gravadas com LocalDateTime.now() (fuso padrão da JVM); convertê-las para ZonedDateTime no mesmo fuso
+    // deixa o cálculo correto também numa virada de horário de verão (Duration.between direto em LocalDateTime ignoraria).
+    private static Duration duracao(LocalDateTime inicio, LocalDateTime fim) {
+        ZoneId zona = ZoneId.systemDefault();
+        return Duration.between(inicio.atZone(zona), fim.atZone(zona));
     }
 
     public Duration calcularTempoMedioExecucaoServicos() {
@@ -343,7 +351,7 @@ public class OrdemDeServico {
                 .toList();
         if (finalizados.isEmpty()) return null;
         long mediaSegundos = (long) finalizados.stream()
-                .mapToLong(sv -> Duration.between(sv.dataInicioExecucao(), sv.dataFimExecucao()).getSeconds())
+                .mapToLong(sv -> duracao(sv.dataInicioExecucao(), sv.dataFimExecucao()).getSeconds())
                 .average()
                 .orElse(0);
         return Duration.ofSeconds(mediaSegundos);

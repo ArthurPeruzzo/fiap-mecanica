@@ -47,6 +47,6 @@ todos os comandos da OS, e a OS passa a também **consumir** respostas.
 
 > **Atualização (11/11/2026):** os dois serviços já consomem os comandos `reserva.confirmar-baixa` e `pagamento.solicitar`, então o
 > bloqueio da outbox descrito na primeira consequência deixou de valer em ambiente com os três serviços no ar. A saga foi validada
-> ponta a ponta no API Gateway (fluxo feliz, pagamento recusado, orçamento recusado e as falhas de cobrança e de estoque; ver
-> `scripts/validacao/`). O bloqueio continua possível se um dos serviços ainda não tiver subido: nesse caso as linhas esperam na
+> ponta a ponta no API Gateway (fluxo feliz, pagamento recusado, orçamento recusado e as falhas de cobrança e de estoque, com uma bateria
+> local, não versionada). O bloqueio continua possível se um dos serviços ainda não tiver subido: nesse caso as linhas esperam na
 > outbox até a fila existir.

@@ -10,6 +10,6 @@
 | [`adr/`](adr/) | ADRs — decisões arquiteturais permanentes (Clean Architecture, comunicação, HPA, split em 4 repositórios, State pattern da OS, JWT HS256 compartilhado, token de serviço, mensageria com outbox e saga de pagamento orquestrada) |
 
 Os serviços da Fase 4 têm os próprios ADRs: [`fiap-estoque`](https://github.com/ArthurPeruzzo/fiap-estoque/tree/main/docs/adr) e [`fiap-cobranca`](https://github.com/ArthurPeruzzo/fiap-cobranca/tree/main/docs/adr).
-A validação ponta a ponta no ambiente implantado está em `scripts/validacao/` (na raiz do workspace).
+A validação ponta a ponta no ambiente implantado é feita por uma bateria local, não versionada.
 
 Visão geral de runtime, autenticação, observabilidade e deploy: [`../README.md`](../README.md).

@@ -50,6 +50,9 @@ public class SecurityConfiguration {
             "/ordem-servico/detalhamento"
     };
 
+    // CSRF desligado de propósito: a API é stateless (sem sessão nem cookie de autenticação; o token JWT vai no header
+    // Authorization), então não há credencial ambiente que um site de terceiros possa reaproveitar.
+    @SuppressWarnings("java:S4502")
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) {
         return httpSecurity
