@@ -103,3 +103,9 @@ dono dos recursos `estoque.*`. Credenciais por serviço, não compartilhadas.
 2. ~~Compensações reais (Saga orquestrada) no fluxo de aprovação~~ — feito no ADR-0009 (pagamento recusado cancela a OS e libera a reserva).
 3. Métrica e alerta sobre a idade da linha mais antiga na outbox e sobre a DLQ; procedimento de reprocessamento. **Pendente.**
 4. ~~Broker no cluster, credenciais no Secret e atualização do `cd.yml`~~ — feito: RabbitMQ no namespace `mensageria`, publicado pelo CD do `fiap-estoque`.
+
+> **Atualização (11/11/2026):** o [ADR-0009](0009-saga-de-pagamento-orquestrada.md) estende este mecanismo. A **aprovação do
+> orçamento deixou de ser síncrona**: ela só grava `AGUARDANDO_PAGAMENTO` e o comando de pagamento na outbox, e a baixa do estoque
+> acontece depois do pagamento, por comando (`reserva.confirmar-baixa`). O usuário `mecanica` no broker agora também é dono de
+> `ordemservico.*` (lê a fila de respostas) e publica em `cobranca.comandos`; `estoque` e `cobranca` publicam em
+> `ordemservico.eventos`. O que continua síncrono por HTTP é o catálogo e a reserva ao abrir ou alterar a OS.

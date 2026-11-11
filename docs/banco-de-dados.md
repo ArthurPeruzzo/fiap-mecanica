@@ -1,4 +1,4 @@
-# Banco de Dados — Mecânica FIAP (Fase 3)
+# Banco de Dados — Mecânica FIAP (Fases 3 e 4)
 
 Justificativa da escolha do banco, o modelo relacional e a explicação dos relacionamentos.
 
@@ -11,7 +11,8 @@ O domínio é **fortemente relacional e transacional**: `cliente → veículo �
 unicidade (placa do veículo, CPF de usuário, um vínculo por item em cada ordem). Abrir uma ordem
 de serviço executa vários `INSERT` numa única unidade de trabalho (a reserva de estoque é uma chamada ao `fiap-estoque`, com compensação) — precisa
 de **transações ACID**. Não há requisito de escala horizontal massiva, schema dinâmico nem dados
-semiestruturados que justificassem um banco NoSQL.
+semiestruturados que justificassem um banco NoSQL **neste serviço**. (O `fiap-cobranca`, que guarda um pagamento por ordem de
+serviço e só acessa por chave, usa DynamoDB; ver [Bancos dos demais serviços](#bancos-dos-demais-serviços).)
 
 ### Por que MySQL
 
@@ -112,6 +113,7 @@ erDiagram
         bigint atendente_id FK
         bigint mecanico_id FK "nullable"
         varchar status
+        varchar descricao
         decimal orcamento_total "nullable"
         datetime data_criacao
         datetime data_inicio_diagnostico "nullable"
@@ -152,6 +154,19 @@ erDiagram
         datetime data_expiracao
         datetime data_utilizacao "nullable"
     }
+    OUTBOX_EVENTO {
+        char id PK
+        varchar tipo
+        varchar exchange
+        varchar routing_key
+        bigint agregado_id "id da OS, sem FK"
+        varchar payload
+        datetime criado_em
+        datetime enviado_em "nullable"
+        int tentativas
+        varchar ultimo_erro "nullable"
+        varchar traceparent "nullable"
+    }
 ```
 
 ## Relacionamentos
@@ -159,8 +174,7 @@ erDiagram
 ### Segurança e perfis
 
 - **`users` N:N `roles`** pela tabela de junção `users_roles` (PK composta `user_id + role_id`).
-  Perfis: `ROLE_ATENDENTE`, `ROLE_MECANICO`, `ROLE_ADMINISTRADOR` (seed em `V1`) e `ROLE_CLIENTE`
-  (`V16`).
+  Perfis: `ROLE_ATENDENTE`, `ROLE_MECANICO`, `ROLE_ADMINISTRADOR` e `ROLE_CLIENTE` (todos com seed em `V1`).
 - **`mecanico` / `atendente` / `administrador` → `users`** (N:1 via `user_id NOT NULL`; na
   prática 1:1). Cada perfil funcional é um registro próprio com dados de RH (nome, turno,
   especialidade) apontando para o `users` que autentica.
@@ -204,3 +218,22 @@ erDiagram
 - **`ordem_servico` 1:1 `link_aprovacao_orcamento`** (`ordem_servico_id` e `token` ambos
   `UNIQUE`). Tabela separada por ter ciclo de vida próprio: token UUID gerado ao enviar o
   orçamento, expira em 3 dias, uso único (o cliente aprova/recusa por link, sem autenticar).
+
+### Outbox de eventos (`outbox_evento`)
+
+Tabela da saga (`V17`, e `V19` para o `traceparent`). Cada mudança de estado da OS que precisa avisar outro serviço grava uma
+linha **na mesma transação** da mudança (`agregado_id` é o id da OS, sem FK, e `payload` é o corpo JSON da mensagem). O relay lê
+as linhas pendentes (`enviado_em IS NULL`), publica no `exchange`/`routing_key` da própria linha, espera a confirmação do broker
+e só então marca `enviado_em`; falhas incrementam `tentativas` e gravam `ultimo_erro`. O `traceparent` guarda o contexto de trace
+da requisição para o consumo no outro serviço aparecer no mesmo trace. Não participa do modelo de negócio e não tem relação com
+as demais tabelas.
+
+## Bancos dos demais serviços
+
+Cada serviço é dono do seu banco; nenhum acessa o de outro (os vínculos entre eles são ids sem FK).
+
+| Serviço | Banco | Por quê | Onde |
+|---|---|---|---|
+| `fiap-mecanica` | MySQL 8.0 (RDS `fiap-mecanica-db`) | Modelo relacional com integridade referencial e transações (esta página) | `fiap-mecanica-infra-db` |
+| `fiap-estoque` | MySQL 8.4 (RDS próprio `fiap-estoque-db`, banco `estoque`) | Saldo e reservas precisam de transação atômica em lote (`peca`, `insumo`, `reserva_estoque`) | `fiap-estoque/infra/terraform/app-infra` |
+| `fiap-cobranca` | DynamoDB (tabela `cobranca-pagamento`, chave `ordemServicoId`) | Um pagamento por OS, acesso só por chave; o put condicional dá idempotência e o update condicional dá decisão atômica | `fiap-cobranca/infra/terraform/app-infra` (ADR-0001 de lá) |

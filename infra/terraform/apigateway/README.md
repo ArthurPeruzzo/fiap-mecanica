@@ -1,9 +1,9 @@
 # API Gateway — fiap-mecanica (Terraform)
 
 Provisiona o **AWS API Gateway HTTP API (v2)** que serve de porta de entrada da aplicação. Roteia
-todo o tráfego para o LoadBalancer do Service Kubernetes (`k8s/service.yaml`) via integração
-`HTTP_PROXY`, e deixa o terreno preparado para a Function Lambda de autenticação
-(`fiap-mecanica-lambda`) entrar como uma rota adicional, sem acoplamento.
+o tráfego para o LoadBalancer do Service Kubernetes (`k8s/service.yaml`) via integração
+`HTTP_PROXY`. Rotas adicionais, criadas só quando o destino já existe: `POST /auth/cliente` para a Function Lambda de autenticação
+(`fiap-mecanica-lambda`), `/peca` e `/insumo` para o `fiap-estoque` e `/pagamentos` para o `fiap-cobranca`.
 
 ## Fluxo (macro)
 
@@ -14,27 +14,34 @@ graph LR
     subgraph APIGW["API Gateway · HTTP API v2"]
         STAGE["stage $default<br/>(sem prefixo de path)"]
         R1["ANY /{proxy+}"]
-        R2["POST /auth/cliente<br/>(futuro · Fase 3)"]
+        R2["POST /auth/cliente"]
+        R3["ANY /peca · /insumo<br/>(e /{proxy+} de cada)"]
+        R4["ANY /pagamentos<br/>(e /{proxy+})"]
     end
 
-    subgraph EKS["EKS · namespace fiap-mecanica"]
-        ELB["Service LoadBalancer<br/>(ELB :80)"]
+    subgraph EKS["EKS"]
+        ELB["Service LoadBalancer<br/>fiap-mecanica (ELB :80)"]
         PODS["Pods da app"]
+        ELBE["Service LoadBalancer<br/>fiap-estoque"]
+        ELBC["Service LoadBalancer<br/>fiap-cobranca"]
     end
 
-    LAMBDA["Lambda fiap-mecanica-auth<br/>(futuro)"]
+    LAMBDA["Lambda fiap-mecanica-auth"]
 
     User -->|HTTPS| STAGE
-    STAGE --> R1 & R2
+    STAGE --> R1 & R2 & R3 & R4
     R1 -->|HTTP_PROXY| ELB --> PODS
-    R2 -.->|AWS_PROXY| LAMBDA
+    R2 -->|AWS_PROXY| LAMBDA
+    R3 -->|HTTP_PROXY| ELBE
+    R4 -->|HTTP_PROXY| ELBC
     LAMBDA -.->|GET /authenticate/cliente/status| ELB
 ```
 
 ## Por que um root module separado
 
-O state deste módulo (`tfstate/apigateway.tfstate`) é **independente** do state da infra principal
-(`../aws`, `tfstate/terraform.tfstate`). Três motivos concretos:
+O state deste módulo (`tfstate/apigateway.tfstate`) é **independente** do state de `../aws`
+(`tfstate/newrelic.tfstate`, hoje só alertas e dashboards da New Relic; antes da divisão em 4 repositórios esse state também
+geria EKS e RDS, e é daí que vêm os motivos abaixo). Três motivos concretos:
 
 1. **Ordem de dependência.** A integração precisa do hostname do ELB, que só existe depois do
    `k8s-deploy` — ou seja, depois do `terraform apply` do módulo `../aws`. No mesmo state, seria

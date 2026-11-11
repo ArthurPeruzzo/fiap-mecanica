@@ -51,5 +51,7 @@ Toda a comunicação entre componentes é **síncrona, request/response sobre HT
 ---
 
 > **Atualização:** a decisão de "não ter broker" foi parcialmente substituída pelo
-> [ADR-0008](0008-mensageria-rabbitmq-outbox.md). As chamadas síncronas por HTTP continuam valendo
-> (reservar, confirmar, catálogo); apenas a liberação de reservas de OS cancelada passou a ser assíncrona.
+> [ADR-0008](0008-mensageria-rabbitmq-outbox.md) e pelo [ADR-0009](0009-saga-de-pagamento-orquestrada.md). As chamadas
+> síncronas por HTTP continuam valendo para o que precisa de resposta na hora (autenticação de cliente, catálogo e reserva de
+> estoque ao abrir ou alterar a OS). Passaram a ser assíncronos, por RabbitMQ com outbox: o pedido de pagamento à cobrança, a
+> baixa do estoque depois do pagamento e a liberação de reservas de OS cancelada.
