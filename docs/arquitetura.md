@@ -251,8 +251,8 @@ cobrem hoje apenas a aplicação principal.
 
 ### Validação
 
-O roteiro automatizado `scripts/validacao/validar_ambiente.py` exercita tudo isso pelo API Gateway (fluxo feliz, compensações,
-segurança e falhas de serviço). Ver o runbook da pasta.
+A saga foi validada ponta a ponta no ambiente implantado, pelo API Gateway, com uma bateria automatizada mantida localmente (não
+versionada): fluxo feliz, compensações, segurança e falhas de serviço (cobrança ou estoque fora do ar).
 
 ## Outros documentos
 

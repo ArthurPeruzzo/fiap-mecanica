@@ -1,5 +1,7 @@
 # Mecânica FIAP
 
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=ArthurPeruzzo_fiap-mecanica&metric=alert_status)](https://sonarcloud.io/project/overview?id=ArthurPeruzzo_fiap-mecanica) [![Cobertura](https://sonarcloud.io/api/project_badges/measure?project=ArthurPeruzzo_fiap-mecanica&metric=coverage)](https://sonarcloud.io/project/overview?id=ArthurPeruzzo_fiap-mecanica)
+
 API REST para gestão de uma oficina mecânica, desenvolvida como projeto acadêmico na FIAP. O sistema cobre o ciclo completo de uma ordem de serviço — da abertura ao diagnóstico, orçamento, aprovação, execução e entrega — com reserva de estoque de peças e insumos (microsserviço `fiap-estoque`) e autenticação baseada em perfis de acesso.
 
 Este é o repositório da **aplicação principal** (Fases 3 e 4): além do código da API, que **orquestra a saga de pagamento** da ordem de serviço, contém a infraestrutura específica da aplicação (ECR, API Gateway e alertas/dashboards New Relic) e o pipeline que faz o deploy no cluster Kubernetes. VPC/EKS, o banco gerenciado e a Function Lambda de autenticação vivem em [três repositórios separados](#estrutura-em-4-repositórios), e os microsserviços `fiap-estoque` e `fiap-cobranca` têm repositório, banco e pipeline próprios ([Fase 4](#fase-4--microsserviços-e-saga-de-pagamento)).
@@ -341,7 +343,7 @@ As especificações executáveis ficam em [`src/test/resources/features/`](src/t
 
 **Evidência:** a cada execução o Cucumber gera o relatório passo a passo em `target/cucumber-reports/cucumber.html` (e `cucumber.json`). No CI, ele fica como artefato **`cucumber-report`** do workflow `build-test.yml` (GitHub → Actions → execução → Artifacts).
 
-**Limite:** nestes cenários o `fiap-estoque` e o `fiap-cobranca` são simulados, então o BDD prova o que o monólito *pediu* a eles e em que ordem, não o efeito real no saldo nem no pagamento. Esse efeito é conferido contra o ambiente implantado (ver `scripts/validacao/` na raiz do workspace).
+**Limite:** nestes cenários o `fiap-estoque` e o `fiap-cobranca` são simulados, então o BDD prova o que o monólito *pediu* a eles e em que ordem, não o efeito real no saldo nem no pagamento. Esse efeito é conferido contra o ambiente implantado, com uma bateria ponta a ponta pelo API Gateway (script local, não versionado neste repositório).
 
 A estrutura do código do BDD (runner, contexto Spring, hooks e passos) está descrita no [`CLAUDE.md`](CLAUDE.md).
 
@@ -350,7 +352,7 @@ A estrutura do código do BDD (runner, contexto Spring, hooks e passos) está de
 O `build-test` do CI (pull request) roda `./mvnw verify` — testes, relatório do JaCoCo e mínimo de 80% de cobertura — e depois a
 análise do **SonarCloud** (plano gratuito, repositório público) sobre as classes e o relatório já gerados. O passo usa
 `-Dsonar.qualitygate.wait=true`: se o Quality Gate falhar, o pipeline falha. A configuração está nas propriedades `sonar.*` do
-`pom.xml` (projeto `ArthurPeruzzo_fiap-mecanica`).
+`pom.xml` (projeto `ArthurPeruzzo_fiap-mecanica`). Resultado: [painel do projeto no SonarCloud](https://sonarcloud.io/project/overview?id=ArthurPeruzzo_fiap-mecanica) (Quality Gate e cobertura da `main`; os pull requests têm a própria análise).
 
 Configuração única, fora do repositório: criar a organização e importar este repositório em <https://sonarcloud.io>, conferir a
 *organization key* e a *project key* (devem bater com o `pom.xml`) e cadastrar o secret **`SONAR_TOKEN`** no repositório. Enquanto o

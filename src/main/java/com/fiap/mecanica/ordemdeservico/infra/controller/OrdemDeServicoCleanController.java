@@ -21,6 +21,7 @@ import com.fiap.mecanica.shared.notificacao.core.gateway.NotificacaoGateway;
 import com.fiap.mecanica.shared.page.Pagina;
 import com.fiap.mecanica.shared.seguranca.core.gateway.TokenGateway;
 import com.fiap.mecanica.shared.seguranca.core.gateway.UserGateway;
+import java.util.Objects;
 
 public class OrdemDeServicoCleanController {
 
@@ -96,6 +97,7 @@ public class OrdemDeServicoCleanController {
         var presenter = new ListarOrdemDeServicoPresenter();
         new ListarOrdemDeServicoDoClienteUseCase(ordemDeServicoGateway, clienteGateway, veiculoGateway,
                 atendenteGateway, mecanicoGateway, tokenGateway, userGateway, presenter).listar(page, size);
-        return presenter.getViewModel();
+        // O caso de uso sempre chama o presenter ou lança exceção; a checagem deixa a regra explícita.
+        return Objects.requireNonNull(presenter.getViewModel(), "o caso de uso deve apresentar a página");
     }
 }
