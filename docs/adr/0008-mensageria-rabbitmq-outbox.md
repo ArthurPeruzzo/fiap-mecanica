@@ -80,7 +80,7 @@ dono dos recursos `estoque.*`. Credenciais por serviço, não compartilhadas.
   repositório `fiap-estoque` (StatefulSet com disco EBS; o Amazon MQ está bloqueado na conta Academy). O
   `cd.yml` deste repositório injeta `RABBITMQ_*` e `ESTOQUE_URL`; sem o broker no ar o monólito sobe e
   acumula os comandos na outbox, mas sem as variáveis ele falha na partida. O disco EBS (driver CSI com a
-  `LabRole`) ainda não foi validado numa conta real.
+  `LabRole`) foi validado em conta real: no deploy de 10/11/2026 o StatefulSet subiu com o volume EBS `Bound`.
 
 ## Alternativas consideradas
 
@@ -99,10 +99,7 @@ dono dos recursos `estoque.*`. Credenciais por serviço, não compartilhadas.
 
 ## Evolução prevista
 
-1. Resposta do estoque (`ReservaLiberada`) e estado da Saga no monólito, fechando o ciclo
-   comando → resposta.
-2. Compensações reais (Saga orquestrada) no fluxo de aprovação, onde uma falha definitiva obriga a
-   desfazer algo já feito.
-3. Métrica e alerta sobre a idade da linha mais antiga na outbox e sobre a DLQ; procedimento de
-   reprocessamento.
-4. Broker no cluster (ou serviço gerenciado), credenciais no Secret e atualização do `cd.yml`.
+1. ~~Resposta do estoque (`ReservaLiberada`) e estado da Saga no monólito~~ — feito no [ADR-0009](0009-saga-de-pagamento-orquestrada.md).
+2. ~~Compensações reais (Saga orquestrada) no fluxo de aprovação~~ — feito no ADR-0009 (pagamento recusado cancela a OS e libera a reserva).
+3. Métrica e alerta sobre a idade da linha mais antiga na outbox e sobre a DLQ; procedimento de reprocessamento. **Pendente.**
+4. ~~Broker no cluster, credenciais no Secret e atualização do `cd.yml`~~ — feito: RabbitMQ no namespace `mensageria`, publicado pelo CD do `fiap-estoque`.
