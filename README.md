@@ -284,6 +284,17 @@ As especificações executáveis ficam em [`src/test/resources/features/`](src/t
 
 A estrutura do código do BDD (runner, contexto Spring, hooks e passos) está descrita no [`CLAUDE.md`](CLAUDE.md).
 
+## Qualidade de código (SonarCloud)
+
+O `build-test` (usado por CI e CD) roda `./mvnw verify` — testes, relatório do JaCoCo e mínimo de 80% de cobertura — e depois a
+análise do **SonarCloud** (plano gratuito, repositório público) sobre as classes e o relatório já gerados. O passo usa
+`-Dsonar.qualitygate.wait=true`: se o Quality Gate falhar, o pipeline falha. A configuração está nas propriedades `sonar.*` do
+`pom.xml` (projeto `ArthurPeruzzo_fiap-mecanica`).
+
+Configuração única, fora do repositório: criar a organização e importar este repositório em <https://sonarcloud.io>, conferir a
+*organization key* e a *project key* (devem bater com o `pom.xml`) e cadastrar o secret **`SONAR_TOKEN`** no repositório. Enquanto o
+secret não existir (ou em PR de fork), o passo é pulado com um aviso e o restante do pipeline segue normalmente.
+
 ## Documentação da Arquitetura
 
 A documentação arquitetural da Fase 3 — diagramas de componentes e de sequência, RFCs, ADRs, justificativa da escolha do banco e modelo de dados (ER) — fica em [`docs/`](docs/).
