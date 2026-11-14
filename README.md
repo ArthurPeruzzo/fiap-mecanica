@@ -43,13 +43,17 @@ ADR-0008) para o fluxo de pagamento e de compensação.
 comando passa por uma *outbox* gravada na mesma transação da mudança de estado, então nenhum comando se perde se o broker cair.
 
 1. Aprovar o orçamento move a OS para `AGUARDANDO_PAGAMENTO` e enfileira `pagamento.solicitar` para a cobrança.
-2. A cobrança grava o pagamento `PENDENTE`; quando ele é decidido, responde `pagamento.confirmado` ou `pagamento.recusado`.
+2. A cobrança grava o pagamento `PENDENTE` e chama o meio de pagamento (um mock HTTP com token, Retry e CircuitBreaker, ver o
+   [ADR-0002 do `fiap-cobranca`](https://github.com/ArthurPeruzzo/fiap-cobranca/blob/main/docs/adr/0002-mock-do-meio-de-pagamento.md)),
+   que aprova ou recusa; ela responde `pagamento.confirmado` ou `pagamento.recusado`. Se o meio estiver fora, o pagamento fica
+   `PENDENTE` e a equipe o decide à mão (`/pagamentos/{os}/aprovar|recusar`).
 3. Pagamento confirmado: a OS pede ao estoque a baixa das reservas; `baixa.confirmada` leva a OS a `EM_EXECUCAO` (fim da saga).
-4. Pagamento recusado: a OS vai para `CANCELADA` e a reserva do estoque é liberada (`reserva.liberada` encerra a compensação).
+4. Pagamento recusado (compensação B): a OS vai para `CANCELADA` e a reserva do estoque é liberada (`reserva.liberada` encerra a compensação).
 
-Cobra-se primeiro e baixa-se o estoque depois, então nenhuma falha exige estorno: a compensação é sempre liberar a reserva e cancelar a OS.
-Respostas repetidas ou atrasadas são ignoradas (idempotência) e mensagens inválidas vão para a DLQ. Riscos aceitos: pagamento que nunca é
-decidido segura a OS e a reserva, e não há estorno depois de um pagamento confirmado.
+O orçamento recusado pelo cliente ou pelo atendente (compensação A) também cancela a OS e libera as reservas (`reserva.liberar` pela
+outbox), sem passar pela cobrança. Cobra-se primeiro e baixa-se o estoque depois, então nenhuma falha exige estorno: a compensação é
+sempre liberar a reserva e cancelar a OS. Respostas repetidas ou atrasadas são ignoradas (idempotência) e mensagens inválidas vão para a
+DLQ. Riscos aceitos: pagamento `PENDENTE` que nunca é decidido segura a OS e a reserva, e não há estorno depois de um pagamento confirmado.
 
 ## Stack
 
@@ -180,7 +184,7 @@ O gateway apenas **roteia** (`ANY /{proxy+}` → ELB via `HTTP_PROXY`, header `A
 - **Traces e métricas** da aplicação são exportados via **OTLP** para a New Relic (Micrometer + OpenTelemetry). Métricas de negócio: `os.criadas`, `os.duracao{fase}`.
 - **Consumo do cluster** (CPU/memória de nós e pods) e **logs** chegam pela integração Kubernetes da New Relic (`nri-bundle`), instalada pelo CD do `fiap-mecanica-infra-k8s`.
 - **Logs estruturados em JSON** (formato ECS), com `traceId` / `spanId` (campos de topo) para correlação com os traces.
-- **Trace distribuído entre os serviços:** o `traceparent` W3C segue nas chamadas HTTP ao estoque e atravessa a outbox e o RabbitMQ (o relay grava e reenvia o contexto da requisição; os listeners abrem o span do consumo como filho dele). Aprovar o orçamento (mecanica → cobrança) e decidir o pagamento (cobrança → mecanica → estoque) são duas requisições, então cada OS gera **dois traces**, cada um passando pelos serviços envolvidos. Os logs de cada pod carregam o mesmo `traceId`, o que permite seguir a OS entre eles (`kubectl logs ... | grep <traceId>`).
+- **Trace distribuído entre os serviços:** o `traceparent` W3C segue nas chamadas HTTP ao estoque e atravessa a outbox e o RabbitMQ (o relay grava e reenvia o contexto da requisição; os listeners abrem o span do consumo como filho dele). Como o meio de pagamento decide durante o consumo do comando, aprovar o orçamento gera **um único trace** que passa por mecanica → cobrança → mecanica → estoque; só um pagamento `PENDENTE` decidido à mão abre um segundo trace (cobrança → mecanica → estoque). Os logs de cada pod carregam o mesmo `traceId`, o que permite seguir a OS entre eles (`kubectl logs ... | grep <traceId>`).
 - **Dashboards** (Terraform, `infra/terraform/aws/newrelic-dashboards.tf`):
   - *Observabilidade de Negócio* — volume diário de OS, tempo médio por fase (diagnóstico / execução / entrega), taxa de erro, erros por rota, falhas de acesso ao banco.
   - *Performance e Disponibilidade* — latência das APIs (p50/p90/p95/p99), uptime do healthcheck, CPU/memória dos pods.
