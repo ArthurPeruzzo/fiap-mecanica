@@ -207,7 +207,7 @@ compartilham apenas o cluster EKS, a VPC e o broker.
 |---|---|---|---|
 | `fiap-mecanica` | `fiap-mecanica` · 8080 | MySQL 8.0 (RDS) | Ordem de serviço, clientes/veículos, orçamento; **orquestra a saga** |
 | `fiap-estoque` | `fiap-estoque` · 8081 | MySQL 8.4 (RDS próprio) | Peças, insumos, reservas e baixa; mantém o RabbitMQ do cluster |
-| `fiap-cobranca` | `fiap-cobranca` · 8082 | DynamoDB (`cobranca-pagamento`) | Pagamento da OS (hoje com meio de pagamento simulado) |
+| `fiap-cobranca` | `fiap-cobranca` · 8082 | DynamoDB (`cobranca-pagamento`) | Pagamento da OS (meio de pagamento: mock HTTP com token, Retry e CircuitBreaker) |
 
 O RabbitMQ roda no namespace `mensageria` (StatefulSet com disco EBS), com um vhost `fiap` e um usuário de menor privilégio por
 serviço. Nenhum serviço lê o banco de outro: a comunicação é por HTTP (com token de serviço, ADR-0007) onde a resposta é
@@ -233,20 +233,23 @@ Decisão e alternativas em [ADR-0008](adr/0008-mensageria-rabbitmq-outbox.md) e 
 | Passo | Quem | O que acontece | Estado da OS |
 |---|---|---|---|
 | 1 | mecanica | Aprovar o orçamento grava `pagamento.solicitar` na outbox | `AGUARDANDO_APROVACAO` → `AGUARDANDO_PAGAMENTO` |
-| 2 | cobrança | Consome o comando e grava o pagamento `PENDENTE` | — |
-| 3 | cobrança | Pagamento decidido: responde `pagamento.confirmado` ou `pagamento.recusado` | — |
+| 2 | cobrança | Consome o comando, grava o pagamento `PENDENTE` e chama o meio de pagamento (mock HTTP: token, depois pagamento; Retry 3x e CircuitBreaker) | — |
+| 3 | cobrança | Meio aprova ou recusa: responde `pagamento.confirmado` ou `pagamento.recusado` (meio fora: fica `PENDENTE` para decisão manual) | — |
 | 4a | mecanica → estoque | Confirmado: grava `reserva.confirmar-baixa`; o estoque baixa as reservas e responde `baixa.confirmada` | `AGUARDANDO_PAGAMENTO` → `EM_EXECUCAO` |
-| 4b | mecanica → estoque | Recusado: cancela a OS e grava `reserva.liberar`; o estoque libera e responde `reserva.liberada` | `AGUARDANDO_PAGAMENTO` → `CANCELADA` |
+| 4b | mecanica → estoque | Recusado (compensação B): cancela a OS e grava `reserva.liberar`; o estoque libera e responde `reserva.liberada` | `AGUARDANDO_PAGAMENTO` → `CANCELADA` |
 
 Cobra-se antes de baixar o estoque, então nenhuma falha exige estorno: a compensação é sempre liberar a reserva e cancelar a OS.
-O orçamento recusado pelo cliente também cancela a OS e libera as reservas (comando `reserva.liberar`), sem passar pela cobrança.
-Um pagamento que nunca é decidido mantém a OS em `AGUARDANDO_PAGAMENTO` e a reserva presa (risco aceito, sem expiração).
+O orçamento recusado pelo cliente ou pelo atendente (compensação A) também cancela a OS e libera as reservas (comando
+`reserva.liberar`), sem passar pela cobrança. O mock do meio de pagamento alterna 503, 503, aprovado e recusado (valor terminado em
+`.99` é sempre recusado; ADR-0002 do `fiap-cobranca`), então o fluxo feliz e a compensação B rodam sem intervenção manual.
+Um pagamento `PENDENTE` (meio de pagamento fora) que nunca é decidido mantém a OS em `AGUARDANDO_PAGAMENTO` e a reserva presa (risco aceito, sem expiração).
 
 ### Observabilidade entre serviços
 
 O `traceparent` W3C segue nas chamadas HTTP e atravessa a outbox e o RabbitMQ, então os spans de uma requisição nos três serviços
-formam um único trace. Cada OS gera dois traces (aprovar o orçamento, e decidir o pagamento), e os logs de cada pod carregam o
-mesmo `traceId`. Todos os serviços exportam traces e métricas por OTLP para a New Relic; os alertas e dashboards em Terraform
+formam um único trace. Como o meio de pagamento decide durante o consumo do comando, aprovar o orçamento gera um trace só, de
+mecanica a estoque passando pela cobrança; um pagamento `PENDENTE` decidido à mão abre um segundo trace. Os logs de cada pod carregam
+o mesmo `traceId`. Todos os serviços exportam traces e métricas por OTLP para a New Relic; os alertas e dashboards em Terraform
 cobrem hoje apenas a aplicação principal.
 
 ### Validação
